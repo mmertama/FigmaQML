@@ -17,8 +17,8 @@ FigmaQML  is  an  application  to  generate  [Figma](https://www.figma.com)  des
 
 ###  Binaries  ###
 
-*  For  [Windows  10]  (https://github.com/mmertama/FigmaQML/releases)
-*  For  [Mac  OSX]  (https://github.com/mmertama/FigmaQML/releases)
+*  For  [Windows  10] (https://github.com/mmertama/FigmaQML/releases)
+*  For  [Mac  OSX] (https://github.com/mmertama/FigmaQML/releases)
 *  For  Ubuntu,  binaries  release  is  not  available,  please  compile  from  sources.
 
 ###  Quick  guide  to  FigmaQML  UI  ###
