@@ -7,13 +7,12 @@ FigmaQML  is  an  application  to  generate  [Figma](https://www.figma.com)  des
 
 ##  Run  ##
 
- *  FigmaQML  can  be  run  either  in  command-line  or  as  a  gui  application.
- *  Basically  it  is  started  on  command-line  if  target  directory  (QML_DIRECTORY)  is  given  as  a  parameter.
- *  Basic  Command  line  format  is  TOKEN  PROJECT  QML_DIRECTORY
-         *  For  flags  and  other  options  see  --help
+ *  FigmaQML  can  be  run  either  in  command line  or  as  a  gui  application.
+ *  Gui application is interactive to see visuals and source code before saving.
+ *  Command line is for processing Figma documents to QML. 
+ *  Basic  Command  line  format  is  <code> $figmaqml <options> TOKEN  PROJECT  QML_DIRECTORY </code>
+         *  For  options  see  --help
          *  For  MacOSX  the  commandline  refers  inside  of  application  bundle:  i.e.  <code>$  FigmaQML.app/Contents/MacOS/FigmaQML</code>  
- *  If  started  as  a  command  line  mode,  the  QtQuick  tab  shows  the  generated  UI.
- *  Note:  rendering  generated  UI  does  not  match  with  the performance  of  real  application  UI  as QML  will be  pre-compiled.  
 
 ###  Binaries  ###
 
