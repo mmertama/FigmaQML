@@ -24,6 +24,22 @@ ApplicationWindow {
         t.triggered.connect(function(){t.destroy();f();});
     }
 
+    function sourceCodeError(error, container) {
+        let item = null;
+        try {
+            item = Qt.createQmlObject(figmaQml.sourceCode, container, figmaQml.element)
+        } catch(err) {
+            return err;
+        }
+        if(item)
+            item.destroy();
+        return error;
+    }
+
+    function fileName(filename) {
+       return filename.substring(filename.lastIndexOf('/') + 1);
+    }
+
     Connections {
         target: figmaGet
         function onError(errorString) {
@@ -490,6 +506,8 @@ ApplicationWindow {
                                                        "figma Item")*/
 
                     } catch (error) {
+                        //There is a reason line numbers wont match, and therefore we try to load a sourceCode
+                        error = sourceCodeError(error, container);
                         let errors = "Text {text:\"Error loading figma item\";}\n"
                         if(error.qmlErrors) {
                             for (var i = 0; i < error.qmlErrors.length; i++) {
@@ -498,7 +516,7 @@ ApplicationWindow {
                                         + "Text {text:\"column: "
                                         + error.qmlErrors[i].columnNumber + "\";}\n"
                                         + "Text {text:\"file: "
-                                        + error.qmlErrors[i].fileName + "\";}\n"
+                                        + fileName(error.qmlErrors[i].fileName) + "\";}\n"
                                         + "Text {text:'message: "
                                         + error.qmlErrors[i].message.split('').map(c=>'\\x' + c.charCodeAt(0).toString(16)).join('') + "';}\n}\n"
                             }
