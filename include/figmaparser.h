@@ -19,6 +19,8 @@
     #define M_PI 3.14159265358979323846
 #endif
 
+const QString FIGMA_SUFFIX("_figma");
+
 template <typename Last>
 QString toStr(const Last& last) {
     QString str;
@@ -82,7 +84,10 @@ public:
                            QJsonObject&& object) :
             m_name(name), m_id(id), m_key(key),
             m_description(description), m_object(object) {}
-        QString name() const {return m_name;}
+        QString name() const {
+            Q_ASSERT(m_name.endsWith(FIGMA_SUFFIX) || validFileName(m_name) == m_name);
+            return m_name;
+        }
         QString description() const {return m_description;}
         QString id() const {return m_id;}
         QString key() const {return m_key;}
@@ -222,7 +227,8 @@ public:
     static QString validFileName(const QString& itemName) {
         if(itemName.isEmpty())
             return QString();
-        auto name = itemName;
+        Q_ASSERT(!itemName.endsWith(FIGMA_SUFFIX));
+        auto name = itemName + FIGMA_SUFFIX;
         const QRegularExpression re(R"([\\\/:*?"<>|\s])");
         name.replace(re, QLatin1String("_"));
         name = name.replace(QRegularExpression(R"([^a-zA-Z0-9_])"), "_");
@@ -508,30 +514,29 @@ private:
                 if(!effects.isEmpty()) {
                     const auto intendent = tabs(intendents);
                     const auto intendent1 = tabs(intendents + 1);
-                    for(const auto& e : effects) {
-                        const auto effect = e.toObject();
-                        if(effect["type"] == "INNER_SHADOW" || effect["type"] == "DROP_SHADOW") {
-                            const auto color = e["color"].toObject();
-                            const auto radius = e["radius"].toDouble();
-                            const auto offset = e["offset"].toObject();
-                            out += tabs(intendents) + "layer.enabled:true\n";
-                            out += tabs(intendents) + "layer.effect: DropShadow {\n";
-                            if(effect["type"] == "INNER_SHADOW") {
-                                out += intendent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
-                                out += intendent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
-                            } else {
-                                out += intendent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
-                                out += intendent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
-                            }
-                            out += intendent1 + "radius: " + QString::number(radius) + "\n";
-                            out += intendent1 + "samples: 17\n";
-                            out += intendent1 + "color: " + toColor(
-                                    color["r"].toDouble(),
-                                    color["g"].toDouble(),
-                                    color["b"].toDouble(),
-                                    color["a"].toDouble()) + "\n";
-                            out += intendent + "}\n";
+                    const auto& e = effects[0];   //Qt supports only ONE effect!
+                    const auto effect = e.toObject();
+                    if(effect["type"] == "INNER_SHADOW" || effect["type"] == "DROP_SHADOW") {
+                        const auto color = e["color"].toObject();
+                        const auto radius = e["radius"].toDouble();
+                        const auto offset = e["offset"].toObject();
+                        out += tabs(intendents) + "layer.enabled:true\n";
+                        out += tabs(intendents) + "layer.effect: DropShadow {\n";
+                        if(effect["type"] == "INNER_SHADOW") {
+                            out += intendent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
+                            out += intendent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
+                        } else {
+                            out += intendent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
+                            out += intendent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
                         }
+                        out += intendent1 + "radius: " + QString::number(radius) + "\n";
+                        out += intendent1 + "samples: 17\n";
+                        out += intendent1 + "color: " + toColor(
+                                color["r"].toDouble(),
+                                color["g"].toDouble(),
+                                color["b"].toDouble(),
+                                color["a"].toDouble()) + "\n";
+                        out += intendent + "}\n";
                     }
                 }
         }
@@ -1795,7 +1800,7 @@ private:
                  instanceObject.insert("strokes", "");
              }
 
-             out += makeItem(validFileName(comp->name()), instanceObject, intendents);
+             out += makeItem(comp->name(), instanceObject, intendents);
              out += makeVector(instanceObject, intendents);
 
              out += makeInstanceChildren(obj, comp->object(), intendents);

@@ -499,7 +499,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
                 return FigmaParser::Element();
             }
 
-            QFile componentFile(targetDir + validFileName(c->name()) + ".qml");
+            QFile componentFile(targetDir + c->name() + ".qml");
             if(componentFile.exists()) {
                 emit info(toStr("File updated", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
             }
