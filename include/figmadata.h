@@ -53,11 +53,16 @@ public:
          Q_ASSERT(m_data.contains(key));
          return  std::get<QString>(m_data[key]);
     }
-    void setPending(const QString& key) {
+    //Atomic get and set
+    bool setPending(const QString& key) {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
+        const auto wasPending = std::get<State>(m_data[key]) == State::Pending;
+        if(wasPending)
+            return false;
         Q_ASSERT(std::get<State>(m_data[key]) == State::Empty);
         std::get<State>(m_data[key]) = State::Pending;
+        return true;
     }
 
     void setBytes(const QString& key, const QByteArray& bytes, int meta =  0) {

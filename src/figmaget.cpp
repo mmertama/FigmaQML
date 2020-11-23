@@ -233,11 +233,8 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
             }
         });
 
-        if(!m_images->isPending(imageRef)) { //this image is already pending, since I have not atomized this there is chance request slips, small change, I just ignore this request when ready
-            m_images->setPending(imageRef);
+        if(m_images->setPending(imageRef)) {
             emit retrieveImage(imageRef, m_images.get(), maxSize);
-        } else {
-            //"Its already pending!"
         }
         loop.exec();
         if(m_images->isEmpty(imageRef)) {
@@ -406,12 +403,11 @@ std::pair<QByteArray, int> FigmaGet::getRendering(const QString& imageId) {
                 loop.quit();
                 }
             });
-
-        m_renderings->setPending(imageId);
-        emit retrieveImage(imageId, m_renderings.get(),
-                      QSize(std::numeric_limits<int>::max(),
-                            std::numeric_limits<int>::max()));
-
+          if( m_renderings->setPending(imageId)) {
+                emit retrieveImage(imageId, m_renderings.get(),
+                              QSize(std::numeric_limits<int>::max(),
+                                    std::numeric_limits<int>::max()));
+          }
         loop.exec();
 
         if(m_renderings->isEmpty(imageId)) {
@@ -534,8 +530,8 @@ QByteArray FigmaGet::getNode(const QString &id) {
             loop.quit();
     });
 
-    m_nodes->setPending(id);
-    emit retrieveNode(id);
+    if(m_nodes->setPending(id))
+        emit retrieveNode(id);
     //m_nodes->onPending(id, [this](const QString& id, const QString& url,  QByteArray* target) {
     //    emit retrieveNode(QUrl(url), id, target);
     //});
