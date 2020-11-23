@@ -692,6 +692,9 @@ ApplicationWindow {
             Label {
             text: "FigmaQML, Markus Mertama 2020"
             }
+            Label {
+            text: "Version:" + figmaQmlVersionNumber;
+            }
         }
     }
 

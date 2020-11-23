@@ -17,6 +17,8 @@
 //-DCMAKE_CXX_FLAGS="-DNON_CONCURRENT=1"
 QT_REQUIRE_CONFIG(ssl);
 
+#define STRINGIFY0(x) #x
+#define STRINGIFY(x) STRINGIFY0(x)
 
 constexpr char PROJECT_TOKEN[]{"project_token"};
 constexpr char USER_TOKEN[]{"user_token"};
@@ -37,8 +39,10 @@ int main(int argc, char *argv[]) {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
 
+    const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
+
     QCommandLineParser parser;
-    parser.setApplicationDescription("Figma to QML generator, Markus Mertama 2020");
+    parser.setApplicationDescription(QString("Figma to QML generator, version: %1, Markus Mertama 2020").arg(versionNumber));
     parser.addHelpOption();
     const QCommandLineOption renderFrameParameter("render-frame", "Render frames as images");
     const QCommandLineOption imageDimensionMaxParameter("image-dimension-max", "Capping image size to a square, default 1024", "imageDimensionMax");
@@ -379,6 +383,7 @@ int main(int argc, char *argv[]) {
          engine.rootContext()->setContextProperty("figmaGet", figmaGet.get());
          engine.rootContext()->setContextProperty("figmaQml", figmaQml.get());
          engine.rootContext()->setContextProperty("figmaDownload", figmaGet->downloadProgress());
+         engine.rootContext()->setContextProperty("figmaQmlVersionNumber", versionNumber);
 
          engine.load(QUrl("qrc:/main.qml"));
      }

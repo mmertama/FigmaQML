@@ -13,6 +13,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt5 COMPONENTS Core Quick Network Widgets Concurrent REQUIRED)
 
+set(VERSION_NUMBER "1.0.0")
+
+add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
+
 add_executable(FigmaQML
   src/main.cpp
   qml/qml.qrc
