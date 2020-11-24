@@ -155,11 +155,11 @@ ApplicationWindow {
 
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid
-                text: "Export all QMLs into..."
+                text: "Export all QMLs..."
                 onTriggered: fileAllDialog.open();
             }
             MenuItem {
-                text: "Imports..."
+                text: "Edit imports..."
                 onTriggered: imports.open();
             }
             MenuItem {
@@ -168,7 +168,7 @@ ApplicationWindow {
                 onTriggered:storeDialog.open();
             }
             MenuItem {
-                text: "Restore"
+                text: "Restore..."
                 onTriggered: restoreDialog.open();
             }
             MenuItem {
