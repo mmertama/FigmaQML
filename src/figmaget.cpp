@@ -120,9 +120,12 @@ bool FigmaGet::restore(const QString& filename) {
 #endif
     if(file.open(QIODevice::ReadOnly)) {
         QDataStream stream(&file);
-        read(stream);
-        if(stream.status() != QDataStream::Ok) {
+        if(!read(stream)) {
             emit error("Restore failed, " + filename);
+            return false;
+        }
+        if(stream.status() != QDataStream::Ok) {
+            emit error("Restore file corrupted, " + filename);
             return false;
         }
     } else {
