@@ -112,9 +112,10 @@ public:
     };
 public:
     inline static const QString PlaceHolder = "placeholder";
-    using errorFunc = std::function<void (const QString&, bool isFatal)>;
-    using imageFunc = std::function<QByteArray (const QString&, bool isRendering)>;
-    using nodeFunc = std::function<QByteArray (const QString&)>;
+    using ErrorFunc = std::function<void (const QString&, bool isFatal)>;
+    using ImageFunc = std::function<QByteArray (const QString&, bool isRendering)>;
+    using NodeFunc = std::function<QByteArray (const QString&)>;
+    using FontFunc = std::function<QString (const QString&)>;
     enum Flags {
         PrerenderShapes = 2,
         PrerenderGroups = 4,
@@ -126,7 +127,7 @@ public:
         AntializeShapes = 2048
     };
 public:
-    static Components components(const QJsonObject& project, errorFunc err, nodeFunc nodes) {
+    static Components components(const QJsonObject& project, ErrorFunc err, NodeFunc nodes) {
         Components map;
         try {
             auto componentObjects = getObjectsByType(project["document"].toObject(), "COMPONENT");
@@ -177,7 +178,7 @@ public:
         return map;
     }
 
-    static Canvases canvases(const QJsonObject& project, errorFunc err) {
+    static Canvases canvases(const QJsonObject& project, ErrorFunc err) {
         Canvases array;
         try {
             const auto doc = project["document"].toObject();
@@ -200,8 +201,8 @@ public:
         return array;
     }
 
-    static Element component(const QJsonObject& obj, unsigned flags, errorFunc err, imageFunc data, const Components& components) {
-        FigmaParser p(flags | Flags::ParseComponent, data, &components);
+    static Element component(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components) {
+        FigmaParser p(flags | Flags::ParseComponent, data, resolveFont, &components);
         try {
             return p.getElement(obj);
         } catch(Exception e) {
@@ -210,8 +211,8 @@ public:
         return Element();
     }
 
-    static Element element(const QJsonObject& obj, unsigned flags, errorFunc err, imageFunc data, const Components& components) {
-        FigmaParser p(flags, data, &components);
+    static Element element(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components) {
+        FigmaParser p(flags, data, resolveFont, &components);
         try {
             return p.getElement(obj);
         } catch(Exception e) {
@@ -240,9 +241,10 @@ public:
     }
     
 private:
-    FigmaParser(unsigned flags, imageFunc data, const Components* components) : m_flags(flags), mImageProvider(data), m_components(components) {}
+    FigmaParser(unsigned flags, ImageFunc data, FontFunc resolveFont, const Components* components) : m_flags(flags), mImageProvider(data), mResolveFont(resolveFont), m_components(components) {}
     const unsigned m_flags;
-    const imageFunc mImageProvider;
+    const ImageFunc mImageProvider;
+    const FontFunc mResolveFont;
     const Components* m_components;
     const QString m_intendent = "    ";
     QSet<QString> m_componentIds;
@@ -638,7 +640,7 @@ private:
     }
 
     static QByteArray fontWeight(double v) {
-        const auto scaled = (v / (900 - 100)) * 90; // figma scale is 100-900, where Qt is enums
+        const auto scaled = ((v - 100) / 900) * 90; // figma scale is 100-900, where Qt is enums
         const std::vector<std::pair<QByteArray, double>> weights { //from Qt docs
             {"Font.Thin", 0},
             {"Font.ExtraLight", 12},
@@ -1274,7 +1276,7 @@ private:
 
     QJsonObject toQMLTextStyles(const QJsonObject& obj) const {
         QJsonObject styles;
-        styles.insert("font.family", QString("\"%1\"").arg(obj["fontFamily"].toString()));
+        styles.insert("font.family", QString("\"%1\"").arg(mResolveFont(obj["fontFamily"].toString())));
         styles.insert("font.italic", QString(obj["italic"].toBool() ? "true" : "false"));
         styles.insert("font.pixelSize", QString::number(static_cast<int>(std::floor(obj["fontSize"].toDouble()))));
         styles.insert("font.weight", QString(fontWeight(obj["fontWeight"].toDouble())));
@@ -1325,7 +1327,8 @@ private:
          const auto styles = toQMLTextStyles(obj);
          for(const auto& k : styles.keys()) {
              const auto v = styles[k];
-             out += intendent + k + ": " + styles[k].toVariant().toString() + "\n";
+             const auto value = v.toVariant().toString();
+             out += intendent + k + ": " + value + "\n";
          }
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {

@@ -53,6 +53,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption snapParameter("snap", "Take snapshot and exit, expects restore or project parameter be given", "snapFile");
     const QCommandLineOption storeParameter("store", "Create .figmaqml file and exit, expects project parameter be given");
     const QCommandLineOption timedParameter("timed", "Time parsing process");
+    const QCommandLineOption showFonts("showFonts", "Show list of used fonts");
     const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1", "show");
 
     parser.addPositionalArgument("argument 1", "Optional", "<FIGMA_QML_FILE>|<USER_TOKEN>");
@@ -70,13 +71,15 @@ int main(int argc, char *argv[]) {
                           snapParameter,
                           storeParameter,
                           timedParameter,
-                          showParameter
+                          showParameter,
+                          showFonts
                       });
     parser.process(app);
 
     enum {
         CmdLine = 1,
-        Store = 2
+        Store = 2,
+        ShowFonts = 4
     };
 
     int state = 0;
@@ -120,6 +123,9 @@ int main(int argc, char *argv[]) {
 
     if(parser.isSet(storeParameter))
         state |= Store;
+
+    if(parser.isSet(showFonts))
+        state |= ShowFonts;
 
     if(!snapFile.isEmpty() && !(userToken.isEmpty() || restore.isEmpty())) {
         parser.showHelp(-2);
@@ -257,6 +263,12 @@ int main(int argc, char *argv[]) {
                     ::print() << "\nSave to " << output << " failed" << Qt::endl;
                     excode = -1;
                 }
+             }
+             if(state & ShowFonts) {
+                 const auto fonts = figmaQml->fonts();
+                 for(const auto& k : fonts.keys()) {
+                     ::print() << "Font: " << k << "->" << fonts[k].toString() << Qt::endl;
+                 }
              }
              QTimer::singleShot(0, [&app, excode](){app.exit(excode);});
          });

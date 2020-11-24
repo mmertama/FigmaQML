@@ -6,5 +6,6 @@
         <file>RowButton.qml</file>
         <file>ImportEditor.qml</file>
         <file>Logo.qml</file>
+        <file>FontMap.qml</file>
     </qresource>
 </RCC>

@@ -87,6 +87,7 @@ public:
         return m_current;
     }
 
+
     QString name() const {
         return m_name;
     }
@@ -113,6 +114,7 @@ public:
         else
             m_componentMap.insert(name, QSet<QString>(components.begin(), components.end()));
     }
+
 
     virtual Canvas* addCanvas(const QString& canvasName) = 0;
     virtual bool containsComponent(const QString& name) const = 0;

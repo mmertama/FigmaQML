@@ -4,11 +4,13 @@
 #include <QObject>
 #include <QVariantMap>
 #include <QUrl>
+#include <QVector>
 #include <memory>
 #include <optional>
 
 class FigmaFileDocument;
 class FigmaDataDocument;
+class FontCache;
 
 class FigmaQml : public QObject {
     Q_OBJECT
@@ -28,6 +30,7 @@ class FigmaQml : public QObject {
     Q_PROPERTY(bool isValid READ isValid NOTIFY isValidChanged)
     Q_PROPERTY(QString qmlDir READ qmlDir CONSTANT)
     Q_PROPERTY(QStringList components READ components NOTIFY componentsChanged)
+    Q_PROPERTY(QVariantMap fonts READ fonts NOTIFY fontsChanged)
 public:
     enum Flags {
         PrerenderShapes     = 0x2,
@@ -59,6 +62,7 @@ public:
     QString documentName() const;
     QString qmlDir() const;
     QStringList components() const;
+    QVariantMap fonts() const;
     bool setBrokenPlaceholder(const QString& placeholder);
     bool isValid() const;
     void setFilter(const QMap<int, QSet<int>>& filter);
@@ -98,6 +102,7 @@ signals:
     void componentLoaded(int canvas, int element);
     void snapped();
     void takeSnap(const QString& pngName, int canvasToWait, int elementToWait);
+    void fontsChanged();
 private:
     bool addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir);
     bool ensureDirExists(const QString& dirname) const;
@@ -119,6 +124,8 @@ private:
     QMap<int, QSet<int>> m_filter;
     QHash<QString, QPair<QString, QString>> m_imageFiles;
     QString m_snap;
+    std::unique_ptr<FontCache> m_fontCache;
 };
+
 
 #endif // FIGMACANVAS_H

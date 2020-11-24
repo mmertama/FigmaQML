@@ -30,6 +30,7 @@ add_executable(FigmaQML
   src/downloads.cpp
   include/figmadata.h
   include/figmadocument.h
+  include/fontcache.h
 )
 
 if(WIN32)

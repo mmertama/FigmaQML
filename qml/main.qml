@@ -163,6 +163,10 @@ ApplicationWindow {
                 onTriggered: imports.open();
             }
             MenuItem {
+                text: "Fonts..."
+                onTriggered: fontMap.open();
+            }
+            MenuItem {
                 enabled: figmaQml && figmaQml.isValid
                 text: "Store..."
                 onTriggered:storeDialog.open();
@@ -725,6 +729,12 @@ ApplicationWindow {
             const copy = JSON.parse(JSON.stringify(this.imports));
             figmaQml.imports = copy
         }
+    }
+
+    FontMap {
+        id: fontMap;
+        anchors.centerIn: main.contentItem
+        fonts: figmaQml.fonts
     }
 
     FolderDialog {
