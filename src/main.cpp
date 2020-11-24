@@ -385,6 +385,12 @@ int main(int argc, char *argv[]) {
          engine.rootContext()->setContextProperty("figmaDownload", figmaGet->downloadProgress());
          engine.rootContext()->setContextProperty("figmaQmlVersionNumber", versionNumber);
 
+
+         QObject::connect(figmaQml.get(), &FigmaQml::elementChanged, [&engine](){
+             engine.clearComponentCache();
+         });
+
+
          engine.load(QUrl("qrc:/main.qml"));
      }
 

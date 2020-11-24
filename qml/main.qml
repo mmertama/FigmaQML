@@ -68,10 +68,10 @@ ApplicationWindow {
             info.text = infoString;
         }
         function onSourceCodeChanged() {
-            container.create();
             warning.text = "";
             info.text = "";
             tooManyRequestsNote.visible = false;
+            container.create();
         }
 
         function onTakeSnap(pngFile, canvasIndex, elementIndex) {
@@ -484,7 +484,6 @@ ApplicationWindow {
                     let comp = null;
                     try {
                         comp = Qt.createComponent(figmaQml.element);
-
                         if(comp) {
                             const ctor = function() {
                                 if (comp.status === Component.Ready) {
@@ -499,12 +498,9 @@ ApplicationWindow {
                             }
                             if(!ctor())
                                 comp.statusChanged.connect(ctor);
+                        } else {
+                            errorNote.text = "Cannot create component \"" + figmaQml.element + "\"";
                         }
-
-                        /*figmaview = Qt.createQmlObject(source,
-                                                       container,
-                                                       "figma Item")*/
-
                     } catch (error) {
                         //There is a reason line numbers wont match, and therefore we try to load a sourceCode
                         error = sourceCodeError(error, container);

@@ -323,6 +323,7 @@ void FigmaQml::createDocumentView(const QByteArray &data) {
         emit canvasCountChanged();
         emit elementCountChanged();
         emit documentNameChanged();
+        emit elementChanged();
         createDocumentSources(data);
     } else {
         emit error("Invalid document");
