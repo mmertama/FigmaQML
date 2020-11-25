@@ -29,7 +29,7 @@ enum Format {
     None = 0, JPEG, PNG
 };
 
-const QLatin1String StreamId("FQ01");
+const QLatin1String StreamId("FQ02");
 
 class RAII_ {
 public:
@@ -137,10 +137,12 @@ bool FigmaGet::restore(const QString& filename) {
 
 bool FigmaGet::write(QDataStream& stream, unsigned flags, const QVariantMap& imports) const {
     stream << QString(StreamId);
+    stream << m_projectToken;
     stream << m_data;
     stream << m_checksum;
     stream << flags;
     stream << imports;
+
 
     m_images->write(stream);
     m_renderings->write(stream);
@@ -155,6 +157,9 @@ bool FigmaGet::read(QDataStream& stream) {
 
     if(streamid  != StreamId)
         return false;
+
+    stream >> m_projectToken;
+    emit projectTokenChanged();
 
     stream >> m_data;
     stream >> m_checksum;
