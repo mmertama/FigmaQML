@@ -404,6 +404,17 @@ void FigmaQml::setFontMapping(const QString& key, const QFont& value) {
     emit fontsChanged();
 }
 
+void FigmaQml::resetFontMapping(const QString& key) {
+    if(key.isEmpty()) {
+        m_fontCache->clear();
+    } else {
+        const auto typeface = nearestFontFamily(key, m_flags & QtFontMatch);
+        m_fontCache->insert(key, typeface);
+    }
+    emit refresh();
+    emit fontsChanged();
+}
+
 
 void FigmaQml::createDocumentSources(const QByteArray &data) {
     const auto json = object(data);

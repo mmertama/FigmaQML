@@ -78,6 +78,7 @@ public:
     Q_INVOKABLE static QVariantMap defaultImports();
     Q_INVOKABLE QByteArray prettyData(const QByteArray& data) const;
     Q_INVOKABLE void setFontMapping(const QString& key, const QFont& value);
+    Q_INVOKABLE void resetFontMapping(const QString& key);
     void takeSnap(const QString& pngName) const;
     static QString nearestFontFamily(const QString& requestedFont, bool useQt);
 public slots:

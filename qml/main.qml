@@ -742,8 +742,14 @@ ApplicationWindow {
                                             else
                                                figmaQml.flags &= ~FigmaQml.QtFontMatch
         onPickFont: {
-            fontDialog.key = figmaQml.fonts[fontName]
+            fontDialog.key = fontName
             fontDialog.open()
+        }
+        onResetFont: {
+             figmaQml.resetFontMapping(fontName);
+        }
+        onRemoveAllMappings: {
+            figmaQml.resetFontMapping("");
         }
         Component.onCompleted: alternativeSearchAlgorithm = figmaQml.flags & FigmaQml.QtFontMatch
     }
