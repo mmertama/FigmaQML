@@ -23,8 +23,8 @@ FigmaQML is an application to generate [Figma](https://www.figma.com) designs to
 ### Quick guide to FigmaQML UI ###
 
 * **Tokens**
- * Set your user [account token ](https://www.figma.com/developers/api#access-tokens) and project token. 
- * To get project token open your Figma Document on the browser and see the URL. The project token is as highlighted: https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…
+  * Set your user [account token ](https://www.figma.com/developers/api#access-tokens) and project token. 
+  * To get project token open your Figma Document on the browser and see the URL. The project token is as highlighted: https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…
 * **Export all QMLs**
     * Generates QML code and related images into the given directory.
 * **Edit Imports...** edit a QML "imports" statement.
