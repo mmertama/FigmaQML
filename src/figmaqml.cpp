@@ -164,7 +164,8 @@ bool FigmaQml::saveAllQML(const QString &folderName) const {
     }
 
     for(const auto& componentName : componentNames) {
-        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath()).arg(validFileName(componentName));
+        Q_ASSERT(componentName.endsWith(FIGMA_SUFFIX));
+        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath()).arg(componentName);
         QFile file(fullname);
         if(!file.open(QIODevice::WriteOnly)) {
             emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
@@ -172,7 +173,7 @@ bool FigmaQml::saveAllQML(const QString &folderName) const {
         }
 
         if(!m_sourceDoc->containsComponent(componentName)) {
-            emit error(QString("Failed to find \"%1\" om write").arg(componentName));
+            emit error(QString("Failed to find \"%1\" on write").arg(componentName));
             return false;
         }
 
@@ -660,6 +661,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         doc->setComponents(name, componentNames);
     };
 
+    for(const auto& c : componentData) {
+        addComponent(c);
+    }
 
 #endif
 
