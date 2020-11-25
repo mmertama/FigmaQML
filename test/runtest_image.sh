@@ -47,7 +47,11 @@ ratio_ok=$(${PYTHON_3} -c "print('True') if float($compare_ratio) > float(${IMAG
 
 echo Ratio ok: $ratio_ok 
 echo Ratio value: $compare_ratio 
-if [ "$ratio_ok" != "True" ]; then
+if [ "${ratio_ok}" != "True" ]; then
+	if [ "${ratio_ok}" != "False" ]; then
+		py_error=$(${PYTHON_3} -c "print('True') if float($compare_ratio) > float(${IMAGE_TRESHOLD}) else print('False')" 2>&1)
+		echo Problem with script: "${py_error}", in Windows, please try 'export PYTHON_3="python"' before running the script.
+	fi
 	echo Result: fail 
 	exit -99
 fi
