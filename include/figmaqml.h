@@ -30,7 +30,8 @@ class FigmaQml : public QObject {
     Q_PROPERTY(bool isValid READ isValid NOTIFY isValidChanged)
     Q_PROPERTY(QString qmlDir READ qmlDir CONSTANT)
     Q_PROPERTY(QStringList components READ components NOTIFY componentsChanged)
-    Q_PROPERTY(QVariantMap fonts READ fonts NOTIFY fontsChanged)
+    Q_PROPERTY(QVariantMap fonts READ fonts WRITE setFonts NOTIFY fontsChanged)
+    Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
 public:
     enum Flags {
         PrerenderShapes     = 0x2,
@@ -40,13 +41,14 @@ public:
         BreakBooleans       = 0x20,
         AntializeShapes     = 0x40,
         EmbedImages         = 0x80,
-        Timed               = 0x100
+        Timed               = 0x100,
+        QtFontMatch         = 0x200
     };
     Q_ENUM(Flags)
 public:
     using ImageProvider = std::function<std::pair<QByteArray, int> (const QString&, bool isRendering, const QSize&)>;
     using NodeProvider = std::function<QByteArray (const QString&)>;
-    FigmaQml(const QString& qmlDir, const ImageProvider& byteProvider, const NodeProvider& nodeProvider, QObject* parent = nullptr);
+    FigmaQml(const QString& qmlDir, const QString& fontFolder, const ImageProvider& byteProvider, const NodeProvider& nodeProvider, QObject* parent = nullptr);
     ~FigmaQml();
     QByteArray sourceCode() const;
     QUrl element() const;
@@ -63,6 +65,7 @@ public:
     QString qmlDir() const;
     QStringList components() const;
     QVariantMap fonts() const;
+    void setFonts(const QVariantMap& map);
     bool setBrokenPlaceholder(const QString& placeholder);
     bool isValid() const;
     void setFilter(const QMap<int, QSet<int>>& filter);
@@ -74,9 +77,11 @@ public:
     Q_INVOKABLE QString componentData(const QString& name) const;
     Q_INVOKABLE static QVariantMap defaultImports();
     Q_INVOKABLE QByteArray prettyData(const QByteArray& data) const;
+    Q_INVOKABLE void setFontMapping(const QString& key, const QFont& value);
     void takeSnap(const QString& pngName) const;
+    static QString nearestFontFamily(const QString& requestedFont, bool useQt);
 public slots:
-    void createDocumentView(const QByteArray& data);
+    void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
 signals:
     void documentCreated();
@@ -103,6 +108,8 @@ signals:
     void snapped();
     void takeSnap(const QString& pngName, int canvasToWait, int elementToWait);
     void fontsChanged();
+    void fontFolderChanged();
+    void refresh();
 private:
     bool addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir);
     bool ensureDirExists(const QString& dirname) const;
@@ -125,6 +132,7 @@ private:
     QHash<QString, QPair<QString, QString>> m_imageFiles;
     QString m_snap;
     std::unique_ptr<FontCache> m_fontCache;
+    QString m_fontFolder;
 };
 
 

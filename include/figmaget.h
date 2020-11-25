@@ -76,7 +76,7 @@ private:
     std::unique_ptr<FigmaData> m_renderings;
     std::unique_ptr<FigmaData> m_nodes;
     std::atomic_bool m_populationOngoing = false;
-    int m_throttle = 300; //Idea of throttle is collect requests into queue and bunches to reduce especially renderig requests
+    int m_throttle = 0; //Idea of throttle is collect requests into queue and bunches to reduce especially renderig requests
     QQueue<NetworkFunction> m_callQueue;
     QTimer m_timer;
     QStringList m_rendringQueue;

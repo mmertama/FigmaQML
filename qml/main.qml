@@ -735,6 +735,26 @@ ApplicationWindow {
         id: fontMap;
         anchors.centerIn: main.contentItem
         fonts: figmaQml.fonts
+        fontFolder: figmaQml.fontFolder
+        onPickFolder: fontFolderDialog.open()
+        onAlternativeSearchAlgorithmChanged: if(alternativeSearchAlgorithm)
+                                               figmaQml.flags |= FigmaQml.QtFontMatch
+                                            else
+                                               figmaQml.flags &= ~FigmaQml.QtFontMatch
+        onPickFont: {
+            fontDialog.key = figmaQml.fonts[fontName]
+            fontDialog.open()
+        }
+        Component.onCompleted: alternativeSearchAlgorithm = figmaQml.flags & FigmaQml.QtFontMatch
+    }
+
+    FontDialog {
+        id: fontDialog
+        property string key
+        currentFont.family: key ? figmaQml.fonts[key] : ""
+        onAccepted: {
+           figmaQml.setFontMapping(key, fontDialog.font);
+        }
     }
 
     FolderDialog {
@@ -746,10 +766,24 @@ ApplicationWindow {
         onAccepted: {
             let path = fileAllDialog.folder.toString();
             path = path.replace(/^(file:\/\/)/,"");
+            path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
             if(!figmaQml.saveAllQML(path)) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
+        }
+    }
+
+    FolderDialog {
+        id: fontFolderDialog
+        title: "Add font search folder"
+        folder: figmaQml.fontFolder.length > 0 ? "file:///" + encodeURIComponent(figmaQml.fontFolder) : StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        acceptLabel: "Select folder"
+        onAccepted: {
+            let path = fontFolderDialog.folder.toString();
+            path = path.replace(/^(file:\/\/)/,"");
+            path = path.replace(/^(\/(c|C):\/)/, "C:/");
+            figmaQml.fontFolder = path
         }
     }
 

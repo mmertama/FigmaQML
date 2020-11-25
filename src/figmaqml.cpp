@@ -198,8 +198,8 @@ QByteArray FigmaQml::sourceCode() const {
       return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
 }
 
-FigmaQml::FigmaQml(const QString& qmlDir, const ImageProvider& byteProvider, const NodeProvider& dataProvider, QObject *parent) : QObject(parent),
-    m_qmlDir(qmlDir), mImageProvider(byteProvider), mNodeProvider(dataProvider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()) {
+FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, const ImageProvider& byteProvider, const NodeProvider& dataProvider, QObject *parent) : QObject(parent),
+    m_qmlDir(qmlDir), mImageProvider(byteProvider), mNodeProvider(dataProvider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
         m_sourceDoc->getCurrent()->setCurrent(m_uiDoc->getCurrent()->currentIndex());
@@ -218,6 +218,20 @@ FigmaQml::FigmaQml(const QString& qmlDir, const ImageProvider& byteProvider, con
             m_imageDimensionMax = 1024;
         }
     });
+
+    const auto fontFolderChanged = [this]() {
+        const QDir fontFolder(m_fontFolder);
+        if(!fontFolder.exists())
+            emit warning(QString("Folder \"%1\", not found").arg(m_fontFolder));
+        for(const auto& entry : fontFolder.entryInfoList()) {
+            emit info(entry.fileName());
+            if(!entry.fileName().endsWith(".txt" && QFontDatabase::addApplicationFont(entry.absoluteFilePath()) < 0))
+                emit warning(QString("Font \"%1\", cannot be loaded").arg(entry.absoluteFilePath()));
+        }
+    };
+
+    QObject::connect(this, &FigmaQml::fontFolderChanged, this, fontFolderChanged);
+    fontFolderChanged();
 }
 
 
@@ -343,14 +357,23 @@ QVariantMap FigmaQml::fonts() const {
     return map;
 }
 
-void FigmaQml::createDocumentView(const QByteArray &data) {
+void FigmaQml::setFonts(const QVariantMap& map) {
+    for(const auto& k : map.keys()) {
+       m_fontCache->insert(k, map[k].toString());
+    }
+}
+
+void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     const auto json = object(data);
     if(!json)
         return;
+    const auto restoredCanvas = currentCanvas();
+    const auto restoredElement = currentElement();
     cleanDir(m_qmlDir);
     m_imageFiles.clear();
     m_uiDoc.reset();
-    m_fontCache->clear();
+    if(!restoreView)
+        m_fontCache->clear();
     emit isValidChanged();
     emit canvasCountChanged();
     emit elementCountChanged();
@@ -368,6 +391,17 @@ void FigmaQml::createDocumentView(const QByteArray &data) {
     } else {
         emit error("Invalid document");
     }
+    if(restoreView) {
+        if(setCurrentCanvas(restoredCanvas))
+            setCurrentElement(restoredElement);
+    }
+}
+
+
+void FigmaQml::setFontMapping(const QString& key, const QFont& value) {
+    m_fontCache->insert(key, value.family());
+    emit refresh();
+    emit fontsChanged();
 }
 
 
@@ -423,6 +457,32 @@ bool FigmaQml::busy() const {
     return m_busy;
 }
 
+QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useQt) {
+    if(useQt) {
+        const QFont font(requestedFont);
+        const QFontInfo fontInfo(font);  //this return mapped family
+        const auto value = fontInfo.family();
+        return value;
+    } else {
+        QFontDatabase database;
+        const QStringList fontFamilies = database.families();
+        int min = std::numeric_limits<int>::max();
+        int index = -1;
+        for(auto ff = 0; ff < fontFamilies.size() ; ff++) {
+            const auto distance = levenshteinDistance(fontFamilies[ff], requestedFont);
+            if(distance < min) {
+                index = ff;
+                min = distance;
+            }
+        }
+        if(index < 0) {
+            return requestedFont;
+        }
+        const auto value = fontFamilies[index];
+        return value;
+    }
+}
+
 template<class T>
 std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
     bool doCancel = false;
@@ -454,22 +514,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         if(m_fontCache->contains(requestedFont))
             return (*m_fontCache)[requestedFont];
 
-        QFontDatabase database;
-        const QStringList fontFamilies = database.families();
-        int min = std::numeric_limits<int>::max();
-        int index = -1;
-        for(auto ff = 0; ff < fontFamilies.size() ; ff++) {
-            const auto distance = levenshteinDistance(fontFamilies[ff], requestedFont);
-            if(distance < min) {
-                index = ff;
-                min = distance;
-            }
-        }
-        if(index < 0) {
-            emit warning("Font not found");
-            return requestedFont;
-        }
-        const auto value = fontFamilies[index];
+        const auto value = nearestFontFamily(requestedFont, m_flags & QtFontMatch);
         m_fontCache->insert(requestedFont, value);
         return value;
     };
@@ -565,9 +610,11 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             }
 
             QFile componentFile(targetDir + c->name() + ".qml");
+#ifdef _DEBUG
             if(componentFile.exists()) {
                 emit info(toStr("File updated", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
             }
+#endif
             if(!componentFile.open(QIODevice::WriteOnly)) {
                 emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
                 return FigmaParser::Element();

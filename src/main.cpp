@@ -13,6 +13,7 @@
 #include <QCommandLineParser>
 #include <QTextStream>
 #include <QRegularExpression>
+#include <QFont>
 
 //-DCMAKE_CXX_FLAGS="-DNON_CONCURRENT=1"
 QT_REQUIRE_CONFIG(ssl);
@@ -25,6 +26,8 @@ constexpr char USER_TOKEN[]{"user_token"};
 constexpr char FLAGS[]{"flags"};
 constexpr char EMBED_IMAGES[]{"embed_images"};
 constexpr char IMAGEMAXSIZE[]{"image_max_size"};
+constexpr char FONTFOLDER[]{"font_folder"};
+constexpr char FONTMAP[]{"font_map"};
 constexpr char IMPORTS[]{"imports"};
 constexpr char COMPANY_NAME[]{"Moonshine shade of haste productions"};
 constexpr char PRODUCT_NAME[]{"FigmaQML"};
@@ -33,6 +36,29 @@ constexpr char PRODUCT_NAME[]{"FigmaQML"};
 QTextStream& print() {
     static QTextStream r{stdout};
     return r;
+}
+
+QVector<QPair<QString, QFont>> parseFontMap(const QString& str, bool useQt) {
+    const auto list = str.split(';');
+    QVector<QPair<QString, QFont>> pairs;
+    for(const auto pair : list) {
+        QRegularExpression rex(R"(^\s*(.+)\s*\:\s*(.+)\s*$)");
+        const auto m = rex.match(pair);
+        if(!m.hasMatch()) {
+            ::print() << "Error: Invalid font map" << pair << "in" << str << Qt::endl;
+            return QVector<QPair<QString, QFont>>();
+        }
+        const QFont font(m.captured(2));
+        if(font.exactMatch()) {
+            pairs.append({m.captured(1), font});
+        } else {
+            const auto typeface = FigmaQml::nearestFontFamily(m.captured(2), useQt);
+            if(typeface != m.captured(2)) //just how it works :-)
+                ::print() << QString("Warning: %1 not found, using %2 instead").arg(m.captured(2), typeface) << Qt::endl;
+            pairs.append({m.captured(1), QFont(typeface)});
+        }
+    }
+   return pairs;
 }
 
 int main(int argc, char *argv[]) {
@@ -44,21 +70,24 @@ int main(int argc, char *argv[]) {
     QCommandLineParser parser;
     parser.setApplicationDescription(QString("Figma to QML generator, version: %1, Markus Mertama 2020").arg(versionNumber));
     parser.addHelpOption();
-    const QCommandLineOption renderFrameParameter("render-frame", "Render frames as images");
-    const QCommandLineOption imageDimensionMaxParameter("image-dimension-max", "Capping image size to a square, default 1024", "imageDimensionMax");
-    const QCommandLineOption embedImagesParameter("embed Images", "Embed images into QML files");
-    const QCommandLineOption breakBooleansParameter("break-boolean", "Break Figma booleans to components");
-    const QCommandLineOption antializeShapesParameter("antialize-shapes", "Add antialiaze property to shapes");
-    const QCommandLineOption importsParameter("imports", "QML imports, ';' separated list of imported modules as <module-name> <version-number>", "imports");
-    const QCommandLineOption snapParameter("snap", "Take snapshot and exit, expects restore or project parameter be given", "snapFile");
-    const QCommandLineOption storeParameter("store", "Create .figmaqml file and exit, expects project parameter be given");
-    const QCommandLineOption timedParameter("timed", "Time parsing process");
-    const QCommandLineOption showFonts("showFonts", "Show list of used fonts");
-    const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1", "show");
+    const QCommandLineOption renderFrameParameter("render-frame", "Render frames as images.");
+    const QCommandLineOption imageDimensionMaxParameter("image-dimension-max", "Capping an image size, default is 1024.", "imageDimensionMax");
+    const QCommandLineOption embedImagesParameter("embed-images", "Embed images into QML files.");
+    const QCommandLineOption breakBooleansParameter("break-boolean", "Break Figma boolean shapes to QtQuick items.");
+    const QCommandLineOption antializeShapesParameter("antialize-shapes", "Add antialiaze property to shapes.");
+    const QCommandLineOption importsParameter("imports", "QML imports, ';' separated list of imported modules as <module-name> <version-number>.", "imports");
+    const QCommandLineOption snapParameter("snap", "Take snapshot and exit, expects restore or user project token parameters to be given.", "snapFile");
+    const QCommandLineOption storeParameter("store", "Create .figmaqml file and exit, expects user and project token parameters to be given.");
+    const QCommandLineOption timedParameter("timed", "Time parsing process.");
+    const QCommandLineOption showFontsParameter("show-fonts", "Show the font mapping.");
+    const QCommandLineOption fontFolderParameter("font-folder", "Add an additional path to search fonts.", "fontFolder");
+    const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1.", "show");
+    const QCommandLineOption qtFontMatchParameter("qt-font-match", "Use Qt font matching algorithm.");
+    const QCommandLineOption fontMapParameter("font-map", "Provide a ';' separated list of <figma font>':'<system font> pairs.", "fontMap");
 
-    parser.addPositionalArgument("argument 1", "Optional", "<FIGMA_QML_FILE>|<USER_TOKEN>");
-    parser.addPositionalArgument("argument 2", "Optional", "<OUTPUT if FIGMA_QML_FILE>| PROJECT_TOKEN if USER_TOKEN");
-    parser.addPositionalArgument("argument 3", "Optional", "<OUTPUT if USER_TOKEN>");
+    parser.addPositionalArgument("argument 1", "Optional: .figmaqml file or user token. GUI opened if empty.", "<FIGMAQML_FILE>|<USER_TOKEN>");
+    parser.addPositionalArgument("argument 2", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the first parameter was the restored file. If empty, GUI is opened. Project token is expected if the first parameter was an user token.", "<OUTPUT if FIGMAQML_FILE>| PROJECT_TOKEN if USER_TOKEN");
+    parser.addPositionalArgument("argument 3", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the user and project tokens were provided. ", "<OUTPUT if USER_TOKEN>");
 
 
     parser.addOptions({
@@ -72,7 +101,10 @@ int main(int argc, char *argv[]) {
                           storeParameter,
                           timedParameter,
                           showParameter,
-                          showFonts
+                          showFontsParameter,
+                          fontFolderParameter,
+                          qtFontMatchParameter,
+                          fontMapParameter
                       });
     parser.process(app);
 
@@ -124,12 +156,16 @@ int main(int argc, char *argv[]) {
     if(parser.isSet(storeParameter))
         state |= Store;
 
-    if(parser.isSet(showFonts))
+    if(parser.isSet(showFontsParameter))
         state |= ShowFonts;
 
     if(!snapFile.isEmpty() && !(userToken.isEmpty() || restore.isEmpty())) {
         parser.showHelp(-2);
     }
+
+     const QString fontFolder = state & CmdLine ?
+                 parser.value(fontFolderParameter) :
+                 QSettings(COMPANY_NAME, PRODUCT_NAME).value(FONTFOLDER).toString();
 
     int canvas = 1;
     int element = 1;
@@ -168,8 +204,9 @@ int main(int argc, char *argv[]) {
 
     QTemporaryDir dir;
 
+
     std::unique_ptr<FigmaGet> figmaGet(new FigmaGet(dir.path() + "/images/"));
-    std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(),
+    std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(), fontFolder,
                                            [&figmaGet](const QString& id, bool isRendering, const QSize& maxSize) {
         return isRendering  ? figmaGet->getRendering(id) : figmaGet->getImage(id, maxSize);
     },
@@ -184,28 +221,42 @@ int main(int argc, char *argv[]) {
 
     figmaQml->setBrokenPlaceholder(":/broken_image.jpg");
 
+
     if(state & CmdLine || !snapFile.isEmpty()) {
         unsigned qmlFlags = 0;
 
         if(restore.isEmpty()) {
-         if(parser.isSet(renderFrameParameter))
-             qmlFlags |= FigmaQml::PrerenderFrames;
-         if(parser.isSet(breakBooleansParameter))
-             qmlFlags |= FigmaQml::BreakBooleans;
-         if(parser.isSet(antializeShapesParameter))
-             qmlFlags |= FigmaQml::AntializeShapes;
-         if(parser.isSet(embedImagesParameter))
-             qmlFlags |= FigmaQml::EmbedImages;
+            if(parser.isSet(renderFrameParameter))
+                qmlFlags |= FigmaQml::PrerenderFrames;
+            if(parser.isSet(breakBooleansParameter))
+                qmlFlags |= FigmaQml::BreakBooleans;
+            if(parser.isSet(antializeShapesParameter))
+                qmlFlags |= FigmaQml::AntializeShapes;
+            if(parser.isSet(embedImagesParameter))
+                qmlFlags |= FigmaQml::EmbedImages;
+            if(parser.isSet(qtFontMatchParameter))
+                qmlFlags |= FigmaQml::QtFontMatch;
 
-         if(parser.isSet(importsParameter)) {
-             QMap<QString, QVariant> imports;
-             const auto p = parser.value(importsParameter).split(';');
-             for(const auto& i : p) {
-                 const auto importLine = i.split(' ');
-                 imports.insert(importLine[0], importLine[1]);
+            if(parser.isSet(importsParameter)) {
+                QMap<QString, QVariant> imports;
+                const auto p = parser.value(importsParameter).split(';');
+                for(const auto& i : p) {
+                    const auto importLine = i.split(' ');
+                    imports.insert(importLine[0], importLine[1]);
+                }
+                figmaQml->setProperty("imports", imports);
              }
-             figmaQml->setProperty("imports", imports);
-         }
+        }
+
+        if(!fontFolder.isEmpty() && !QDir(fontFolder).exists()) {
+            ::print() << (QString("Error: Font folder not found \"%1\"").arg(fontFolder));
+            return -1;
+        }
+
+        if(parser.isSet(fontMapParameter)) {
+            const auto fonts = parseFontMap(parser.value(fontMapParameter), parser.isSet(qtFontMatchParameter));
+            for(const auto& [k, v] : fonts)
+                figmaQml->setFontMapping(k, v);
         }
 
         if(parser.isSet(timedParameter))
@@ -217,6 +268,7 @@ int main(int argc, char *argv[]) {
              figmaGet->setProperty("projectToken", projectToken);
 
          figmaQml->setProperty("flags", qmlFlags);
+         figmaQml->setProperty("fontFolder", fontFolder);
 
          if(parser.isSet(imageDimensionMaxParameter))
             figmaQml->setProperty("imageDimensionMax", parser.value(imageDimensionMaxParameter));
@@ -294,36 +346,53 @@ int main(int argc, char *argv[]) {
                           figmaQml.get(), [&figmaGet, &figmaQml]() {
              QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(FLAGS, figmaQml->property("flags").toUInt());
-             figmaQml->createDocumentView(figmaGet->data());
+             figmaQml->createDocumentView(figmaGet->data(), true);
          });
 
          QObject::connect(figmaQml.get(), &FigmaQml::imageDimensionMaxChanged,
                           figmaQml.get(), [&figmaGet, &figmaQml]() {
              QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(IMAGEMAXSIZE, figmaQml->property("imageDimensionMax").toInt());
-             figmaQml->createDocumentView(figmaGet->data());
+             figmaQml->createDocumentView(figmaGet->data(), true);
+         });
+
+
+         QObject::connect(figmaQml.get(), &FigmaQml::fontsChanged,
+                          figmaQml.get(), [&figmaGet, &figmaQml]() {
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
+             settings.setValue(FONTMAP, figmaQml->property("fonts").toMap());
          });
 
          QObject::connect(figmaGet.get(), &FigmaGet::projectTokenChanged, [&figmaGet](){
-             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME, false);
              settings.setValue(PROJECT_TOKEN, figmaGet->property("projectToken").toString());
          });
 
          QObject::connect(figmaGet.get(), &FigmaGet::userTokenChanged, [&figmaGet](){
-             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME, false);
              settings.setValue(USER_TOKEN, figmaGet->property("userToken").toString());
          });
 
          QObject::connect(figmaQml.get(), &FigmaQml::importsChanged, [&figmaQml, &figmaGet]() {
              QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(IMPORTS, figmaQml->property("imports").toMap());
-             figmaQml->createDocumentView(figmaGet->data());
+             figmaQml->createDocumentView(figmaGet->data(), true);
+         });
+
+         QObject::connect(figmaQml.get(), &FigmaQml::fontFolderChanged, [&figmaQml, &figmaGet]() {
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
+             settings.setValue(FONTFOLDER, figmaQml->property("fontFolder").toString());
+             figmaQml->createDocumentView(figmaGet->data(), true);
          });
 
          QObject::connect(figmaGet.get(), &FigmaGet::restored,
                           figmaQml.get(), [&figmaGet, &figmaQml](unsigned flags, const QVariantMap& imports) {
              figmaQml->restore(flags, imports);
-             figmaQml->createDocumentView(figmaGet->data());
+             figmaQml->createDocumentView(figmaGet->data(), false);
+         });
+
+         QObject::connect(figmaQml.get(), &FigmaQml::refresh, [&figmaQml, &figmaGet](){
+              figmaQml->createDocumentView(figmaGet->data(), true);
          });
 
          QSettings settings(COMPANY_NAME, PRODUCT_NAME);
@@ -335,6 +404,8 @@ int main(int argc, char *argv[]) {
 
          figmaGet->setProperty("embedImages", settings.value(EMBED_IMAGES).toString());
          figmaQml->setProperty("imageDimensionMax", settings.value(IMAGEMAXSIZE, 1024).toInt());
+
+         figmaQml->setProperty("fonts", settings.value(FONTMAP, QVariantMap()).toMap());
 
      }
 
@@ -353,22 +424,21 @@ int main(int argc, char *argv[]) {
              QObject::connect(figmaGet.get(), &FigmaGet::restored,
                               figmaQml.get(), [&figmaGet, &figmaQml](unsigned flags, const QVariantMap& imports) {
                   figmaQml->restore(flags, imports);
-                  figmaQml->createDocumentView(figmaGet->data());
+                  figmaQml->createDocumentView(figmaGet->data(), false);
              });
          } else {
              QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
                               figmaQml.get(), [&figmaGet, &figmaQml]() {
-                 figmaQml->createDocumentView(figmaGet->data());
+                 figmaQml->createDocumentView(figmaGet->data(), false);
              });
              figmaGet->update();
          }
      }
 
      if(!(state & CmdLine)) {
-
          QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
                           figmaQml.get(), [&figmaGet, &figmaQml]() {
-             figmaQml->createDocumentView(figmaGet->data());
+             figmaQml->createDocumentView(figmaGet->data(), true);
          });
 
         if(parser.isSet(showParameter)) {

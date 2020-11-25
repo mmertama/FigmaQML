@@ -10,7 +10,23 @@ Popup {
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
     property var fonts
     property double _cw: 0
+    signal pickFolder
+    signal pickFont(string fontName)
+    property alias fontFolder: fontFolderText.text
+    property alias alternativeSearchAlgorithm: alternativeSearchAlgorithmCheck.checked
     contentItem: Column {
+        CheckBox {
+            id: alternativeSearchAlgorithmCheck
+            text: "Use Qt font match"
+        }
+        Button {
+            id: fontFolderText
+            Component.onCompleted: {
+                if(text.length === 0)
+                    text = "Choose Font folder"
+            }
+            onClicked: main.pickFolder()
+        }
         Text {
             id: placeHolder
             visible: Object.keys(main.fonts).length === 0
@@ -33,6 +49,10 @@ Popup {
                 }
                 Text {
                     text: main.fonts[modelData]
+                }
+                Button {
+                    text: "Change..."
+                    onClicked: main.pickFont(modelData)
                 }
             }
         }
