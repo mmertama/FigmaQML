@@ -268,7 +268,7 @@ QStringList FigmaQml::components() const {
 }
 
 QByteArray FigmaQml::componentSourceCode(const QString &name) const {
-    return (!name.isEmpty()) && m_sourceDoc->containsComponent(name) ? m_sourceDoc->component(name) : QByteArray();
+    return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->component(name) : QByteArray();
 }
 
 QString FigmaQml::componentData(const QString &name) const {
@@ -497,7 +497,7 @@ QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useQt) {
 
 template<class T>
 std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
-    bool doCancel = false;
+    std::atomic_bool doCancel = false;
     const auto d = QObject::connect(this, &FigmaQml::cancelled, this, [&doCancel]() {
         doCancel = true;
     }, Qt::UniqueConnection);
@@ -509,12 +509,12 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 
     auto doc = std::make_unique<T>(targetDir, FigmaParser::name(obj));
 
-    bool ok = true;
+    std::atomic_bool ok = true;
     const auto errorFunction = [this, &ok, &doCancel](const QString& str, bool isFatal) {
         if(!doCancel) {
             if(isFatal) {
-                emit error(str);
                 ok = false;
+                emit error(str);
             } else
                 emit warning(str);
         }
@@ -531,8 +531,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         return value;
     };
 
-    const auto imageFunction = [this, &doCancel, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
-        if(doCancel)
+    const auto imageFunction = [this, &doCancel, &ok, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
+        if(!ok || doCancel)
             return QByteArray();
         if(imageRef == FigmaParser::PlaceHolder)
             return m_brokenPlaceholder;
@@ -566,8 +566,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
     }
 
-    const auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel](const QString& id) {
-        if(doCancel)
+    const auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
+        if(!ok || doCancel)
             return QByteArray();
         return mNodeProvider(id);
     });
@@ -612,11 +612,13 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             QtConcurrent::mapped<decltype(components),
                 std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>(components, [&, this](const auto& c)->FigmaParser::Element {
 
-            const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
             if(!ok || doCancel)
                 return FigmaParser::Element();
 
+             const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
+
             if(component.data().isEmpty()) {
+                ok = false;
                 emit error(toStr("Invalid component", component.name()));
                 return FigmaParser::Element();
             }
@@ -628,6 +630,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             }
 #endif
             if(!componentFile.open(QIODevice::WriteOnly)) {
+                ok = false;
                 emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
                 return FigmaParser::Element();
             }
@@ -636,22 +639,34 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             return component;
         });
 
-        QFutureWatcher<FigmaParser::Element> watch;
-        QEventLoop loop;
-        QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
-        watch.setFuture(componentData);
-        loop.exec();
+    QFutureWatcher<FigmaParser::Element> watch;
+    QEventLoop loop;
+    QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+    QObject::connect(this, &FigmaQml::error, [&doCancel](){
+        doCancel = true;
+    });
+    watch.setFuture(componentData);
+    loop.exec();
+
+    if(!watch.isFinished() && !m_uiDoc) {
+        watch.waitForFinished();
+        return nullptr;
+    }
 
     if(!ok || doCancel)
         return nullptr;
 
     const std::function<void (const FigmaParser::Element& c)> addComponent = [&, this](const FigmaParser::Element& c) { //recursive lambdas cannot be declared auto
+        if(!ok || doCancel)
+            return;
         const auto name = components[c.id()]->name();
         if(doc->containsComponent(name))
             return;
         QStringList componentNames;
         doc->addComponent(name, components[c.id()]->object(), header + c.data());
         for(const auto& id : c.components()) {
+            if(!ok || doCancel)
+                return;
             Q_ASSERT(components.contains(id)); //just check here
             const auto compname = components[id]->name();
             componentNames.append(compname);
@@ -709,8 +724,19 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         QFutureWatcher<FigmaParser::Element> watch;
         QEventLoop loop;
         QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+        QObject::connect(this, &FigmaQml::error, [&doCancel](){
+            doCancel = true;
+        });
         watch.setFuture(elementData);
         loop.exec();
+
+        if(!watch.isFinished() && !m_uiDoc) {
+            watch.waitForFinished();
+            return nullptr;
+        }
+
+        if(!ok || doCancel)
+            return nullptr;
 
         for(const auto& element : elementData) {
 #endif

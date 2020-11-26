@@ -87,6 +87,17 @@ FigmaGet::FigmaGet(const QString& dataDir, QObject *parent) : QObject(parent),
              m_downloads->monitor(reply, call);
          }
      });
+
+     QObject::connect(this, &FigmaGet::error, [this](const QString&) {
+         m_connectionState = State::Error;
+         m_images->clean();
+         m_renderings->clean();
+         m_nodes->clean();
+     });
+
+     QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
+         emit error("Cancel");
+     }, Qt::QueuedConnection);
 }
 
 
@@ -182,6 +193,10 @@ void FigmaGet::reset() {
     m_images->clear();
     m_renderings->clear();
     m_nodes->clear();
+}
+
+void FigmaGet::cancel() {
+    m_downloads->cancel();
 }
 
 void FigmaGet::quequeCall(const NetworkFunction& call) {
@@ -313,7 +328,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, c
 
 
 
-        if(target->isEmpty(id)) {  //there CAN be multiple requests within multithreaded, but we use only first
+        if(target->isEmpty(id) && m_connectionState == State::Loading) {  //there CAN be multiple requests within multithreaded, but we use only first
             Q_ASSERT(format == "png" || format == "jpeg");
             target->setBytes(id, *bytes, format == "png" ? PNG : JPEG);
         }
@@ -505,7 +520,8 @@ void FigmaGet::update() {
         reply->deleteLater();
         QObject::connect(reply, &QObject::destroyed, this, [this, bytes] (QObject* o) { //since added after downloads, this is called after
             const auto checksum = qChecksum(bytes->constData(), bytes->length());
-            if(checksum != m_checksum) {
+            if(checksum != m_checksum || m_connectionState == State::Error) {
+                m_connectionState = State::Loading;
                 m_downloads->reset();
                 m_downloads->setProgress(nullptr, bytes->length(), bytes->length());
                 m_checksum = checksum;
@@ -517,6 +533,10 @@ void FigmaGet::update() {
             }
         });
     });
+}
+
+void FigmaGet::documentCreated() {
+    m_connectionState = State::Complete;
 }
 
 QByteArray FigmaGet::getNode(const QString &id) {
@@ -543,6 +563,10 @@ QByteArray FigmaGet::getNode(const QString &id) {
     //m_nodes->onPending(id, [this](const QString& id, const QString& url,  QByteArray* target) {
     //    emit retrieveNode(QUrl(url), id, target);
     //});
+
+    QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
+        loop.quit();
+    });
 
    loop.exec();
 
@@ -576,7 +600,8 @@ void FigmaGet::doRetrieveNode(const QString& id) {
     });
 
     loop.exec();
-    m_nodes->setBytes(id, *bytes);
+    if(m_connectionState == State::Loading)
+        m_nodes->setBytes(id, *bytes);
     emit nodeRetrieved(id);
 }
 

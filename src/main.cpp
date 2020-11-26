@@ -32,11 +32,14 @@ constexpr char IMPORTS[]{"imports"};
 constexpr char COMPANY_NAME[]{"Moonshine shade of haste productions"};
 constexpr char PRODUCT_NAME[]{"FigmaQML"};
 
-
+#ifdef _DEBUG
+    #define print() qDebug()
+#else
 QTextStream& print() {
     static QTextStream r{stdout};
     return r;
 }
+#endif
 
 QVector<QPair<QString, QFont>> parseFontMap(const QString& str, bool useQt) {
     const auto list = str.split(';');
@@ -222,6 +225,9 @@ int main(int argc, char *argv[]) {
     figmaQml->setBrokenPlaceholder(":/broken_image.jpg");
 
 
+    bool supressErrors = false;
+
+
     if(state & CmdLine || !snapFile.isEmpty()) {
         unsigned qmlFlags = 0;
 
@@ -283,19 +289,31 @@ int main(int argc, char *argv[]) {
                 start = now;
              }
          });
-         QObject::connect(figmaQml.get(), &FigmaQml::warning, [](const QString& infoString){
+         QObject::connect(figmaQml.get(), &FigmaQml::warning, [](const QString& infoString ){
             ::print() << "\nInfo: " << infoString << Qt::endl;
          });
-         QObject::connect(figmaQml.get(), &FigmaQml::warning, [](const QString& warningString){
+         QObject::connect(figmaQml.get(), &FigmaQml::warning, [](const QString& warningString) {
             ::print() << "\nWarning: " << warningString << Qt::endl;
          });
-         QObject::connect(figmaQml.get(), &FigmaQml::error, [&app](const QString& errorString){
-            ::print() << "\nError: " << errorString << Qt::endl;
-            QTimer::singleShot(0, [&app](){app.exit(-2);});
+         QObject::connect(figmaQml.get(), &FigmaQml::error, [&app, &figmaGet, &supressErrors](const QString& errorString) {
+            if(supressErrors)
+                return;
+            supressErrors = true;
+            figmaGet->cancel();
+            ::print() << "\nParser Error: " << errorString << Qt::endl;
+            QTimer::singleShot(800, [&app]() {
+                app.exit(-2);
+            }); //delay must be big enough so all threads notice app.exit side effect is to cease all eventloop.execs!
          });
-         QObject::connect(figmaGet.get(), &FigmaGet::error, [&app](const QString& errorString){
-            ::print() << "\nError: " << errorString << Qt::endl;
-            QTimer::singleShot(0, [&app](){app.exit(-3);});
+         QObject::connect(figmaGet.get(), &FigmaGet::error, [&app, &figmaGet, &supressErrors](const QString& errorString) {
+            if(supressErrors)
+                return;
+            supressErrors = true;
+            figmaGet->cancel();
+            ::print() << "\nConnection Error: " << errorString << Qt::endl;
+            QTimer::singleShot(800, [&app]() {
+                app.exit(-3);
+            });  //delay must be big enough so all threads notice app.exit side effect is to cease all eventloop.execs!
          });
 
          QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state]() {
@@ -441,19 +459,21 @@ int main(int argc, char *argv[]) {
              figmaQml->createDocumentView(figmaGet->data(), true);
          });
 
+         QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, figmaGet.get(), &FigmaGet::documentCreated);
+
         if(parser.isSet(showParameter)) {
                 auto connection = std::make_shared<QMetaObject::Connection>();
                 *connection = QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, [&figmaQml, &canvas, &element, &app, connection] () {
                     if(figmaQml->isValid()) {
                          if(!figmaQml->setCurrentCanvas(canvas - 1)) {
                              ::print() << "Error: Invalid page " << canvas << " of " << figmaQml->canvasCount() << Qt::endl;
-                             QTimer::singleShot(0, [&app](){app.exit(-2);}); //ensure a correct thread
+                             QTimer::singleShot(100, [&app](){app.exit(-2);}); //ensure a correct thread
                              return;
                          }
 
                          if(!figmaQml->setCurrentElement(element - 1))  {
                              ::print() << "Error: Invalid view " << element << " of " << figmaQml->elementCount() << Qt::endl;
-                             QTimer::singleShot(0, [&app](){app.exit(-2);});
+                             QTimer::singleShot(100, [&app](){app.exit(-2);});
                              return;
                          }
                     }

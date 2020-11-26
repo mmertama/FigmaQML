@@ -7,6 +7,7 @@
 #include <QMutex>
 #include <tuple>
 
+//TODO: Change to QReadWriteLock - for perf?
 #define MUTEX_LOCK(m) QMutexLocker _l(&m);
 
 class FigmaData {
@@ -72,11 +73,21 @@ public:
         std::get<State>(m_data[key]) = State::Committed;
     }
     QStringList keys() const {
+        MUTEX_LOCK(m_mutex);
         return m_data.keys();
     }
+
+    void clean() {
+        MUTEX_LOCK(m_mutex);
+        for(auto& e : m_data)
+            if(std::get<State>(e) != State::Committed)
+                std::get<State>(e) = State::Empty;
+    }
+
     void clear(){
         m_data.clear();
     }
+
     void write(QDataStream& stream) const {
         const int size = std::accumulate(m_data.begin(), m_data.end(), 0, [](const auto &a, const auto& c){return std::get<State>(c) != State::Committed ? a : a + 1;});
         stream << size;
@@ -91,6 +102,7 @@ public:
             }
         }
     }
+
     void read(QDataStream& stream) {
         int size;
         stream >> size;
