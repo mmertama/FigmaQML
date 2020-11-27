@@ -388,12 +388,12 @@ int main(int argc, char *argv[]) {
          });
 
          QObject::connect(figmaGet.get(), &FigmaGet::projectTokenChanged, [&figmaGet](){
-             QSettings settings(COMPANY_NAME, PRODUCT_NAME, false);
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(PROJECT_TOKEN, figmaGet->property("projectToken").toString());
          });
 
          QObject::connect(figmaGet.get(), &FigmaGet::userTokenChanged, [&figmaGet](){
-             QSettings settings(COMPANY_NAME, PRODUCT_NAME, false);
+             QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(USER_TOKEN, figmaGet->property("userToken").toString());
          });
 
