@@ -77,10 +77,11 @@ public:
     Q_INVOKABLE QString componentData(const QString& name) const;
     Q_INVOKABLE static QVariantMap defaultImports();
     Q_INVOKABLE QByteArray prettyData(const QByteArray& data) const;
-    Q_INVOKABLE void setFontMapping(const QString& key, const QFont& value);
-    Q_INVOKABLE void resetFontMapping(const QString& key);
+    Q_INVOKABLE void setFontMapping(const QString& key, const QString& value);
+    Q_INVOKABLE void resetFontMappings();
+    Q_INVOKABLE void setSignals(bool allow);
     void takeSnap(const QString& pngName) const;
-    static QString nearestFontFamily(const QString& requestedFont, bool useQt);
+    Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);

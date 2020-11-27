@@ -399,19 +399,14 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
 }
 
 
-void FigmaQml::setFontMapping(const QString& key, const QFont& value) {
-    m_fontCache->insert(key, value.family());
+void FigmaQml::setFontMapping(const QString& key, const QString& value) {
+    m_fontCache->insert(key, value);
     emit refresh();
     emit fontsChanged();
 }
 
-void FigmaQml::resetFontMapping(const QString& key) {
-    if(key.isEmpty()) {
-        m_fontCache->clear();
-    } else {
-        const auto typeface = nearestFontFamily(key, m_flags & QtFontMatch);
-        m_fontCache->insert(key, typeface);
-    }
+void FigmaQml::resetFontMappings() {
+    m_fontCache->clear();
     emit refresh();
     emit fontsChanged();
 }
@@ -493,6 +488,10 @@ QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useQt) {
         const auto value = fontFamilies[index];
         return value;
     }
+}
+
+void FigmaQml::setSignals(bool allow) {
+    blockSignals(!allow);
 }
 
 template<class T>
@@ -648,7 +647,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     watch.setFuture(componentData);
     loop.exec();
 
-    if(!watch.isFinished() && !m_uiDoc) {
+    if(!watch.isFinished()) {
         watch.waitForFinished();
         return nullptr;
     }
@@ -730,7 +729,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         watch.setFuture(elementData);
         loop.exec();
 
-        if(!watch.isFinished() && !m_uiDoc) {
+        if(!watch.isFinished()) {
             watch.waitForFinished();
             return nullptr;
         }

@@ -732,34 +732,56 @@ ApplicationWindow {
     }
 
     FontMap {
-        id: fontMap;
+        id: fontMap
+        property var mappings: figmaQml.fonts //is manually updated due no signals
         anchors.centerIn: main.contentItem
-        fonts: figmaQml.fonts
+        fonts: mappings
         fontFolder: figmaQml.fontFolder
         onPickFolder: fontFolderDialog.open()
-        onAlternativeSearchAlgorithmChanged: if(alternativeSearchAlgorithm)
-                                               figmaQml.flags |= FigmaQml.QtFontMatch
-                                            else
-                                               figmaQml.flags &= ~FigmaQml.QtFontMatch
+        alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.QtFontMatch
+        property bool removeMappings: false
         onPickFont: {
             fontDialog.key = fontName
             fontDialog.open()
         }
         onResetFont: {
-             figmaQml.resetFontMapping(fontName);
+            mappings[fontName] = figmaQml.nearestFontFamily(fontName, alternativeSearchAlgorithm);
+            fonts = mappings;
         }
         onRemoveAllMappings: {
-            figmaQml.resetFontMapping("");
+            removeMappings = true;
+            close();
         }
-        Component.onCompleted: alternativeSearchAlgorithm = figmaQml.flags & FigmaQml.QtFontMatch
+        onAboutToHide: {
+            after(300, function() {  //let dialog be closed before long run opt
+                figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
+                if(fontMap.alternativeSearchAlgorithm)
+                    figmaQml.flags |= FigmaQml.QtFontMatch
+                else
+                    figmaQml.flags &= ~FigmaQml.QtFontMatch
+
+
+                figmaQml.setSignals(true);
+
+                if(fontMap.removeAllMappings) {
+                    figmaQml.resetFontMappings();
+                } else {
+                    for(const k in fontMap.mappings) {
+                        figmaQml.setFontMapping(k, mappings[k]);
+                    }
+                    figmaQml.refresh();
+                }
+            });
+        }
     }
 
     FontDialog {
         id: fontDialog
         property string key
-        currentFont.family: key ? figmaQml.fonts[key] : ""
+        currentFont.family: key ? fontMap.mappings[key] : ""
         onAccepted: {
-           figmaQml.setFontMapping(key, fontDialog.font);
+            fontMap.mappings[key] = fontDialog.font.family;
+            fontMap.fonts = fontMap.mappings;
         }
     }
 
