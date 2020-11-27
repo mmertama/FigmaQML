@@ -3,6 +3,11 @@ if [ -z "${PYTHON_3}" ]; then
     PYTHON_3="python3"
 fi
 
+if ! command -v ${PYTHON_3} &> /dev/null; then
+    echo Python: "${PYTHON_3}", not found
+    exit -888
+fi
+
 if [ -z "${FILE_NAME}" ]; then
     FILE_NAME="fq_test";
 fi
