@@ -27,6 +27,7 @@ constexpr char FLAGS[]{"flags"};
 constexpr char EMBED_IMAGES[]{"embed_images"};
 constexpr char IMAGEMAXSIZE[]{"image_max_size"};
 constexpr char FONTFOLDER[]{"font_folder"};
+constexpr char THROTTLE[]{"throttle"};
 constexpr char FONTMAP[]{"font_map"};
 constexpr char IMPORTS[]{"imports"};
 constexpr char COMPANY_NAME[]{"Moonshine shade of haste productions"};
@@ -41,24 +42,24 @@ QTextStream& print() {
 }
 #endif
 
-QVector<QPair<QString, QFont>> parseFontMap(const QString& str, bool useQt) {
+QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useQt) {
     const auto list = str.split(';');
-    QVector<QPair<QString, QFont>> pairs;
+    QVector<QPair<QString, QString>> pairs;
     for(const auto pair : list) {
         QRegularExpression rex(R"(^\s*(.+)\s*\:\s*(.+)\s*$)");
         const auto m = rex.match(pair);
         if(!m.hasMatch()) {
             ::print() << "Error: Invalid font map" << pair << "in" << str << Qt::endl;
-            return QVector<QPair<QString, QFont>>();
+            return QVector<QPair<QString, QString>>();
         }
         const QFont font(m.captured(2));
         if(font.exactMatch()) {
-            pairs.append({m.captured(1), font});
+            pairs.append({m.captured(1), font.family()});
         } else {
             const auto typeface = FigmaQml::nearestFontFamily(m.captured(2), useQt);
             if(typeface != m.captured(2)) //just how it works :-)
                 ::print() << QString("Warning: %1 not found, using %2 instead").arg(m.captured(2), typeface) << Qt::endl;
-            pairs.append({m.captured(1), QFont(typeface)});
+            pairs.append({m.captured(1), typeface});
         }
     }
    return pairs;
@@ -87,6 +88,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1.", "show");
     const QCommandLineOption qtFontMatchParameter("qt-font-match", "Use Qt font matching algorithm.");
     const QCommandLineOption fontMapParameter("font-map", "Provide a ';' separated list of <figma font>':'<system font> pairs.", "fontMap");
+    const QCommandLineOption throttleParameter("throttle", "Milliseconds between server requests. Too frequent request may have issues, especially with big desings - default 300", "throttle");
 
     parser.addPositionalArgument("argument 1", "Optional: .figmaqml file or user token. GUI opened if empty.", "<FIGMAQML_FILE>|<USER_TOKEN>");
     parser.addPositionalArgument("argument 2", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the first parameter was the restored file. If empty, GUI is opened. Project token is expected if the first parameter was an user token.", "<OUTPUT if FIGMAQML_FILE>| PROJECT_TOKEN if USER_TOKEN");
@@ -107,7 +109,8 @@ int main(int argc, char *argv[]) {
                           showFontsParameter,
                           fontFolderParameter,
                           qtFontMatchParameter,
-                          fontMapParameter
+                          fontMapParameter,
+                          throttleParameter
                       });
     parser.process(app);
 
@@ -278,6 +281,9 @@ int main(int argc, char *argv[]) {
 
          if(parser.isSet(imageDimensionMaxParameter))
             figmaQml->setProperty("imageDimensionMax", parser.value(imageDimensionMaxParameter));
+
+         if(parser.isSet(throttleParameter))
+            figmaGet->setProperty("throttle", parser.value(throttleParameter));
      }
 
      if(state & CmdLine) {
@@ -415,8 +421,9 @@ int main(int argc, char *argv[]) {
 
          QSettings settings(COMPANY_NAME, PRODUCT_NAME);
 
-         figmaGet->setProperty("projectToken", settings.value(PROJECT_TOKEN).toString());
-         figmaGet->setProperty("userToken", settings.value(USER_TOKEN).toString());
+         figmaGet->setProperty("projectToken", settings.value(PROJECT_TOKEN));
+         figmaGet->setProperty("userToken", settings.value(USER_TOKEN));
+         figmaGet->setProperty("throttle", settings.value(THROTTLE, 300));
          figmaQml->setProperty("flags", settings.value(FLAGS, 0).toUInt());
          figmaQml->setProperty("imports", settings.value(IMPORTS, FigmaQml::defaultImports()).toMap());
 
