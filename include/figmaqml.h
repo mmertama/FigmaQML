@@ -42,7 +42,7 @@ public:
         AntializeShapes     = 0x40,
         EmbedImages         = 0x80,
         Timed               = 0x100,
-        QtFontMatch         = 0x200
+        AltFontMatch         = 0x200
     };
     Q_ENUM(Flags)
 public:

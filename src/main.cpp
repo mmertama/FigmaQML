@@ -42,7 +42,7 @@ QTextStream& print() {
 }
 #endif
 
-QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useQt) {
+QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
     const auto list = str.split(';');
     QVector<QPair<QString, QString>> pairs;
     for(const auto pair : list) {
@@ -56,7 +56,7 @@ QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useQt) {
         if(font.exactMatch()) {
             pairs.append({m.captured(1), font.family()});
         } else {
-            const auto typeface = FigmaQml::nearestFontFamily(m.captured(2), useQt);
+            const auto typeface = FigmaQml::nearestFontFamily(m.captured(2), useAlt);
             if(typeface != m.captured(2)) //just how it works :-)
                 ::print() << QString("Warning: %1 not found, using %2 instead").arg(m.captured(2), typeface) << Qt::endl;
             pairs.append({m.captured(1), typeface});
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption showFontsParameter("show-fonts", "Show the font mapping.");
     const QCommandLineOption fontFolderParameter("font-folder", "Add an additional path to search fonts.", "fontFolder");
     const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1.", "show");
-    const QCommandLineOption qtFontMatchParameter("qt-font-match", "Use Qt font matching algorithm.");
+    const QCommandLineOption altFontMatchParameter("alt-font-match", "Use alternative font matching algorithm.");
     const QCommandLineOption fontMapParameter("font-map", "Provide a ';' separated list of <figma font>':'<system font> pairs.", "fontMap");
     const QCommandLineOption throttleParameter("throttle", "Milliseconds between server requests. Too frequent request may have issues, especially with big desings - default 300", "throttle");
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
                           showParameter,
                           showFontsParameter,
                           fontFolderParameter,
-                          qtFontMatchParameter,
+                          altFontMatchParameter,
                           fontMapParameter,
                           throttleParameter
                       });
@@ -243,8 +243,8 @@ int main(int argc, char *argv[]) {
                 qmlFlags |= FigmaQml::AntializeShapes;
             if(parser.isSet(embedImagesParameter))
                 qmlFlags |= FigmaQml::EmbedImages;
-            if(parser.isSet(qtFontMatchParameter))
-                qmlFlags |= FigmaQml::QtFontMatch;
+            if(parser.isSet(altFontMatchParameter))
+                qmlFlags |= FigmaQml::AltFontMatch;
 
             if(parser.isSet(importsParameter)) {
                 QMap<QString, QVariant> imports;
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
         }
 
         if(parser.isSet(fontMapParameter)) {
-            const auto fonts = parseFontMap(parser.value(fontMapParameter), parser.isSet(qtFontMatchParameter));
+            const auto fonts = parseFontMap(parser.value(fontMapParameter), parser.isSet(altFontMatchParameter));
             for(const auto& [k, v] : fonts)
                 figmaQml->setFontMapping(k, v);
         }

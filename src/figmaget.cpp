@@ -31,7 +31,7 @@ enum Format {
     None = 0, JPEG, PNG
 };
 
-const QLatin1String StreamId("FQ02");
+const QLatin1String StreamId("FQ03");
 
 class RAII_ {
 public:

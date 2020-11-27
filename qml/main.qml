@@ -738,7 +738,7 @@ ApplicationWindow {
         fonts: mappings
         fontFolder: figmaQml.fontFolder
         onPickFolder: fontFolderDialog.open()
-        alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.QtFontMatch
+        alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.AltFontMatch
         property bool removeMappings: false
         onPickFont: {
             fontDialog.key = fontName
@@ -756,9 +756,9 @@ ApplicationWindow {
             after(300, function() {  //let dialog be closed before long run opt
                 figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
                 if(fontMap.alternativeSearchAlgorithm)
-                    figmaQml.flags |= FigmaQml.QtFontMatch
+                    figmaQml.flags |= FigmaQml.AltFontMatch
                 else
-                    figmaQml.flags &= ~FigmaQml.QtFontMatch
+                    figmaQml.flags &= ~FigmaQml.AltFontMatch
 
 
                 figmaQml.setSignals(true);

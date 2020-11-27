@@ -464,8 +464,8 @@ bool FigmaQml::busy() const {
     return m_busy;
 }
 
-QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useQt) {
-    if(useQt) {
+QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useAlt) {
+    if(!useAlt) {
         const QFont font(requestedFont);
         const QFontInfo fontInfo(font);  //this return mapped family
         const auto value = fontInfo.family();
@@ -525,7 +525,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         if(m_fontCache->contains(requestedFont))
             return (*m_fontCache)[requestedFont];
 
-        const auto value = nearestFontFamily(requestedFont, m_flags & QtFontMatch);
+        const auto value = nearestFontFamily(requestedFont, m_flags & AltFontMatch);
         m_fontCache->insert(requestedFont, value);
         return value;
     };

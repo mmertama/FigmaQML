@@ -84,7 +84,7 @@ Popup {
         Row {
             CheckBox {
                 id: alternativeSearchAlgorithmCheck
-                text: "Use Qt font match"
+                text: "Use alternative font match"
             }
             Button {
                 text: "Remove all mappings"
