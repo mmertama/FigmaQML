@@ -14,10 +14,12 @@ else
 fi
 
 echo Test: Image 
-echo Params: $2 
+echo Params: $2
+
+echo Phase 1: Generate a snap from rendering. 
 	
 rm -f ${FILE_NAME}.png
-$1 ${FILE_NAME}.figmaqml --snap ${FILE_NAME}.png ${show_param}
+$1 ${FILE_NAME}.figmaqml --snap ${FILE_NAME}.png ${show_param} ${FONT_FLAGS}
 
 if [ $? -ne 0 ]; then 
 	echo Error: code $? 
@@ -29,6 +31,8 @@ if [ ! -f ${FILE_NAME}.png ]; then
 	exit -97
 fi
 
+echo Phase 2: Generate a snap from frame. 
+
 rm -f ${FILE_NAME}_frame.png
 $1 ${FILE_NAME}_frame.figmaqml --render-frame --snap  ${FILE_NAME}_frame.png ${show_param}
 
@@ -36,6 +40,8 @@ if [ $? -ne 0 ]; then
 	echo Error: code $? 
 	exit -91
 fi
+
+echo Phase 3: Compare images. 
 
 if [ ! -f  ${FILE_NAME}_frame.png ]; then
     echo Error: ${FILE_NAME}_frame.png not found. 
