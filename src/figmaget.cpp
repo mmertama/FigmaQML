@@ -19,6 +19,8 @@
 #include <memory>
 #include <array>
 
+#define IMAGE_TIMEOUT
+
 #ifdef IMAGE_TIMEOUT
 constexpr auto ImageTimeout = 80 * 1000;
 #endif
@@ -56,9 +58,12 @@ FigmaGet::FigmaGet(const QString& dataDir, QObject *parent) : QObject(parent),
          m_checksum = 0;
      });
      QObject::connect(this, &FigmaGet::requestRendering, this, [this](const QString& id) {
-         if(!id.isEmpty())
+         if(!id.isEmpty()) {
             m_rendringQueue.append(id);
-         quequeCall([this, id](){return FigmaGet::doRequestRendering();});
+         }
+         quequeCall([this](){
+             return FigmaGet::doRequestRendering();
+         });
      });
      QObject::connect(this, &FigmaGet::retrieveImage, this, [this](const QString& id, FigmaData* target, const QSize& maxSize) {
          Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
@@ -216,7 +221,9 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
         bool err = false;
         QEventLoop loop;
 #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+        QTimer::singleShot(ImageTimeout, &loop, [this, imageRef]() {
+            emit error("Timeout A on image " + imageRef);
+        });
 #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString&) {
             err = true;
@@ -242,7 +249,9 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
     if(m_images->isEmpty(imageRef)) {
         QEventLoop loop;
     #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageRef]() {
+             emit error("Timeout B on image " + imageRef);
+         });
     #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
             loop.quit();
@@ -385,7 +394,9 @@ std::pair<QByteArray, int> FigmaGet::getRendering(const QString& imageId) {
         bool err = false;
         QEventLoop loop;
 #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageId]() {
+             emit error("Timeout A on rendering " + imageId);
+         });
 #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString&) {
             err = true;
@@ -414,7 +425,9 @@ std::pair<QByteArray, int> FigmaGet::getRendering(const QString& imageId) {
     if(m_renderings->isEmpty(imageId)) {
         QEventLoop loop;
     #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageId]() {
+             emit error("Timeout B on rendering " + imageId);
+         });
     #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
             loop.quit();
@@ -592,7 +605,9 @@ void FigmaGet::doRetrieveNode(const QString& id) {
         loop.quit();
     });
 #ifdef IMAGE_TIMEOUT
-    QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+    QTimer::singleShot(ImageTimeout, &loop, [this, id]() {
+        emit error("Timeout B on node " + id);
+    });
 #endif
     QObject::connect(this, &FigmaGet::error, &loop, [&loop, bytes](const QString&) {
         bytes->clear();
