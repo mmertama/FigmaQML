@@ -769,6 +769,7 @@ private:
             {"STAR", std::bind(&FigmaParser::parseStar, this, std::placeholders::_1, std::placeholders::_2)},
             {"GROUP", std::bind(&FigmaParser::parseGroup, this, std::placeholders::_1, std::placeholders::_2)},
             {"FRAME", std::bind(&FigmaParser::parseFrame, this, std::placeholders::_1, std::placeholders::_2)},
+            {"SLICE", std::bind(&FigmaParser::parseSlice, this, std::placeholders::_1, std::placeholders::_2)},
             {"NONE", [this](const QJsonObject& o, int i){return makePlainItem(o, i);}}
         };
         if(!parsers.contains(type)) {
@@ -1232,6 +1233,7 @@ private:
             {"STAR", ItemType::Vector},
             {"GROUP", ItemType::Frame},
             {"FRAME", ItemType::Frame},
+            {"SLICE", ItemType::None},
             {"NONE", ItemType::None}
 
         };
@@ -1366,8 +1368,13 @@ private:
         out += parseStyle(obj["style"].toObject(), intendents);
         out += tabs(intendents - 1) + "}\n";
         return out;
-
      }
+
+    QByteArray parseSlice(const QJsonObject& obj, int intendents) {
+        Q_UNUSED(obj);
+        Q_UNUSED(intendents);
+        return QByteArray();
+    }
 
      QByteArray parseFrame(const QJsonObject& obj, int intendents) {
          QByteArray out = makeItem("Rectangle", obj, intendents);
