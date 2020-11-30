@@ -1,6 +1,6 @@
 # FigmaQML #
 
-FigmaQML is an application to generate [Figma](https://www.figma.com) designs to [QML](https://doc.qt.io/qt-5/qtqml-index.html) sourcecode for [QtQuick](https://doc.qt.io/qt-5/qtquick-index.html) applications. 
+FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.html) sourcecode from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-5/qtquick-index.html) applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce design using UI code. Omitting that tedious, reduntant step, will dramatically decrease development effort. FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality.  
 
 * Version 1.0
 * License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
