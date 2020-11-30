@@ -1719,22 +1719,36 @@ private:
         QByteArray out;
         const auto compChildren = comp["children"].toArray();
         const auto objChildren = obj["children"].toArray();
-        const auto children = parseChildrenItems(obj, intendents);
-        Q_ASSERT(compChildren.size() == children.size());
+        auto children = parseChildrenItems(obj, intendents);  //const not accepted! bug in VC??
+        if(compChildren.size() != children.size()) { //TODO: better heuristics what to do if kids count wont match, problem is z-order, but we can do better
+            for(const auto& [k, bytes] : children)
+                out += bytes;
+            return out;
+        }
+     //   QSet<QString> unmatched = QSet<QString>::fromList(children.keys());
+     //   Q_ASSERT(compChildren.size() == children.size());
         const auto keys = children.keys();
         const auto intendent = tabs(intendents);
         for(const auto& cc : compChildren) {
+            //first we find the corresponsing object child
             const auto cchild = cc.toObject();
             const auto id = cchild["id"].toString();
+            //when it's keys last section  match
             const auto keyit = std::find_if(keys.begin(), keys.end(), [&id](const auto& key){return key.split(';').last() == id;});
             Q_ASSERT(keyit != keys.end());
-
+            //and get its index
+        //    Q_ASSERT(unmatched.contains(*keyit));
+        //    unmatched.remove(*keyit);
             const auto index = std::distance(keys.begin(), keyit);
+            //here we have it
             const auto objChild = objChildren[index].toObject();
+            //Then we compare to to find delta, we ignore absoluteBoundingBox as
             //size and transformations are aliases
             const auto deltaObject = delta(objChild, cchild, {"absoluteBoundingBox", "name", "id"}, {{"children", [objChild, this](const auto& o, const auto& c) {
                                                                                                           return (type(objChild) == ItemType::Boolean && !(m_flags & BreakBooleans)) || o == c ? QJsonValue() : c;
                                                                                                       }}});
+
+            // difference, nothing to override
             if(deltaObject.isEmpty())
                 continue;
 
