@@ -1276,7 +1276,8 @@ private:
 
     QJsonObject toQMLTextStyles(const QJsonObject& obj) const {
         QJsonObject styles;
-        styles.insert("font.family", QString("\"%1\"").arg(mResolveFont(obj["fontFamily"].toString())));
+        const auto resolvedFunction = mResolveFont(obj["fontFamily"].toString());
+        styles.insert("font.family", QString("\"%1\"").arg(resolvedFunction));
         styles.insert("font.italic", QString(obj["italic"].toBool() ? "true" : "false"));
         styles.insert("font.pixelSize", QString::number(static_cast<int>(std::floor(obj["fontSize"].toDouble()))));
         styles.insert("font.weight", QString(fontWeight(obj["fontWeight"].toDouble())));

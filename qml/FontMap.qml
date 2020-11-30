@@ -6,7 +6,7 @@ Popup {
     id: main
     modal: true
     focus: true
-    width: 500
+    width: 560
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
     property var fonts
     signal pickFolder
@@ -15,6 +15,7 @@ Popup {
     signal removeAllMappings
     property alias fontFolder: fontFolderText.text
     property alias alternativeSearchAlgorithm: alternativeSearchAlgorithmCheck.checked
+    property alias keepFigmaFont: keepFigmaFontCheck.checked
     contentItem: Column {
         Button {
             id: fontFolderText
@@ -85,6 +86,10 @@ Popup {
             CheckBox {
                 id: alternativeSearchAlgorithmCheck
                 text: "Use alternative font match"
+            }
+            CheckBox {
+                id: keepFigmaFontCheck
+                text: "Keep Figma font names"
             }
             Button {
                 text: "Remove all mappings"

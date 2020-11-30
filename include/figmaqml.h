@@ -30,7 +30,7 @@ class FigmaQml : public QObject {
     Q_PROPERTY(bool isValid READ isValid NOTIFY isValidChanged)
     Q_PROPERTY(QString qmlDir READ qmlDir CONSTANT)
     Q_PROPERTY(QStringList components READ components NOTIFY componentsChanged)
-    Q_PROPERTY(QVariantMap fonts READ fonts WRITE setFonts NOTIFY fontsChanged)
+    Q_PROPERTY(QVariantMap fonts READ fonts WRITE setFonts NOTIFY fontsChanged STORED false)
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
 public:
     enum Flags {
@@ -42,7 +42,8 @@ public:
         AntializeShapes     = 0x40,
         EmbedImages         = 0x80,
         Timed               = 0x100,
-        AltFontMatch         = 0x200
+        AltFontMatch        = 0x200,
+        KeepFigmaFontName   = 0x400
     };
     Q_ENUM(Flags)
 public:

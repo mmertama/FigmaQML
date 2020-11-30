@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption snapParameter("snap", "Take snapshot and exit, expects restore or user project token parameters to be given.", "snapFile");
     const QCommandLineOption storeParameter("store", "Create .figmaqml file and exit, expects user and project token parameters to be given.");
     const QCommandLineOption timedParameter("timed", "Time parsing process.");
+    const QCommandLineOption figmaFontParameter("keepFigmaFont", "Do not resolve fonts, keep original font names.");
     const QCommandLineOption showFontsParameter("show-fonts", "Show the font mapping.");
     const QCommandLineOption fontFolderParameter("font-folder", "Add an additional path to search fonts.", "fontFolder");
     const QCommandLineOption showParameter("show", "Set current page and view to <page index>-<view index>, indexing starts from 1.", "show");
@@ -110,7 +111,8 @@ int main(int argc, char *argv[]) {
                           fontFolderParameter,
                           altFontMatchParameter,
                           fontMapParameter,
-                          throttleParameter
+                          throttleParameter,
+                          figmaFontParameter
                       });
     parser.process(app);
 
@@ -245,6 +247,8 @@ int main(int argc, char *argv[]) {
                 qmlFlags |= FigmaQml::EmbedImages;
             if(parser.isSet(altFontMatchParameter))
                 qmlFlags |= FigmaQml::AltFontMatch;
+            if(parser.isSet(figmaFontParameter))
+                qmlFlags |= FigmaQml::KeepFigmaFontName;
 
             if(parser.isSet(importsParameter)) {
                 QMap<QString, QVariant> imports;

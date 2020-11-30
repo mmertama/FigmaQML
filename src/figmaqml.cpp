@@ -522,6 +522,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     Q_ASSERT(m_imageDimensionMax > 0);
 
     const auto fontFunction = [this](const QString& requestedFont) {
+        if(m_flags & KeepFigmaFontName)
+            return requestedFont;
+
         if(m_fontCache->contains(requestedFont))
             return (*m_fontCache)[requestedFont];
 

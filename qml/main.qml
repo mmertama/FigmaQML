@@ -739,6 +739,7 @@ ApplicationWindow {
         fontFolder: figmaQml.fontFolder
         onPickFolder: fontFolderDialog.open()
         alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.AltFontMatch
+        keepFigmaFont: figmaQml.flags & figmaQml.KeepFigmaFontName
         property bool removeMappings: false
         onPickFont: {
             fontDialog.key = fontName
@@ -760,14 +761,18 @@ ApplicationWindow {
                 else
                     figmaQml.flags &= ~FigmaQml.AltFontMatch
 
+                if(fontMap.keepFigmaFont)
+                    figmaQml.flags |= FigmaQml.KeepFigmaFontName
+                else
+                    figmaQml.flags &= ~FigmaQml.KeepFigmaFontName
 
                 figmaQml.setSignals(true);
 
-                if(fontMap.removeAllMappings) {
+                if(fontMap.removeMappings) {
                     figmaQml.resetFontMappings();
                 } else {
                     for(const k in fontMap.mappings) {
-                        figmaQml.setFontMapping(k, mappings[k]);
+                        figmaQml.setFontMapping(k, fontMap.mappings[k]);
                     }
                     figmaQml.refresh();
                 }
