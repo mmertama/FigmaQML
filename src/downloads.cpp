@@ -1,9 +1,20 @@
 #include "downloads.h"
 #include <QNetworkReply>
 #include <QQmlEngine>
+#include <QEventLoop>
+#include <QTimer>
 
 Downloads::Downloads(QObject* parent) : QObject(parent) {
     qmlRegisterUncreatableType<Downloads>("FigmaGet", 1, 0, "Downloads", "");
+    QObject::connect(this, &Downloads::cancelled, this, [this]() {
+        if(m_progresses.empty())
+            return;
+        m_progresses.clear();
+        const auto clone =  m_progresses;
+        for(auto& [r, v] : clone) {
+           r->abort();
+        }
+    }, Qt::QueuedConnection);
 }
 
 bool Downloads::downloading() const {
@@ -11,10 +22,7 @@ bool Downloads::downloading() const {
 }
 
 void Downloads::cancel() {
-    for(auto& [r, v] : m_progresses) {
-        r->abort();
-    }
-    emit cancelled();
+   emit cancelled();
 }
 
 void Downloads::reset() {
@@ -77,7 +85,7 @@ void Downloads::monitor(QNetworkReply* reply, const NetworkFunction &f) {
         std::get<NetworkFunction>(m_progresses[reply]) = f;
 }
 
-NetworkFunction Downloads::monitored(QNetworkReply* reply)  {
+NetworkFunction Downloads::monitored(QNetworkReply* reply) {
     return std::get<NetworkFunction>(m_progresses[reply]);
 }
 

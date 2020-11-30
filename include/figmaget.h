@@ -36,6 +36,8 @@ public:
     Q_INVOKABLE bool restore(const QString& filename);
 public slots:
     void reset();
+    void cancel();
+    void documentCreated();
 private:
     void monitorReply(QNetworkReply* reply, const std::shared_ptr<QByteArray>& bytes, bool showProgress = true);
     void quequeCall(const NetworkFunction& call);
@@ -66,6 +68,7 @@ private:
     void doRetrieveNode(const QString& id);
     QNetworkReply* doRetrieveImage(const QString& id,  FigmaData* target, const QSize& maxSize);
 private:
+    enum class State {Loading, Complete, Error};
     QNetworkAccessManager* m_accessManager;
     Downloads* m_downloads;
     QString m_projectToken;
@@ -80,6 +83,7 @@ private:
     QQueue<NetworkFunction> m_callQueue;
     QTimer m_timer;
     QStringList m_rendringQueue;
+    State m_connectionState = State::Loading;
 };
 
 #endif // FIGMAGET_H

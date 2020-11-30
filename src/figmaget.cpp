@@ -19,6 +19,8 @@
 #include <memory>
 #include <array>
 
+#define IMAGE_TIMEOUT
+
 #ifdef IMAGE_TIMEOUT
 constexpr auto ImageTimeout = 80 * 1000;
 #endif
@@ -29,7 +31,7 @@ enum Format {
     None = 0, JPEG, PNG
 };
 
-const QLatin1String StreamId("FQ01");
+const QLatin1String StreamId("FQ03");
 
 class RAII_ {
 public:
@@ -56,9 +58,12 @@ FigmaGet::FigmaGet(const QString& dataDir, QObject *parent) : QObject(parent),
          m_checksum = 0;
      });
      QObject::connect(this, &FigmaGet::requestRendering, this, [this](const QString& id) {
-         if(!id.isEmpty())
+         if(!id.isEmpty()) {
             m_rendringQueue.append(id);
-         quequeCall([this, id](){return FigmaGet::doRequestRendering();});
+         }
+         quequeCall([this](){
+             return FigmaGet::doRequestRendering();
+         });
      });
      QObject::connect(this, &FigmaGet::retrieveImage, this, [this](const QString& id, FigmaData* target, const QSize& maxSize) {
          Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
@@ -87,6 +92,17 @@ FigmaGet::FigmaGet(const QString& dataDir, QObject *parent) : QObject(parent),
              m_downloads->monitor(reply, call);
          }
      });
+
+     QObject::connect(this, &FigmaGet::error, [this](const QString&) {
+         m_connectionState = State::Error;
+         m_images->clean();
+         m_renderings->clean();
+         m_nodes->clean();
+     });
+
+     QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
+         emit error("Cancel");
+     }, Qt::QueuedConnection);
 }
 
 
@@ -137,10 +153,12 @@ bool FigmaGet::restore(const QString& filename) {
 
 bool FigmaGet::write(QDataStream& stream, unsigned flags, const QVariantMap& imports) const {
     stream << QString(StreamId);
+    stream << m_projectToken;
     stream << m_data;
     stream << m_checksum;
     stream << flags;
     stream << imports;
+
 
     m_images->write(stream);
     m_renderings->write(stream);
@@ -155,6 +173,9 @@ bool FigmaGet::read(QDataStream& stream) {
 
     if(streamid  != StreamId)
         return false;
+
+    stream >> m_projectToken;
+    emit projectTokenChanged();
 
     stream >> m_data;
     stream >> m_checksum;
@@ -179,6 +200,10 @@ void FigmaGet::reset() {
     m_nodes->clear();
 }
 
+void FigmaGet::cancel() {
+    m_downloads->cancel();
+}
+
 void FigmaGet::quequeCall(const NetworkFunction& call) {
     m_callQueue.enqueue(call);
     if(!m_timer.isActive())
@@ -196,7 +221,9 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
         bool err = false;
         QEventLoop loop;
 #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+        QTimer::singleShot(ImageTimeout, &loop, [this, imageRef]() {
+            emit error("Timeout A on image " + imageRef);
+        });
 #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString&) {
             err = true;
@@ -222,7 +249,9 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
     if(m_images->isEmpty(imageRef)) {
         QEventLoop loop;
     #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageRef]() {
+             emit error("Timeout B on image " + imageRef);
+         });
     #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
             loop.quit();
@@ -308,7 +337,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, c
 
 
 
-        if(target->isEmpty(id)) {  //there CAN be multiple requests within multithreaded, but we use only first
+        if(target->isEmpty(id) && m_connectionState == State::Loading) {  //there CAN be multiple requests within multithreaded, but we use only first
             Q_ASSERT(format == "png" || format == "jpeg");
             target->setBytes(id, *bytes, format == "png" ? PNG : JPEG);
         }
@@ -365,7 +394,9 @@ std::pair<QByteArray, int> FigmaGet::getRendering(const QString& imageId) {
         bool err = false;
         QEventLoop loop;
 #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageId]() {
+             emit error("Timeout A on rendering " + imageId);
+         });
 #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString&) {
             err = true;
@@ -394,7 +425,9 @@ std::pair<QByteArray, int> FigmaGet::getRendering(const QString& imageId) {
     if(m_renderings->isEmpty(imageId)) {
         QEventLoop loop;
     #ifdef IMAGE_TIMEOUT
-        QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+         QTimer::singleShot(ImageTimeout, &loop, [this, imageId]() {
+             emit error("Timeout B on rendering " + imageId);
+         });
     #endif
         QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
             loop.quit();
@@ -500,7 +533,8 @@ void FigmaGet::update() {
         reply->deleteLater();
         QObject::connect(reply, &QObject::destroyed, this, [this, bytes] (QObject* o) { //since added after downloads, this is called after
             const auto checksum = qChecksum(bytes->constData(), bytes->length());
-            if(checksum != m_checksum) {
+            if(checksum != m_checksum || m_connectionState == State::Error) {
+                m_connectionState = State::Loading;
                 m_downloads->reset();
                 m_downloads->setProgress(nullptr, bytes->length(), bytes->length());
                 m_checksum = checksum;
@@ -512,6 +546,10 @@ void FigmaGet::update() {
             }
         });
     });
+}
+
+void FigmaGet::documentCreated() {
+    m_connectionState = State::Complete;
 }
 
 QByteArray FigmaGet::getNode(const QString &id) {
@@ -539,6 +577,10 @@ QByteArray FigmaGet::getNode(const QString &id) {
     //    emit retrieveNode(QUrl(url), id, target);
     //});
 
+    QObject::connect(this, &FigmaGet::error, &loop, [&loop](const QString&) {
+        loop.quit();
+    });
+
    loop.exec();
 
    return m_nodes->isEmpty(id) ? QByteArray() : m_nodes->data(id);
@@ -563,7 +605,9 @@ void FigmaGet::doRetrieveNode(const QString& id) {
         loop.quit();
     });
 #ifdef IMAGE_TIMEOUT
-    QTimer::singleShot(ImageTimeout, &loop, &QEventLoop::quit);
+    QTimer::singleShot(ImageTimeout, &loop, [this, id]() {
+        emit error("Timeout B on node " + id);
+    });
 #endif
     QObject::connect(this, &FigmaGet::error, &loop, [&loop, bytes](const QString&) {
         bytes->clear();
@@ -571,7 +615,8 @@ void FigmaGet::doRetrieveNode(const QString& id) {
     });
 
     loop.exec();
-    m_nodes->setBytes(id, *bytes);
+    if(m_connectionState == State::Loading)
+        m_nodes->setBytes(id, *bytes);
     emit nodeRetrieved(id);
 }
 

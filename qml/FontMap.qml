@@ -6,34 +6,89 @@ Popup {
     id: main
     modal: true
     focus: true
-    width: 350
+    width: 500
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
     property var fonts
-    property double _cw: 0
+    signal pickFolder
+    signal pickFont(string fontName)
+    signal resetFont(string fontName)
+    signal removeAllMappings
+    property alias fontFolder: fontFolderText.text
+    property alias alternativeSearchAlgorithm: alternativeSearchAlgorithmCheck.checked
     contentItem: Column {
+        Button {
+            id: fontFolderText
+            width: list.width
+            Component.onCompleted: {
+                if(text.length === 0)
+                    text = "Choose Font folder"
+            }
+            onClicked: main.pickFolder()
+        }
         Text {
             id: placeHolder
             visible: Object.keys(main.fonts).length === 0
             text: "No QML file with fonts available"
-            height: 200
-            width: 300
+            height: list.height
+            width: list.width
         }
         ListView {
             visible: !placeHolder.visible
             id: list
-            height: 200
-            width: 300
+            height: 400
+            width:  parent.width
             model: Object.keys(main.fonts)
+            clip: true
             delegate: Row {
                 spacing: 10
                 Text {
+                    id: key
                     text: modelData
-                    //width: Math.max(width, main._cw)
-                    //Component.onCompleted: main._cw = Math.max(width, main._cw)
+                    height: 18
+                    width:  list.width / 2 - 30
+                    clip: true
                 }
-                Text {
-                    text: main.fonts[modelData]
+                Rectangle {
+                    color: "lightgrey"
+                    width: list.width / 2 - 30
+                    height: key.height
+                    border.width: 1
+                    clip: true
+                    Text {
+                        anchors.centerIn: parent
+                        text: main.fonts[modelData]
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: main.pickFont(modelData)
+                    }
                 }
+                Rectangle {
+                    color: "lightgrey"
+                    height: key.height
+                    width: 40
+                    border.width: 1
+                    Text {
+                        anchors.margins: 10
+                        anchors.centerIn: parent
+                        text: "reset"
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: main.resetFont(modelData)
+                    }
+                }
+
+            }
+        }
+        Row {
+            CheckBox {
+                id: alternativeSearchAlgorithmCheck
+                text: "Use alternative font match"
+            }
+            Button {
+                text: "Remove all mappings"
+                onClicked: main.removeAllMappings()
             }
         }
     }

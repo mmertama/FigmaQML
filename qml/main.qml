@@ -732,9 +732,57 @@ ApplicationWindow {
     }
 
     FontMap {
-        id: fontMap;
+        id: fontMap
+        property var mappings: figmaQml.fonts //is manually updated due no signals
         anchors.centerIn: main.contentItem
-        fonts: figmaQml.fonts
+        fonts: mappings
+        fontFolder: figmaQml.fontFolder
+        onPickFolder: fontFolderDialog.open()
+        alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.AltFontMatch
+        property bool removeMappings: false
+        onPickFont: {
+            fontDialog.key = fontName
+            fontDialog.open()
+        }
+        onResetFont: {
+            mappings[fontName] = figmaQml.nearestFontFamily(fontName, alternativeSearchAlgorithm);
+            fonts = mappings;
+        }
+        onRemoveAllMappings: {
+            removeMappings = true;
+            close();
+        }
+        onAboutToHide: {
+            after(300, function() {  //let dialog be closed before long run opt
+                figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
+                if(fontMap.alternativeSearchAlgorithm)
+                    figmaQml.flags |= FigmaQml.AltFontMatch
+                else
+                    figmaQml.flags &= ~FigmaQml.AltFontMatch
+
+
+                figmaQml.setSignals(true);
+
+                if(fontMap.removeAllMappings) {
+                    figmaQml.resetFontMappings();
+                } else {
+                    for(const k in fontMap.mappings) {
+                        figmaQml.setFontMapping(k, mappings[k]);
+                    }
+                    figmaQml.refresh();
+                }
+            });
+        }
+    }
+
+    FontDialog {
+        id: fontDialog
+        property string key
+        currentFont.family: key ? fontMap.mappings[key] : ""
+        onAccepted: {
+            fontMap.mappings[key] = fontDialog.font.family;
+            fontMap.fonts = fontMap.mappings;
+        }
     }
 
     FolderDialog {
@@ -746,10 +794,24 @@ ApplicationWindow {
         onAccepted: {
             let path = fileAllDialog.folder.toString();
             path = path.replace(/^(file:\/\/)/,"");
+            path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
             if(!figmaQml.saveAllQML(path)) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
+        }
+    }
+
+    FolderDialog {
+        id: fontFolderDialog
+        title: "Add font search folder"
+        folder: figmaQml.fontFolder.length > 0 ? "file:///" + encodeURIComponent(figmaQml.fontFolder) : StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        acceptLabel: "Select folder"
+        onAccepted: {
+            let path = fontFolderDialog.folder.toString();
+            path = path.replace(/^(file:\/\/)/,"");
+            path = path.replace(/^(\/(c|C):\/)/, "C:/");
+            figmaQml.fontFolder = path
         }
     }
 

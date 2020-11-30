@@ -164,7 +164,8 @@ bool FigmaQml::saveAllQML(const QString &folderName) const {
     }
 
     for(const auto& componentName : componentNames) {
-        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath()).arg(validFileName(componentName));
+        Q_ASSERT(componentName.endsWith(FIGMA_SUFFIX));
+        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath()).arg(componentName);
         QFile file(fullname);
         if(!file.open(QIODevice::WriteOnly)) {
             emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
@@ -172,7 +173,7 @@ bool FigmaQml::saveAllQML(const QString &folderName) const {
         }
 
         if(!m_sourceDoc->containsComponent(componentName)) {
-            emit error(QString("Failed to find \"%1\" om write").arg(componentName));
+            emit error(QString("Failed to find \"%1\" on write").arg(componentName));
             return false;
         }
 
@@ -198,8 +199,8 @@ QByteArray FigmaQml::sourceCode() const {
       return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
 }
 
-FigmaQml::FigmaQml(const QString& qmlDir, const ImageProvider& byteProvider, const NodeProvider& dataProvider, QObject *parent) : QObject(parent),
-    m_qmlDir(qmlDir), mImageProvider(byteProvider), mNodeProvider(dataProvider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()) {
+FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, const ImageProvider& byteProvider, const NodeProvider& dataProvider, QObject *parent) : QObject(parent),
+    m_qmlDir(qmlDir), mImageProvider(byteProvider), mNodeProvider(dataProvider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
         m_sourceDoc->getCurrent()->setCurrent(m_uiDoc->getCurrent()->currentIndex());
@@ -218,6 +219,20 @@ FigmaQml::FigmaQml(const QString& qmlDir, const ImageProvider& byteProvider, con
             m_imageDimensionMax = 1024;
         }
     });
+
+    const auto fontFolderChanged = [this]() {
+        const QDir fontFolder(m_fontFolder);
+        if(!fontFolder.exists())
+            emit warning(QString("Folder \"%1\", not found").arg(m_fontFolder));
+        for(const auto& entry : fontFolder.entryInfoList()) {
+            emit info(entry.fileName());
+            if(!entry.fileName().endsWith(".txt" && QFontDatabase::addApplicationFont(entry.absoluteFilePath()) < 0))
+                emit warning(QString("Font \"%1\", cannot be loaded").arg(entry.absoluteFilePath()));
+        }
+    };
+
+    QObject::connect(this, &FigmaQml::fontFolderChanged, this, fontFolderChanged);
+    fontFolderChanged();
 }
 
 
@@ -253,7 +268,7 @@ QStringList FigmaQml::components() const {
 }
 
 QByteArray FigmaQml::componentSourceCode(const QString &name) const {
-    return (!name.isEmpty()) && m_sourceDoc->containsComponent(name) ? m_sourceDoc->component(name) : QByteArray();
+    return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->component(name) : QByteArray();
 }
 
 QString FigmaQml::componentData(const QString &name) const {
@@ -343,14 +358,23 @@ QVariantMap FigmaQml::fonts() const {
     return map;
 }
 
-void FigmaQml::createDocumentView(const QByteArray &data) {
+void FigmaQml::setFonts(const QVariantMap& map) {
+    for(const auto& k : map.keys()) {
+       m_fontCache->insert(k, map[k].toString());
+    }
+}
+
+void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     const auto json = object(data);
     if(!json)
         return;
+    const auto restoredCanvas = currentCanvas();
+    const auto restoredElement = currentElement();
     cleanDir(m_qmlDir);
     m_imageFiles.clear();
     m_uiDoc.reset();
-    m_fontCache->clear();
+    if(!restoreView)
+        m_fontCache->clear();
     emit isValidChanged();
     emit canvasCountChanged();
     emit elementCountChanged();
@@ -368,6 +392,23 @@ void FigmaQml::createDocumentView(const QByteArray &data) {
     } else {
         emit error("Invalid document");
     }
+    if(restoreView) {
+        if(setCurrentCanvas(restoredCanvas))
+            setCurrentElement(restoredElement);
+    }
+}
+
+
+void FigmaQml::setFontMapping(const QString& key, const QString& value) {
+    m_fontCache->insert(key, value);
+    emit refresh();
+    emit fontsChanged();
+}
+
+void FigmaQml::resetFontMappings() {
+    m_fontCache->clear();
+    emit refresh();
+    emit fontsChanged();
 }
 
 
@@ -423,37 +464,13 @@ bool FigmaQml::busy() const {
     return m_busy;
 }
 
-template<class T>
-std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
-    bool doCancel = false;
-    const auto d = QObject::connect(this, &FigmaQml::cancelled, this, [&doCancel]() {
-        doCancel = true;
-    }, Qt::UniqueConnection);
-    RAII(([this, d](){QObject::disconnect(d);}));
-
-    m_busy = true;
-    emit busyChanged();
-    RAII([this]() {m_busy = false; emit busyChanged();});
-
-    auto doc = std::make_unique<T>(targetDir, FigmaParser::name(obj));
-
-    bool ok = true;
-    const auto errorFunction = [this, &ok, &doCancel](const QString& str, bool isFatal) {
-        if(!doCancel) {
-            if(isFatal) {
-                emit error(str);
-                ok = false;
-            } else
-                emit warning(str);
-        }
-    };
-
-    Q_ASSERT(m_imageDimensionMax > 0);
-
-    const auto fontFunction = [this](const QString& requestedFont) {
-        if(m_fontCache->contains(requestedFont))
-            return (*m_fontCache)[requestedFont];
-
+QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useAlt) {
+    if(!useAlt) {
+        const QFont font(requestedFont);
+        const QFontInfo fontInfo(font);  //this return mapped family
+        const auto value = fontInfo.family();
+        return value;
+    } else {
         QFontDatabase database;
         const QStringList fontFamilies = database.families();
         int min = std::numeric_limits<int>::max();
@@ -466,16 +483,55 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             }
         }
         if(index < 0) {
-            emit warning("Font not found");
             return requestedFont;
         }
         const auto value = fontFamilies[index];
+        return value;
+    }
+}
+
+void FigmaQml::setSignals(bool allow) {
+    blockSignals(!allow);
+}
+
+template<class T>
+std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
+    std::atomic_bool doCancel = false;
+    const auto d = QObject::connect(this, &FigmaQml::cancelled, this, [&doCancel]() {
+        doCancel = true;
+    }, Qt::UniqueConnection);
+    RAII(([this, d](){QObject::disconnect(d);}));
+
+    m_busy = true;
+    emit busyChanged();
+    RAII([this]() {m_busy = false; emit busyChanged();});
+
+    auto doc = std::make_unique<T>(targetDir, FigmaParser::name(obj));
+
+    std::atomic_bool ok = true;
+    const auto errorFunction = [this, &ok, &doCancel](const QString& str, bool isFatal) {
+        if(!doCancel) {
+            if(isFatal) {
+                ok = false;
+                emit error(str);
+            } else
+                emit warning(str);
+        }
+    };
+
+    Q_ASSERT(m_imageDimensionMax > 0);
+
+    const auto fontFunction = [this](const QString& requestedFont) {
+        if(m_fontCache->contains(requestedFont))
+            return (*m_fontCache)[requestedFont];
+
+        const auto value = nearestFontFamily(requestedFont, m_flags & AltFontMatch);
         m_fontCache->insert(requestedFont, value);
         return value;
     };
 
-    const auto imageFunction = [this, &doCancel, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
-        if(doCancel)
+    const auto imageFunction = [this, &doCancel, &ok, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
+        if(!ok || doCancel)
             return QByteArray();
         if(imageRef == FigmaParser::PlaceHolder)
             return m_brokenPlaceholder;
@@ -509,8 +565,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
     }
 
-    const auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel](const QString& id) {
-        if(doCancel)
+    const auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
+        if(!ok || doCancel)
             return QByteArray();
         return mNodeProvider(id);
     });
@@ -555,20 +611,25 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             QtConcurrent::mapped<decltype(components),
                 std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>(components, [&, this](const auto& c)->FigmaParser::Element {
 
-            const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
             if(!ok || doCancel)
                 return FigmaParser::Element();
 
+             const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
+
             if(component.data().isEmpty()) {
+                ok = false;
                 emit error(toStr("Invalid component", component.name()));
                 return FigmaParser::Element();
             }
 
             QFile componentFile(targetDir + c->name() + ".qml");
+#ifdef _DEBUG
             if(componentFile.exists()) {
                 emit info(toStr("File updated", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
             }
+#endif
             if(!componentFile.open(QIODevice::WriteOnly)) {
+                ok = false;
                 emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
                 return FigmaParser::Element();
             }
@@ -577,22 +638,34 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             return component;
         });
 
-        QFutureWatcher<FigmaParser::Element> watch;
-        QEventLoop loop;
-        QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
-        watch.setFuture(componentData);
-        loop.exec();
+    QFutureWatcher<FigmaParser::Element> watch;
+    QEventLoop loop;
+    QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+    QObject::connect(this, &FigmaQml::error, [&doCancel](){
+        doCancel = true;
+    });
+    watch.setFuture(componentData);
+    loop.exec();
+
+    if(!watch.isFinished()) {
+        watch.waitForFinished();
+        return nullptr;
+    }
 
     if(!ok || doCancel)
         return nullptr;
 
     const std::function<void (const FigmaParser::Element& c)> addComponent = [&, this](const FigmaParser::Element& c) { //recursive lambdas cannot be declared auto
+        if(!ok || doCancel)
+            return;
         const auto name = components[c.id()]->name();
         if(doc->containsComponent(name))
             return;
         QStringList componentNames;
         doc->addComponent(name, components[c.id()]->object(), header + c.data());
         for(const auto& id : c.components()) {
+            if(!ok || doCancel)
+                return;
             Q_ASSERT(components.contains(id)); //just check here
             const auto compname = components[id]->name();
             componentNames.append(compname);
@@ -602,6 +675,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         doc->setComponents(name, componentNames);
     };
 
+    for(const auto& c : componentData) {
+        addComponent(c);
+    }
 
 #endif
 
@@ -647,8 +723,19 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         QFutureWatcher<FigmaParser::Element> watch;
         QEventLoop loop;
         QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+        QObject::connect(this, &FigmaQml::error, [&doCancel](){
+            doCancel = true;
+        });
         watch.setFuture(elementData);
         loop.exec();
+
+        if(!watch.isFinished()) {
+            watch.waitForFinished();
+            return nullptr;
+        }
+
+        if(!ok || doCancel)
+            return nullptr;
 
         for(const auto& element : elementData) {
 #endif
