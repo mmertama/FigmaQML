@@ -39,10 +39,12 @@ QString toStr(const First& first, Rest&&... args) {
 
 #define ERR(...) throw FigmaParser::Exception(toStr(__VA_ARGS__));
 
+#ifndef QT5
 inline QByteArray& operator+=(QByteArray& ba, const QString& qstr) {
     ba += qstr.toUtf8();
     return ba;
 }
+#endif
 
 class FigmaParser {
 public:
@@ -762,19 +764,23 @@ private:
     QByteArray parse(const QJsonObject& obj, int intendents) {
         const auto type = obj["type"].toString();
         const QHash<QString, std::function<QByteArray (const QJsonObject&, int)> > parsers {
-            {"RECTANGLE", std::bind(&FigmaParser::parseRectangle, this, std::placeholders::_1, std::placeholders::_2)},
+            {"RECTANGLE", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
             {"TEXT", std::bind(&FigmaParser::parseText, this, std::placeholders::_1, std::placeholders::_2)},
             {"COMPONENT", std::bind(&FigmaParser::parseComponent, this, std::placeholders::_1, std::placeholders::_2)},
             {"BOOLEAN_OPERATION", std::bind(&FigmaParser::parseBooleanOperation, this, std::placeholders::_1, std::placeholders::_2)},
             {"INSTANCE", std::bind(&FigmaParser::parseInstance, this, std::placeholders::_1, std::placeholders::_2)},
-            {"ELLIPSE", std::bind(&FigmaParser::parseEllipse, this, std::placeholders::_1, std::placeholders::_2)},
+            {"ELLIPSE", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
             {"VECTOR", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
-            {"LINE", std::bind(&FigmaParser::parseLine, this, std::placeholders::_1, std::placeholders::_2)},
-            {"REGULAR_POLYGON", std::bind(&FigmaParser::parsePolygon, this, std::placeholders::_1, std::placeholders::_2)},
-            {"STAR", std::bind(&FigmaParser::parseStar, this, std::placeholders::_1, std::placeholders::_2)},
-            {"GROUP", std::bind(&FigmaParser::parseGroup, this, std::placeholders::_1, std::placeholders::_2)},
+            {"LINE", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
+            {"REGULAR_POLYGON", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
+            {"STAR", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
+            {"GROUP", std::bind(&FigmaParser::parseFrame, this, std::placeholders::_1, std::placeholders::_2)},
             {"FRAME", std::bind(&FigmaParser::parseFrame, this, std::placeholders::_1, std::placeholders::_2)},
-            {"SLICE", std::bind(&FigmaParser::parseSlice, this, std::placeholders::_1, std::placeholders::_2)},
+            {"COMPONENT_SET", std::bind(&FigmaParser::parseFrame, this, std::placeholders::_1, std::placeholders::_2)},
+            {"SLICE", std::bind(&FigmaParser::parseSkip, this, std::placeholders::_1, std::placeholders::_2)},
+            {"STAMP", std::bind(&FigmaParser::parseSkip, this, std::placeholders::_1, std::placeholders::_2)},
+            {"STICKY", std::bind(&FigmaParser::parseSkip, this, std::placeholders::_1, std::placeholders::_2)},
+            {"SHAPE_WITH_TEXT", std::bind(&FigmaParser::parseSkip, this, std::placeholders::_1, std::placeholders::_2)},
             {"NONE", [this](const QJsonObject& o, int i){return makePlainItem(o, i);}}
         };
         if(!parsers.contains(type)) {
@@ -1261,25 +1267,6 @@ private:
 
     }
 
-    QByteArray parseLine(const QJsonObject& obj, int intendents) {
-         return parseVector(obj, intendents);
-    }
-
-    QByteArray parsePolygon(const QJsonObject& obj, int intendents) {
-          return parseVector(obj, intendents);
-    }
-
-    QByteArray parseStar(const QJsonObject& obj, int intendents) {
-          return parseVector(obj, intendents);
-    }
-
-    QByteArray parseRectangle(const QJsonObject& obj, int intendents) {
-        return parseVector(obj, intendents);
-    }
-
-    QByteArray parseEllipse(const QJsonObject& obj, int intendents) {
-        return parseVector(obj, intendents);
-    }
 
     QJsonObject toQMLTextStyles(const QJsonObject& obj) const {
         QJsonObject styles;
@@ -1375,7 +1362,7 @@ private:
         return out;
      }
 
-    QByteArray parseSlice(const QJsonObject& obj, int intendents) {
+    QByteArray parseSkip(const QJsonObject& obj, int intendents) {
         Q_UNUSED(obj);
         Q_UNUSED(intendents);
         return QByteArray();
@@ -1448,10 +1435,6 @@ private:
              return out;
          }
      }
-
-     QByteArray parseGroup(const QJsonObject& obj, int intendents) {
-         return parseFrame(obj, intendents);
-    }
 
 
      QByteArray parseBooleanOperation(const QJsonObject& obj, int intendents) {

@@ -1,9 +1,7 @@
-import QtQuick 2.14
-import Qt.labs.platform 1.1
-import QtQuick.Window 2.14
-import QtQuick.Controls 2.14
+import QtQuick 2.15
+import QtQuick.Window 2.15
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.12
-import QtGraphicalEffects 1.14
 import FigmaQml 1.0
 import FigmaGet 1.0
 
@@ -39,6 +37,8 @@ ApplicationWindow {
     function fileName(filename) {
        return filename.substring(filename.lastIndexOf('/') + 1);
     }
+
+
 
     Connections {
         target: figmaGet
@@ -232,10 +232,19 @@ ApplicationWindow {
                     height: childrenRect.height
                     width: childrenRect.width
                     layer.enabled: true
-                    layer.effect:  DropShadow {
-                           horizontalOffset: 5
-                           verticalOffset: 5
+                    /*layer.effect:  Loader { //This does not work - rething later how to do compatible drop shadows
+                           asynchronous: false
+                           Component.onCompleted: {
+                               setSource("Qt5DropShadow.qml", {horizontalOffset: 5,
+                                                           verticalOffset: 5});
+                               if(status == Loader.Error)
+                                   setSource("Qt6DropShadow.qml", {horizontalOffset: 5,
+                                                               verticalOffset: 5});
+
+                           console.assert(status != Loader.Ready, "Cannot load dropshadow")
+                           }
                        }
+                       */
                     Column {
                         CheckBox {
                             text: "Break Booleans"
@@ -342,11 +351,24 @@ ApplicationWindow {
                             height: qmlText.height
                             clip: true
                             layer.enabled: true
-                            layer.effect: DropShadow {
-                               transparentBorder: false
-                               horizontalOffset: 8
-                               verticalOffset: 8
-                            }
+                            /*layer.effect: Loader { //This does not work - rething later how to do compatible drop shadows
+                                Component.onCompleted: {
+                                    setSource("Qt5DropShadow.qml", {
+                                                                     transparentBorder: false,
+                                                                     horizontalOffset: 8,
+                                                                     verticalOffset: 8
+                                                                  });
+                                    if(status == Loader.Error)
+                                        setSource("Qt6DropShadow.qml", {
+                                                                     transparentBorder: false,
+                                                                     horizontalOffset: 8,
+                                                                     verticalOffset: 8
+                                                                  });
+
+                                console.assert(status != Loader.Ready, "Cannot load dropshadow")
+                                }
+                            }*/
+
                             delegate: RadioButton {
                                 width:  sourceChooser.width
                                 text: modelData
@@ -384,11 +406,23 @@ ApplicationWindow {
                             height: figmaSource.height
                             clip: true
                             layer.enabled: true
-                            layer.effect: DropShadow {
-                               transparentBorder: false
-                               horizontalOffset: 8
-                               verticalOffset: 8
-                            }
+                            /*layer.effect: Loader { //This does not work - rething later how to do compatible drop shadows
+                                Component.onCompleted: {
+                                    setSource("Qt5DropShadow.qml", {
+                                                                     transparentBorder: false,
+                                                                     horizontalOffset: 8,
+                                                                     verticalOffset: 8
+                                                                  });
+                                    if(status == Loader.Error)
+                                        setSource("Qt6DropShadow.qml", {
+                                                                     transparentBorder: false,
+                                                                     horizontalOffset: 8,
+                                                                     verticalOffset: 8
+                                                                  });
+
+                                console.assert(status != Loader.Ready, "Cannot load dropshadow")
+                                }
+                            }*/
                             delegate: RadioButton {
                                 width:  jsonChooser.width
                                 text: modelData
@@ -592,14 +626,14 @@ ApplicationWindow {
         }
     }
 
-    FileDialog {
+    Qt5FileDialog {
         id: storeDialog
         title: "Store"
         property string name:  documentName + ".figmaqml"
         currentFile: "file:///" + encodeURIComponent(name)
-        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        folder: Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
-        fileMode: FileDialog.SaveFile
+        fileMode: Qt5FileDialog.SaveFile
         onAccepted: {
             let path = storeDialog.file.toString();
             path = path.replace(/^(file:\/\/)/,"");
@@ -610,12 +644,12 @@ ApplicationWindow {
         }
     }
 
-    FileDialog {
+    Qt5FileDialog {
         id: restoreDialog
         title: "Restore"
-        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        folder: Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
-        fileMode: FileDialog.OpenFile
+        fileMode: Qt5FileDialog.OpenFile
         onAccepted: {
             let path = restoreDialog.file.toString();
             path = path.replace(/^(file:\/\/)/,"");
@@ -780,7 +814,7 @@ ApplicationWindow {
         }
     }
 
-    FontDialog {
+    Q5FontDialog {
         id: fontDialog
         property string key
         currentFont.family: key ? fontMap.mappings[key] : ""
@@ -790,11 +824,11 @@ ApplicationWindow {
         }
     }
 
-    FolderDialog {
+    Qt5FolderDialog {
         id: fileAllDialog
         title: "Save All QMLs into"
         //currentFolder: "file:///" + encodeURIComponent(documentName)
-        folder: StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        folder:Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
         acceptLabel: "Save All"
         onAccepted: {
             let path = fileAllDialog.folder.toString();
@@ -807,10 +841,12 @@ ApplicationWindow {
         }
     }
 
-    FolderDialog {
+    Qt5FolderDialog {
         id: fontFolderDialog
         title: "Add font search folder"
-        folder: figmaQml.fontFolder.length > 0 ? "file:///" + encodeURIComponent(figmaQml.fontFolder) : StandardPaths.writableLocation(StandardPaths.DocumentsLocation)
+        folder: figmaQml.fontFolder.length > 0 ? "file:///" +
+                                                 encodeURIComponent(figmaQml.fontFolder) :
+                                                 Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
         acceptLabel: "Select folder"
         onAccepted: {
             let path = fontFolderDialog.folder.toString();
@@ -820,17 +856,17 @@ ApplicationWindow {
         }
     }
 
-    MessageDialog {
+    Qt5MessageDialog {
         id: tooManyRequestsNote
-        buttons: MessageDialog.Ok
+        buttons: Qt5MessageDialog.Ok
         visible: false
         text: "It looks like there is too many requests..., prepare for long wait or interrupt"
     }
 
 
-    MessageDialog {
+    Qt5MessageDialog {
         id: errorNote
-        buttons: MessageDialog.Ok
+        buttons: Qt5MessageDialog.Ok
         visible: text.length > 0
         onOkClicked: text = ""
     }

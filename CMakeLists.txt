@@ -68,7 +68,7 @@ target_compile_definitions(FigmaQML
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 if(Qt5_FOUND)
-    target_compile_definitions(FigmaQML -DQT5)
+    target_compile_definitions(FigmaQML PUBLIC -DQT5)
     target_link_libraries(FigmaQML
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 else()

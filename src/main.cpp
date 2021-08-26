@@ -498,6 +498,13 @@ int main(int argc, char *argv[]) {
          engine.rootContext()->setContextProperty("figmaDownload", figmaGet->downloadProgress());
          engine.rootContext()->setContextProperty("figmaQmlVersionNumber", versionNumber);
 
+         engine.rootContext()->setContextProperty("qtVersion6",
+#ifdef QT5
+          false);
+#else
+          true);
+#endif
+
 
          QObject::connect(figmaQml.get(), &FigmaQml::elementChanged, [&engine](){
              engine.clearComponentCache();
