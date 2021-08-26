@@ -39,6 +39,10 @@ QString toStr(const First& first, Rest&&... args) {
 
 #define ERR(...) throw FigmaParser::Exception(toStr(__VA_ARGS__));
 
+inline QByteArray& operator+=(QByteArray& ba, const QString& qstr) {
+    ba += qstr.toUtf8();
+    return ba;
+}
 
 class FigmaParser {
 public:
@@ -331,7 +335,8 @@ private:
         if(obj.contains("children")) {
             const auto children = obj["children"].toArray();
             for(const auto& c : children) {
-                cList.insert(c["id"].toString(), c["name"].toString());
+                const auto childObj = c.toObject();
+                cList.insert(childObj["id"].toString(), childObj["name"].toString());
             }
         }
         return cList;

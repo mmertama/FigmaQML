@@ -226,7 +226,7 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, const Image
             emit warning(QString("Folder \"%1\", not found").arg(m_fontFolder));
         for(const auto& entry : fontFolder.entryInfoList()) {
             emit info(entry.fileName());
-            if(!entry.fileName().endsWith(".txt" && QFontDatabase::addApplicationFont(entry.absoluteFilePath()) < 0))
+            if(!entry.fileName().endsWith(".txt")&& QFontDatabase::addApplicationFont(entry.absoluteFilePath()) < 0)
                 emit warning(QString("Font \"%1\", cannot be loaded").arg(entry.absoluteFilePath()));
         }
     };
@@ -353,7 +353,7 @@ bool FigmaQml::ensureDirExists(const QString& e) const {
 QVariantMap FigmaQml::fonts() const {
     QVariantMap map;
     const auto c = m_fontCache->content();
-    for(const auto v : c)
+    for(const auto& v : c)
         map.insert(v.first, v.second);
     return map;
 }
@@ -471,8 +471,7 @@ QString FigmaQml::nearestFontFamily(const QString& requestedFont, bool useAlt) {
         const auto value = fontInfo.family();
         return value;
     } else {
-        QFontDatabase database;
-        const QStringList fontFamilies = database.families();
+        const QStringList fontFamilies = QFontDatabase::families();
         int min = std::numeric_limits<int>::max();
         int index = -1;
         for(auto ff = 0; ff < fontFamilies.size() ; ff++) {
@@ -500,7 +499,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     const auto d = QObject::connect(this, &FigmaQml::cancelled, this, [&doCancel]() {
         doCancel = true;
     }, Qt::UniqueConnection);
-    RAII(([this, d](){QObject::disconnect(d);}));
+    RAII(([d](){QObject::disconnect(d);}));
 
     m_busy = true;
     emit busyChanged();
@@ -568,7 +567,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
     }
 
-    const auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
+    auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
         if(!ok || doCancel)
             return QByteArray();
         return mNodeProvider(id);
@@ -611,8 +610,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 
 
     const auto componentData =
-            QtConcurrent::mapped<decltype(components),
-                std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>(components, [&, this](const auto& c)->FigmaParser::Element {
+            QtConcurrent::mapped<decltype(components), std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>
+                          (std::move(components), [&, this](const auto& c)->FigmaParser::Element {
 
             if(!ok || doCancel)
                 return FigmaParser::Element();
@@ -658,7 +657,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     if(!ok || doCancel)
         return nullptr;
 
-    const std::function<void (const FigmaParser::Element& c)> addComponent = [&, this](const FigmaParser::Element& c) { //recursive lambdas cannot be declared auto
+    const std::function<void (const FigmaParser::Element& c)> addComponent = [&](const FigmaParser::Element& c) { //recursive lambdas cannot be declared auto
         if(!ok || doCancel)
             return;
         const auto name = components[c.id()]->name();
@@ -710,8 +709,10 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             }
             const auto element = hasElement ? FigmaParser::element(f, m_flags, errorFunction, imageFunction, components) : FigmaParser::Element();
 #else
-        QFuture<FigmaParser::Element> elementData = QtConcurrent::mapped<FigmaParser::Canvas::ElementVector, std::function<FigmaParser::Element (const FigmaParser::Canvas::ElementVector::value_type&)> > (
-        c.elements(), [&, this](const auto& f) {
+        auto elements = c.elements();
+        QFuture<FigmaParser::Element> elementData =
+                QtConcurrent::mapped<FigmaParser::Canvas::ElementVector, std::function<FigmaParser::Element (const FigmaParser::Canvas::ElementVector::value_type&)> > (
+        std::move(elements), [&, this](const auto& f) {
             if(!ok || doCancel)
                 return FigmaParser::Element();
             if(!m_filter.isEmpty()) {

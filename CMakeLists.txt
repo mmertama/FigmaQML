@@ -11,7 +11,14 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt5 COMPONENTS Core Quick Network Widgets Concurrent REQUIRED)
+
+find_package(Qt5 COMPONENTS Core Quick Network Widgets Concurrent)
+find_package(Qt6 COMPONENTS Core Quick Network Widgets Concurrent)
+
+if(NOT Qt5_FOUND AND NOT Qt6_FOUND)
+    message(FATAL_ERROR "Qt5 or Qt6 is not found!")
+endif()
+
 
 set(VERSION_NUMBER "1.0.0")
 
@@ -60,5 +67,11 @@ include_directories(include)
 target_compile_definitions(FigmaQML
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
-target_link_libraries(FigmaQML
-  PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
+if(Qt5_FOUND)
+    target_compile_definitions(FigmaQML -DQT5)
+    target_link_libraries(FigmaQML
+        PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
+else()
+    target_link_libraries(FigmaQML
+      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent ${EXTRA})
+endif()
