@@ -50,15 +50,18 @@ FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.
 * **Ctrl+C** copies the current text view to the clipboard. 
 
 ### Build and deploy ###
-* Qt 5.15.1
-* Python 3.8
-* CMake 
-* Windows 10:
-* Git Bash
-* MSVC 19
-* OpenSSL binaries (prebuilt version within Qt)
-* Windows 10: msvc_build.bat in x64 Native Tools Command Prompt
-* Mac OSX: osx_build.sh 
+* Qt 5.15.1 (or later, Qt6 ok)
+* Python 3.8 (or later)
+* CMake (pretty recent)
+* For Windows 10: 
+    * Git Bash
+    * MSVC 19
+    * OpenSSL binaries (prebuilt version within Qt)
+    * msvc_build.bat in x64 Native Tools Command Prompt
+* For Mac OSX
+    * osx_build.sh
+* For Linux
+    * linux_build.sh
 
 #### Testing
 There are few scripts in the [test]() folder that are used for testing. Since the test data itself is under personal Figma account, there are no automated tests provided along the FigmaQML sources. However if you have a good set of Figma documents available you can execute tests using next example:
