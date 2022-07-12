@@ -1,8 +1,12 @@
 # FigmaQML #
 
-FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.html) sourcecode from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-5/qtquick-index.html) applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce design using UI code. Omitting that tedious, reduntant step, will dramatically decrease development effort. FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality.  
+FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.html) sourcecode
+from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-5/qtquick-index.html) 
+applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
+design using UI code. Omitting that tedious, reduntant step, will dramatically decrease development effort.
+FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality.  
 
-* Version 1.0
+* Version 1.0.1
 * License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
 
 ## Run ##
@@ -24,7 +28,9 @@ FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.
 
 * **Tokens**
   * Set your user [account token ](https://www.figma.com/developers/api#access-tokens) and project token. 
-  * To get project token open your Figma Document on the browser and see the URL. The project token is as highlighted: https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…
+  * To get project token open your Figma Document on the browser and see the URL: The token after file.
+  * For example: if the URL is "https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…", the requested token is
+  "bPWNMoKnXkXgf71S9cFX7G"  (without quotes)
 * **Export all QMLs**
     * Generates QML code and related images into the given directory.
 * **Edit Imports...** edit a QML "imports" statement.

@@ -12,15 +12,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(Qt5 COMPONENTS Core Quick Network Widgets Concurrent)
-find_package(Qt6 COMPONENTS Core Quick Network Widgets Concurrent)
+find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
+find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
 
 if(NOT Qt5_FOUND AND NOT Qt6_FOUND)
     message(FATAL_ERROR "Qt5 or Qt6 is not found!")
 endif()
 
 
-set(VERSION_NUMBER "1.0.0")
+set(VERSION_NUMBER "1.0.1")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
