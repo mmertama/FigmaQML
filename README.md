@@ -56,9 +56,9 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
 * **Ctrl+C** copies the current text view to the clipboard. 
 
 ### Build and deploy ###
-* Qt 5.15.1 (or later, Qt6 ok)
+* Qt6
 * Python 3.8 (or later)
-* CMake (pretty recent)
+* CMake 3.16 (or later)
 * For Windows 10: 
     * Git Bash
     * MSVC 19
