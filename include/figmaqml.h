@@ -32,6 +32,7 @@ class FigmaQml : public QObject {
     Q_PROPERTY(QStringList components READ components NOTIFY componentsChanged)
     Q_PROPERTY(QVariantMap fonts READ fonts WRITE setFonts NOTIFY fontsChanged STORED false)
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
+    Q_PROPERTY(QString documentsLocation READ documentsLocation CONSTANT)
 public:
     enum Flags {
         PrerenderShapes     = 0x2,
@@ -71,6 +72,7 @@ public:
     bool isValid() const;
     void setFilter(const QMap<int, QSet<int>>& filter);
     void restore(int flags, const QVariantMap& imports);
+    QString documentsLocation() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName) const;
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);

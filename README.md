@@ -56,9 +56,9 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
 * **Ctrl+C** copies the current text view to the clipboard. 
 
 ### Build and deploy ###
-* Qt 5.15.1 (or later, Qt6 ok)
+* Qt6
 * Python 3.8 (or later)
-* CMake (pretty recent)
+* CMake 3.16 (or later)
 * For Windows 10: 
     * Git Bash
     * MSVC 19
@@ -106,3 +106,12 @@ There are few scripts in the [test]() folder that are used for testing. Since th
  * image test compares Figma rendered Canvas-view and FigmaQML rendered canvas view (see IMAGE_COMPARE above) and provides fuzzy match value between 0 and 1.
  * Here I have been using value 0.9, "90% same"), (see IMAGE_TRESHOLD above) to pass the test.
  * Note: You may have to install SSIM_PIL from https://github.com/mmertama/SSIM-PIL.git until my change is accepted in.
+ 
+ #### Changes
+ * 1.0.1 
+    * Qt5 may not build anymore, Qt 6.3 had some issues and maintaing those also on Qt 5.15 was too much work. The support for Qt6 is a bit half hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
+    But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat until eternity or the issue changes.
+    * On OSX Checkbox was not working correctly so I did a quick styling to fix it.
+    * Some minor fixes to get rid of warnings.
+    * Build script and README updates.   
+    

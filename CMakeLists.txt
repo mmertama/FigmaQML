@@ -12,11 +12,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
-find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
+if(LET_QT5)
+    find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
+endif()
+
+find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
 
 if(NOT Qt5_FOUND AND NOT Qt6_FOUND)
     message(FATAL_ERROR "Qt5 or Qt6 is not found!")
+endif()
+
+if(Qt5_FOUND)
+    message("Project is Qt5")
+endif()
+
+if(Qt6_FOUND)
+    message("Project is Qt6")
 endif()
 
 
@@ -73,5 +84,5 @@ if(Qt5_FOUND)
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 else()
     target_link_libraries(FigmaQML
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent ${EXTRA})
+      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent Qt6::Core5Compat ${EXTRA})
 endif()

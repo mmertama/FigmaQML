@@ -14,5 +14,6 @@
         <file>Qt5FileDialog.qml</file>
         <file>Qt5MessageDialog.qml</file>
         <file>Qt5StandardPaths.qml</file>
+        <file>Qt6CheckBox.qml</file>
     </qresource>
 </RCC>
