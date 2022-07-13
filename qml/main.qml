@@ -246,7 +246,7 @@ ApplicationWindow {
                        }
                        */
                     Column {
-                        CheckBox {
+                        Qt6CheckBox {
                             text: "Break Booleans"
                             checked: figmaQml.flags & FigmaQml.BreakBooleans
                             onCheckedChanged: {
@@ -256,7 +256,7 @@ ApplicationWindow {
                                     figmaQml.flags &= ~FigmaQml.BreakBooleans
                             }
                         }
-                        CheckBox {
+                        Qt6CheckBox {
                             text: "Antialize Shapes"
                             checked: figmaQml.flags & FigmaQml.AntializeShapes
                             onCheckedChanged: {
@@ -266,7 +266,7 @@ ApplicationWindow {
                                     figmaQml.flags &= ~FigmaQml.AntializeShapes
                             }
                         }
-                        CheckBox {
+                        Qt6CheckBox {
                             text: "Embed images"
                             checked: figmaQml.flags & FigmaQml.EmbedImages
                             onCheckedChanged: {
@@ -283,7 +283,7 @@ ApplicationWindow {
                                 {"Components":  FigmaQml.PrerenderComponets},*/
                                 {"Render view":  FigmaQml.PrerenderFrames}
                             ]
-                            CheckBox {
+                            Qt6CheckBox {
                                 text: Object.keys(modelData)[0]
                                 width: 200
                                 checked: figmaQml.flags & modelData[text]
@@ -543,8 +543,11 @@ ApplicationWindow {
                         //There is a reason line numbers wont match, and therefore we try to load a sourceCode
                         error = sourceCodeError(error, container);
                         let errors = "Text {text:\"Error loading figma item\";}\n"
+
+                        console.debug("Catch error on create:", error)
+
                         if(error.qmlErrors) {
-                            for (var i = 0; i < error.qmlErrors.length; i++) {
+                            for (let i = 0; i < error.qmlErrors.length; i++) {
                                 errors += "Column {\nText {text:\"" + "line: "
                                         + error.qmlErrors[i].lineNumber  + "\";}\n"
                                         + "Text {text:\"column: "
@@ -555,14 +558,27 @@ ApplicationWindow {
                                         + error.qmlErrors[i].message.split('').map(c=>'\\x' + c.charCodeAt(0).toString(16)).join('') + "';}\n}\n"
                             }
                         } else {
-                           errors += "Text {text: \"Unknown error:" + error +"\" }";
+                           errors += "Text {text: \"Unknown error:" + error.replace(/"/g, '\\"') +"\" }";
                         }
+                        let content = "import QtQuick 2.14\n Column {\n" + errors + "}\n";
+                        try {
                         figmaview = Qt.createQmlObject(
-                                    "import QtQuick 2.14\n"
-                                    + "Column {\n" + errors + "}\n",
+                                    content,
                                     container, "Debug info");
+                        } catch (error) {
+                            print ("Error loading QML : ")
+                            for (let i = 0; i < error.qmlErrors.length; i++) {
+                                print("lineNumber: " + error.qmlErrors[i].lineNumber)
+                                print("columnNumber: " + error.qmlErrors[i].columnNumber)
+                                print("content: " + content)
+                                print("message: " + error.qmlErrors[i].message)
+                            }
+                        }
                         updater.stop();
-                        console.log(source); //throw out the code
+                        if(typeof source !== 'undefined')
+                            console.log(source); //throw out the code
+                        else
+                            console.debug("Source not created")
                     }
                 }
             }
@@ -631,7 +647,7 @@ ApplicationWindow {
         title: "Store"
         property string name:  documentName + ".figmaqml"
         currentFile: "file:///" + encodeURIComponent(name)
-        folder: Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
+        folder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
         fileMode: Qt5FileDialog.SaveFile
         onAccepted: {
@@ -647,7 +663,7 @@ ApplicationWindow {
     Qt5FileDialog {
         id: restoreDialog
         title: "Restore"
-        folder: Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
+        folder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
         fileMode: Qt5FileDialog.OpenFile
         onAccepted: {
@@ -828,7 +844,7 @@ ApplicationWindow {
         id: fileAllDialog
         title: "Save All QMLs into"
         //currentFolder: "file:///" + encodeURIComponent(documentName)
-        folder:Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
+        folder: figmaQml.documentsLocation
         acceptLabel: "Save All"
         onAccepted: {
             let path = fileAllDialog.folder.toString();
@@ -846,7 +862,7 @@ ApplicationWindow {
         title: "Add font search folder"
         folder: figmaQml.fontFolder.length > 0 ? "file:///" +
                                                  encodeURIComponent(figmaQml.fontFolder) :
-                                                 Qt5StandardPaths.writableLocation(Qt5StandardPaths.DocumentsLocation)
+                                                 figmaQml.documentsLocation
         acceptLabel: "Select folder"
         onAccepted: {
             let path = fontFolderDialog.folder.toString();

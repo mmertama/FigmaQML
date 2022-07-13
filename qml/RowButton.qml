@@ -11,7 +11,7 @@ Button {
                                              'x': mapToItem(main, 0, 0).x,
                                              'y': mapToItem(main.parent, 0, main.height).y,
                                              'visible': false,
-                                             'activeFocus': true
+                                             'focus': true
                                          });
         instance.onVisibleChanged.connect(function() {if(!instance.visible) closed(delegate);})
         instance.onActiveFocusChanged.connect(function() {

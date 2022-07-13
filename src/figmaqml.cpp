@@ -11,6 +11,7 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QtConcurrent>
+#include <QStandardPaths>
 #include <exception>
 
 #include <QTime>
@@ -99,6 +100,10 @@ QString FigmaQml::qmlDir() const {
 
 QString FigmaQml::elementName() const {
     return (m_uiDoc && !m_uiDoc->empty()) ? m_uiDoc->current().name(currentElement()) : QString();
+}
+
+QString FigmaQml::documentsLocation() const {
+    return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
 
 const auto FrameDelay = 500ms;
@@ -238,13 +243,16 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, const Image
 
 QVariantMap FigmaQml::defaultImports() {
     return {
-        {"QtQuick", QString("2.15")},
 #ifdef QT5
+        {"QtQuick", QString("2.15")},
         {"QtGraphicalEffects", QString("1.15")},
+        {"QtQuick.Shapes", QString("1.15")}
 #else
+        {"QtQuick", QString("")},
         {"Qt5Compat.GraphicalEffects", QString("")},
+        {"QtQuick.Shapes", QString("")}
 #endif
-        {"QtQuick.Shapes", QString("1.15")}};
+    };
 }
 
 bool FigmaQml::setBrokenPlaceholder(const QString &placeholder) {
@@ -568,12 +576,16 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 
     QByteArray header = QString(FileHeader).toLatin1();
     for(const auto& k : m_imports.keys()) {
+#ifdef QT5
         const auto ver = QVersionNumber::fromString(m_imports[k].toString());
         if(ver.isNull()) {
             emit error(toStr("Invalid imports version", m_imports[k].toString(), "for", k));
             return nullptr;
         }
         header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
+#else
+        header += QString("import %1\n").arg(k);
+#endif
     }
 
     auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
