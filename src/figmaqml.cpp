@@ -10,9 +10,21 @@
 #include <QDir>
 #include <QFontDatabase>
 #include <QFontInfo>
-#include <QtConcurrent>
 #include <QStandardPaths>
+#include <QEventLoop>
 #include <exception>
+
+#ifndef NO_CONCURRENT
+#include <QtConcurrent>
+template <class T> using Future = QFuture<T>;
+namespace Concurrent = QtConcurrent;
+template <class T> using FutureWatcher = QFutureWatcher<T>;
+#else
+//#include "NonConcurrent.hpp"
+//template <class T> using Future = NonConcurrent::Future<T>;
+//namespace Concurrent = NonConcurrent;
+//template <class T> using FutureWatcher = NonConcurrent::FutureWatcher<T>;
+#endif
 
 #include <QTime>
 #define TIMED_START(s)  const auto s = QTime::currentTime();
@@ -61,7 +73,6 @@ static int levenshteinDistance(const QString& s1, const QString& s2) {
     }
     return dist[l2][l1];
 }
-
 
 enum Format {
     None = 0, JPEG, PNG
@@ -600,14 +611,14 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     for(const auto& c : components) {
       const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
       if(!ok || doCancel)
-          return;
+          return nullptr;
 
       if(component.data().isEmpty()) {
           emit error(toStr("Invalid component", component.name()));
-          return;
+          return nullptr;
       }
 
-      doc->addComponent(components[component.id()]->name(), header + component.data());
+      doc->addComponent(components[component.id()]->name(), components[component.id()]->object(), header + component.data());
 
       QStringList componentNames;
       for(const auto& id : component.components()) {
@@ -619,20 +630,18 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
       QFile componentFile(targetDir + "/" + validFileName(c->name()) + ".qml");
       if(componentFile.exists()) {
           emit error(toStr("File aleady exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
-          return;
+          return nullptr;
       }
       if(!componentFile.open(QIODevice::WriteOnly)) {
           emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
-          return;
+          return nullptr;
       }
       componentFile.write(header + component.data());
     }
 #else
 
-
-
     const auto componentData =
-            QtConcurrent::mapped<FigmaParser::Components::iterator, std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>
+            Concurrent::mapped<FigmaParser::Components::iterator, std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>
                           (components.begin(), components.end(), [&, this](const auto& c)->FigmaParser::Element {
 
             if(!ok || doCancel)
@@ -662,9 +671,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
             return component;
         });
 
-    QFutureWatcher<FigmaParser::Element> watch;
+    FutureWatcher<FigmaParser::Element> watch;
     QEventLoop loop;
-    QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&watch, &FutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
     QObject::connect(this, &FigmaQml::error, [&doCancel](){
         doCancel = true;
     });
@@ -722,18 +731,18 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #ifdef NON_CONCURRENT
         for(const auto& f : c.elements()) {
             if(doCancel)
-                return;
+                return nullptr;
             bool hasElement = true;
             if(!m_filter.isEmpty()) {
                 ++currentElement;
                 if(!m_filter.keys().contains(currentCanvas) || !m_filter[currentCanvas].contains(currentElement))
                     hasElement = false;
             }
-            const auto element = hasElement ? FigmaParser::element(f, m_flags, errorFunction, imageFunction, components) : FigmaParser::Element();
+            const auto element = hasElement ? FigmaParser::element(f, m_flags, errorFunction, imageFunction, fontFunction, components) : FigmaParser::Element();
 #else
         auto elements = c.elements();
-        QFuture<FigmaParser::Element> elementData =
-                QtConcurrent::mapped<FigmaParser::Canvas::ElementVector::iterator, std::function<FigmaParser::Element (const FigmaParser::Canvas::ElementVector::value_type&)> > (
+        Future<FigmaParser::Element> elementData =
+        Concurrent::mapped<FigmaParser::Canvas::ElementVector::iterator, std::function<FigmaParser::Element (const FigmaParser::Canvas::ElementVector::value_type&)> > (
         elements.begin(), elements.end(), [&, this](const auto& f) {
             if(!ok || doCancel)
                 return FigmaParser::Element();
@@ -746,9 +755,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 
         });
 
-        QFutureWatcher<FigmaParser::Element> watch;
+        FutureWatcher<FigmaParser::Element> watch;
         QEventLoop loop;
-        QObject::connect(&watch, &QFutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
+        QObject::connect(&watch, &FutureWatcher<FigmaParser::Element>::finished, &loop, &QEventLoop::quit);
         QObject::connect(this, &FigmaQml::error, [&doCancel](){
             doCancel = true;
         });
