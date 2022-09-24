@@ -15,8 +15,9 @@
 #include <QRegularExpression>
 #include <QFont>
 
-//-DCMAKE_CXX_FLAGS="-DNON_CONCURRENT=1"
+#ifndef NO_SSL
 QT_REQUIRE_CONFIG(ssl);
+#endif
 
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
@@ -45,7 +46,7 @@ QTextStream& print() {
 QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
     const auto list = str.split(';');
     QVector<QPair<QString, QString>> pairs;
-    for(const auto pair : list) {
+    for(const auto& pair : list) {
         QRegularExpression rex(R"(^\s*(.+)\s*\:\s*(.+)\s*$)");
         const auto m = rex.match(pair);
         if(!m.hasMatch()) {
@@ -66,7 +67,6 @@ QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
 }
 
 int main(int argc, char *argv[]) {
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
 
     const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
@@ -190,21 +190,15 @@ int main(int argc, char *argv[]) {
         if(!ok) parser.showHelp(-13);
     }
 
-    /*
-    if(!gui) {
-        if(parser.positionalArguments().size() != 3 || parser.positionalArguments().size() != 2) {
-            parser.showHelp();
-            return -1;
-        }
-    }*/
 
+#ifndef NO_SSL
     if (!QSslSocket::supportsSsl()) {
         QMessageBox::warning(nullptr,
                              "Secure Socket Client",
                              "Cannot load SSL/TLS. Please make sure that DLLS are available.");
         return -1;
     }
-
+#endif
 
     QSurfaceFormat format;
     format.setSamples(8);
@@ -311,7 +305,7 @@ int main(int argc, char *argv[]) {
             supressErrors = true;
             figmaGet->cancel();
             ::print() << "\nParser Error: " << errorString << Qt::endl;
-            QTimer::singleShot(800, [&app]() {
+            QTimer::singleShot(800, &app, [&app]() {
                 app.exit(-2);
             }); //delay must be big enough so all threads notice app.exit side effect is to cease all eventloop.execs!
          });
@@ -321,7 +315,7 @@ int main(int argc, char *argv[]) {
             supressErrors = true;
             figmaGet->cancel();
             ::print() << "\nConnection Error: " << errorString << Qt::endl;
-            QTimer::singleShot(800, [&app]() {
+            QTimer::singleShot(800, &app, [&app]() {
                 app.exit(-3);
             });  //delay must be big enough so all threads notice app.exit side effect is to cease all eventloop.execs!
          });
@@ -350,7 +344,7 @@ int main(int argc, char *argv[]) {
                      ::print() << "Font: " << k << "->" << fonts[k].toString() << Qt::endl;
                  }
              }
-             QTimer::singleShot(0, [&app, excode](){app.exit(excode);});
+             QTimer::singleShot(0, &app, [&app, excode](){app.exit(excode);});
          });
 
          if(!restore.isEmpty()) {
@@ -386,7 +380,7 @@ int main(int argc, char *argv[]) {
 
 
          QObject::connect(figmaQml.get(), &FigmaQml::fontsChanged,
-                          figmaQml.get(), [&figmaGet, &figmaQml]() {
+                          figmaQml.get(), [&figmaQml]() {
              QSettings settings(COMPANY_NAME, PRODUCT_NAME);
              settings.setValue(FONTMAP, figmaQml->property("fonts").toMap());
          });
@@ -504,7 +498,12 @@ int main(int argc, char *argv[]) {
 #else
           true);
 #endif
-
+         engine.rootContext()->setContextProperty("wasm",
+#ifdef Q_CC_EMSCRIPTEN
+          true);
+#else
+          false);
+#endif
 
          QObject::connect(figmaQml.get(), &FigmaQml::elementChanged, [&engine](){
              engine.clearComponentCache();
@@ -520,7 +519,6 @@ int main(int argc, char *argv[]) {
      if(!restore.isEmpty()) {
          figmaGet->restore(restore);
      }
-
     return app.exec();
 }
 

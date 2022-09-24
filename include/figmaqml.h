@@ -119,7 +119,8 @@ private:
     bool addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir);
     bool ensureDirExists(const QString& dirname) const;
     bool saveImages(const QString &folder) const;
-    template<class T> std::unique_ptr<T> construct(const QJsonObject& data, const QString& targetDir, bool embedImages) const;
+    template<class T>
+    std::unique_ptr<T> construct(const QJsonObject& data, const QString& targetDir, bool embedImages) const;
     std::optional<QJsonObject> object(const QByteArray& bytes) const;
     void cleanDir(const QString& dirName) const;
 private:

@@ -11,9 +11,10 @@ import QtQuick.Controls
 
 CheckBox {
     id: main
+    width: parent ? parent.width : contentItem.width
     background: Rectangle {
-        width: 400
-        height: 20
+        width: main.width
+        height: main.height
         color: "black"
     }
     contentItem: Text {

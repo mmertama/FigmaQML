@@ -12,30 +12,42 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
 if(LET_QT5)
     find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
+    if(Qt5_FOUND)
+        message("Project is Qt5")
+    else()
+        message(FATAL_ERROR "Qt5 is not found!")
+    endif()
+elseif(EMSCRIPTEN)
+    find_package(Qt6 QUIET COMPONENTS Core Quick Core5Compat)
+    if(Qt6_FOUND)
+        message("Project is Qt6 Emscripten")
+    else()
+         message(FATAL_ERROR "Qt6 Emscripten is not found!")
+     endif()
+else()
+    find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
+    if(Qt6_FOUND)
+        message("Project is Qt6")
+    else()
+         message(FATAL_ERROR "Qt6 is not found!")
+    endif()
 endif()
 
-find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
-
-if(NOT Qt5_FOUND AND NOT Qt6_FOUND)
-    message(FATAL_ERROR "Qt5 or Qt6 is not found!")
-endif()
-
-if(Qt5_FOUND)
-    message("Project is Qt5")
-endif()
-
-if(Qt6_FOUND)
-    message("Project is Qt6")
-endif()
 
 
-set(VERSION_NUMBER "1.0.1")
+
+set(VERSION_NUMBER "2.0.0")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
-add_executable(FigmaQML
+#add_executable(FigmaQML
+qt_add_executable(FigmaQML
   src/main.cpp
   qml/qml.qrc
   src/figmaget.cpp
@@ -75,14 +87,40 @@ endif()
 
 include_directories(include)
 
+if(NOT EMSCRIPTEN)
 target_compile_definitions(FigmaQML
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+endif()
 
 if(Qt5_FOUND)
-    target_compile_definitions(FigmaQML PUBLIC -DQT5)
+    target_compile_definitions(FigmaQML PRIVATE -DQT5)
     target_link_libraries(FigmaQML
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
+elseif(EMSCRIPTEN)
+    execute_process(COMMAND em++ --version OUTPUT_VARIABLE out_p OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+"
+        ver_p ${out_p})
+    if(NOT ${ver_p} STREQUAL "3.1.14")
+        message(FATAL_ERROR "emsdk 3.1.14 expected now!, you have ${ver_p}")
+    endif()
+    message("emsdk ${ver_p}")
+    configure_file(favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
+    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os)
+    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
+    if(NOT DEFINED CMAKE_BUILD_TYPE)
+        message(FATAL_ERROR "CMAKE_BUILD_TYPE is not set ${CMAKE_BUILD_TYPE}")
+    endif()
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_NAME}.html ${CMAKE_BUILD_TYPE}/${PROJECT_NAME}.html
+        COMMAND ${CMAKE_COMMAND} -E copy qtloader.js ${CMAKE_BUILD_TYPE}/qtloader.js
+        COMMAND ${CMAKE_COMMAND} -E copy qtlogo.svg ${CMAKE_BUILD_TYPE}/qtlogo.svg
+        COMMAND ${CMAKE_COMMAND} -E copy favicon.ico ${CMAKE_BUILD_TYPE}/favicon.ico
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
+    target_link_libraries(FigmaQML
+      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
+    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
     target_link_libraries(FigmaQML
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent Qt6::Core5Compat ${EXTRA})
 endif()

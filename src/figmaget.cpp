@@ -1,4 +1,4 @@
-#include "figmaget.h"
+    #include "figmaget.h"
 #include "figmadata.h"
 #include "downloads.h"
 #include <QQmlEngine>
@@ -101,7 +101,7 @@ FigmaGet::FigmaGet(const QString& dataDir, QObject *parent) : QObject(parent),
      });
 
      QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
-         emit error("Cancel");
+         emit error("Downloads cancel");
      }, Qt::QueuedConnection);
 }
 
@@ -119,7 +119,7 @@ bool FigmaGet::store(const QString& filename, unsigned flags, const QVariantMap&
             return false;
         }
     } else {
-      emit error(file.errorString() + " "  + filename);
+      emit error("Store error: " + file.errorString() + " "  + filename);
       return false;
     }
     return true;
@@ -137,7 +137,7 @@ bool FigmaGet::restore(const QString& filename) {
     if(file.open(QIODevice::ReadOnly)) {
         QDataStream stream(&file);
         if(!read(stream)) {
-            emit error("Restore failed, " + filename);
+            emit error("Restore failed on " + filename);
             return false;
         }
         if(stream.status() != QDataStream::Ok) {
@@ -145,7 +145,7 @@ bool FigmaGet::restore(const QString& filename) {
             return false;
         }
     } else {
-        emit error(file.errorString() + " "  + filename);
+        emit error("Restore error: " + file.errorString() + " "  + filename);
         return false;
       }
     return true;
@@ -225,7 +225,8 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
             emit error("Timeout A on image " + imageRef);
         });
 #endif
-        QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString&) {
+        QObject::connect(this, &FigmaGet::error, &loop, [&loop, &err](const QString& errorStr) {
+            qDebug() << errorStr;
             err = true;
             loop.quit();
         });
@@ -367,7 +368,7 @@ QNetworkReply* FigmaGet::doPopulateImages() {
         QJsonParseError err;
         const auto doc = QJsonDocument::fromJson(*bytes, &err);
         if(err.error != QJsonParseError::NoError) {
-           emit error(QString("%1 at %2")
+           emit error(QString("Json error: %1 at %2")
                     .arg(err.errorString())
                     .arg(err.offset));
             return;
@@ -484,7 +485,7 @@ QNetworkReply* FigmaGet::doRequestRendering() {
         QJsonParseError err;
         const auto doc = QJsonDocument::fromJson(*bytes, &err);
         if(err.error != QJsonParseError::NoError) {
-           emit error(QString("%1 at %2")
+           emit error(QString("Json error: %1 at %2")
                     .arg(err.errorString())
                     .arg(err.offset));
             return;
@@ -633,19 +634,22 @@ void FigmaGet::monitorReply(QNetworkReply* reply, const std::shared_ptr<QByteArr
                     quequeCall(faildedCall);
                 });
             }  else {
-                emit error(reply->errorString());
+                emit error("HTTP error: " + reply->errorString());
             }
         } else {
-            emit error(reply->errorString());
+            emit error("Network error: " + QString::number(err) + ", "  + reply->errorString());
         }
         reply->deleteLater();
     });
 
+
+#ifndef NO_SSL
     QObject::connect(reply, &QNetworkReply::sslErrors,
                      this, [this, reply](const QList<QSslError>&) {
         emit error(reply->errorString());
         reply->deleteLater();
     });
+#endif
 
     if(showProgress) {
         QObject::connect(reply, &QNetworkReply::downloadProgress, this, [reply, this] (qint64 bytesReceived, qint64 bytesTotal) {

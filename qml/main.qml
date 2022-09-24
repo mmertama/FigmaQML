@@ -1,9 +1,10 @@
-import QtQuick 2.15
-import QtQuick.Window 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Layouts 1.12
-import FigmaQml 1.0
-import FigmaGet 1.0
+import QtQuick
+import QtQuick.Window
+import QtQuick.Controls
+import QtQuick.Layouts
+import FigmaQml
+import FigmaGet
+import QtQuick.Dialogs
 
 
 ApplicationWindow {
@@ -246,7 +247,7 @@ ApplicationWindow {
                        }
                        */
                     Column {
-                        Qt6CheckBox {
+                        QtCheckBox {
                             text: "Break Booleans"
                             checked: figmaQml.flags & FigmaQml.BreakBooleans
                             onCheckedChanged: {
@@ -256,7 +257,7 @@ ApplicationWindow {
                                     figmaQml.flags &= ~FigmaQml.BreakBooleans
                             }
                         }
-                        Qt6CheckBox {
+                        QtCheckBox {
                             text: "Antialize Shapes"
                             checked: figmaQml.flags & FigmaQml.AntializeShapes
                             onCheckedChanged: {
@@ -266,7 +267,7 @@ ApplicationWindow {
                                     figmaQml.flags &= ~FigmaQml.AntializeShapes
                             }
                         }
-                        Qt6CheckBox {
+                        QtCheckBox {
                             text: "Embed images"
                             checked: figmaQml.flags & FigmaQml.EmbedImages
                             onCheckedChanged: {
@@ -283,7 +284,7 @@ ApplicationWindow {
                                 {"Components":  FigmaQml.PrerenderComponets},*/
                                 {"Render view":  FigmaQml.PrerenderFrames}
                             ]
-                            Qt6CheckBox {
+                            QtCheckBox {
                                 text: Object.keys(modelData)[0]
                                 width: 200
                                 checked: figmaQml.flags & modelData[text]
@@ -642,12 +643,12 @@ ApplicationWindow {
         }
     }
 
-    Qt5FileDialog {
+    FileDialog {
         id: storeDialog
         title: "Store"
         property string name:  documentName + ".figmaqml"
         currentFile: "file:///" + encodeURIComponent(name)
-        folder: figmaQml.documentsLocation
+        currentFolder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
         fileMode: Qt5FileDialog.SaveFile
         onAccepted: {
@@ -660,10 +661,10 @@ ApplicationWindow {
         }
     }
 
-    Qt5FileDialog {
+    FileDialog {
         id: restoreDialog
         title: "Restore"
-        folder: figmaQml.documentsLocation
+        currentFolder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
         fileMode: Qt5FileDialog.OpenFile
         onAccepted: {
@@ -740,10 +741,10 @@ ApplicationWindow {
                 }
             }
             Label {
-            text: "FigmaQML, Markus Mertama 2020"
+            text: "FigmaQML, Markus Mertama 2020 - 2020"
             }
             Label {
-            text: "Version:" + figmaQmlVersionNumber;
+            text: "Version: " + figmaQmlVersionNumber;
             }
         }
     }
@@ -755,14 +756,15 @@ ApplicationWindow {
         focus: true
         width: 350
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
-        contentItem: Column {
-                TextField {
+        contentItem: ColumnLayout {
+            TextField {
+                Layout.fillWidth: true
                 placeholderText:  "Figma User Token"
                 Component.onCompleted: text = figmaGet.userToken
                 onTextEdited: figmaGet.userToken = text
             }
              TextField {
-                width: 200
+                Layout.fillWidth: true
                 placeholderText: "Figma Project Token"
                 Component.onCompleted: text = figmaGet.projectToken
                 onTextEdited: figmaGet.projectToken = text
@@ -830,7 +832,7 @@ ApplicationWindow {
         }
     }
 
-    Q5FontDialog {
+    FontDialog {
         id: fontDialog
         property string key
         currentFont.family: key ? fontMap.mappings[key] : ""
@@ -840,11 +842,11 @@ ApplicationWindow {
         }
     }
 
-    Qt5FolderDialog {
+    FolderDialog {
         id: fileAllDialog
         title: "Save All QMLs into"
         //currentFolder: "file:///" + encodeURIComponent(documentName)
-        folder: figmaQml.documentsLocation
+        currentFolder: figmaQml.documentsLocation
         acceptLabel: "Save All"
         onAccepted: {
             let path = fileAllDialog.folder.toString();
@@ -857,10 +859,10 @@ ApplicationWindow {
         }
     }
 
-    Qt5FolderDialog {
+    FolderDialog {
         id: fontFolderDialog
         title: "Add font search folder"
-        folder: figmaQml.fontFolder.length > 0 ? "file:///" +
+        currentFolder: figmaQml.fontFolder.length > 0 ? "file:///" +
                                                  encodeURIComponent(figmaQml.fontFolder) :
                                                  figmaQml.documentsLocation
         acceptLabel: "Select folder"
@@ -872,18 +874,18 @@ ApplicationWindow {
         }
     }
 
-    Qt5MessageDialog {
+    MessageDialog {
         id: tooManyRequestsNote
-        buttons: Qt5MessageDialog.Ok
+        buttons: MessageDialog.Ok
         visible: false
         text: "It looks like there is too many requests..., prepare for long wait or interrupt"
     }
 
 
-    Qt5MessageDialog {
+    MessageDialog {
         id: errorNote
-        buttons: Qt5MessageDialog.Ok
+        buttons: MessageDialog.Ok
         visible: text.length > 0
-        onOkClicked: text = ""
+        onButtonClicked: text = ""
     }
 }
