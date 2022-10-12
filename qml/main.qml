@@ -157,7 +157,7 @@ ApplicationWindow {
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid
                 text: "Export all QMLs..."
-                onTriggered: fileAllDialog.open();
+                onTriggered: saveAllQMLs();
             }
             MenuItem {
                 text: "Edit imports..."
@@ -170,11 +170,11 @@ ApplicationWindow {
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid
                 text: "Store..."
-                onTriggered:storeDialog.open();
+                onTriggered: storeFile();
             }
             MenuItem {
                 text: "Restore..."
-                onTriggered: restoreDialog.open();
+                onTriggered: restoreFile();
             }
             MenuItem {
                 text: "About..."
@@ -643,6 +643,21 @@ ApplicationWindow {
         }
     }
 
+
+    function storeFile() {
+        if(isWebAssmbly()) {
+            const path  = figmaQML.store(documentName + ".figmaqml");
+            if(path.size() > 0) {
+                errorNote.text = "Cannot store to \"" + path + "\""
+            } else {
+                info.text = path + " saved";
+            }
+        } else {
+            storeDialog.open();
+        }
+    }
+
+
     FileDialog {
         id: storeDialog
         title: "Store"
@@ -650,14 +665,27 @@ ApplicationWindow {
         currentFile: "file:///" + encodeURIComponent(name)
         currentFolder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
-        fileMode: Qt5FileDialog.SaveFile
+        fileMode: FileDialog.SaveFile
         onAccepted: {
-            let path = storeDialog.file.toString();
+            let path = storeDialog.currentFile.toString();
             path = path.replace(/^(file:\/\/)/,"");
             if(!figmaGet.store(path, figmaQml.flags, figmaQml.imports)) {
-                errorNote.text = "Cannot strore to \"" + path + "\""
+                errorNote.text = "Cannot store to \"" + path + "\""
             } else
                 info.text = path + " saved";
+        }
+    }
+
+    function restoreFile() {
+        if(isWebAssmbly()) {
+            const path  = figmaQML.restore();
+            if(path.size() > 0) {
+                errorNote.text = "Cannot restore";
+            } else {
+                info.text = path + " restored";
+            }
+        } else {
+            storeDialog.open();
         }
     }
 
@@ -666,9 +694,9 @@ ApplicationWindow {
         title: "Restore"
         currentFolder: figmaQml.documentsLocation
         nameFilters: [ "QML files (*.figmaqml)", "All files (*)" ]
-        fileMode: Qt5FileDialog.OpenFile
+        fileMode: FileDialog.OpenFile
         onAccepted: {
-            let path = restoreDialog.file.toString();
+            let path = restoreDialog.currentFile.toString();
             path = path.replace(/^(file:\/\/)/,"");
             if(!figmaGet.restore(path)) {
                 errorNote.text = "Cannot restore from \"" + path + "\""
@@ -842,6 +870,17 @@ ApplicationWindow {
         }
     }
 
+    function saveAllQMLs() {
+        if(isWebAssembly) {
+            if(!figmaQml.saveAllQMLZipped(
+                        figmaQml.validFileName(documentName),
+                        figmaQml.validFileName(canvasName)))
+                errorNote.text = "QML save failed";
+        } else {
+            fileAllDialog.open();
+        }
+    }
+
     FolderDialog {
         id: fileAllDialog
         title: "Save All QMLs into"
@@ -849,13 +888,23 @@ ApplicationWindow {
         currentFolder: figmaQml.documentsLocation
         acceptLabel: "Save All"
         onAccepted: {
-            let path = fileAllDialog.folder.toString();
+            let path = fileAllDialog.currentFolder.toString();
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
             if(!figmaQml.saveAllQML(path)) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
+        }
+    }
+
+    function importFonts() {
+        if(isWebAssembly) {
+            if(!figmaQml.importFontFolder()) {
+                errorNote.text = "Font import failed";
+            }
+        } else {
+            fontFolderDialog.open();
         }
     }
 
@@ -867,7 +916,7 @@ ApplicationWindow {
                                                  figmaQml.documentsLocation
         acceptLabel: "Select folder"
         onAccepted: {
-            let path = fontFolderDialog.folder.toString();
+            let path = fontFolderDialog.currentFolder.toString();
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             figmaQml.fontFolder = path

@@ -498,7 +498,7 @@ int main(int argc, char *argv[]) {
 #else
           true);
 #endif
-         engine.rootContext()->setContextProperty("wasm",
+         engine.rootContext()->setContextProperty("isWebAssembly",
 #ifdef Q_CC_EMSCRIPTEN
           true);
 #else
