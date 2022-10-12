@@ -85,6 +85,12 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
+#ifdef Q_CC_EMSCRIPTEN
+    Q_INVOKABLE QString saveAllQMLZipped(const QString& docName, const QString& canvasName);
+    Q_INVOKABLE bool importFontFolder();
+    Q_INVOKABLE QString store(const QString& docName);
+    Q_INVOKABLE QString restore();
+#endif
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);

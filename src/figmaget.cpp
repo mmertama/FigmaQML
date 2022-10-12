@@ -1,4 +1,4 @@
-    #include "figmaget.h"
+#include "figmaget.h"
 #include "figmadata.h"
 #include "downloads.h"
 #include <QQmlEngine>
