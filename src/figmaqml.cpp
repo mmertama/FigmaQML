@@ -14,6 +14,11 @@
 #include <QEventLoop>
 #include <exception>
 
+#ifdef WASM_FILEDIALOGS
+#include <QTemporaryDir>
+#include <QFileDialog>
+#endif
+
 #ifndef NO_CONCURRENT
 #include <QtConcurrent>
 template <class T> using Future = QFuture<T>;
@@ -28,7 +33,7 @@ template <class T> using FutureWatcher = QFutureWatcher<T>;
 
 #include <QTime>
 #define TIMED_START(s)  const auto s = QTime::currentTime();
-#define TIMED_END(s, p) if(m_flags & Timed ) emit info(toStr("timed", p, s.msecsTo(QTime::currentTime())));
+#define TIMED_END(s, p) if(m_flags & Timed ) {emit info(toStr("timed", p, s.msecsTo(QTime::currentTime())));}
 
 class RAII_ {
 public:
@@ -152,7 +157,7 @@ QString FigmaQml::validFileName(const QString& name) {
    return FigmaParser::validFileName(name);
 }
 
-bool FigmaQml::saveAllQML(const QString &folderName) const {
+bool FigmaQml::saveAllQML(const QString& folderName) const {
 #ifdef Q_OS_WINDOWS
     QDir d(folderName.startsWith('/') ? folderName.mid(1) : folderName);
 #else
@@ -199,6 +204,7 @@ bool FigmaQml::saveAllQML(const QString &folderName) const {
             return false;
         }
     }
+
     if(!saveImages(d.absolutePath() + Images))
         return false;
     emit info(QString("%1 files written into %2").arg(m_imageFiles.size() + componentNames.count()
@@ -794,3 +800,28 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     TIMED_END(t4, "elements")
     return doc;
 }
+
+#ifdef WASM_FILEDIALOGS
+QString FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasName) {
+    QTemporaryDir temp;
+    if(!saveAllQML(temp.path()))
+        return QString{}; // an error
+  //  QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
+}
+
+bool FigmaQml::importFontFolder() {
+    //QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
+    return false;
+}
+
+QString FigmaQml::store(const QString& docName) {
+  //  void QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
+    return QString{};
+}
+
+QString FigmaQml::restore() {
+ //   QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
+    return QString{};
+}
+
+#endif

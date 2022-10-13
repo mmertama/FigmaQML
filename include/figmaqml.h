@@ -12,6 +12,7 @@ class FigmaFileDocument;
 class FigmaDataDocument;
 class FontCache;
 
+
 class FigmaQml : public QObject {
     Q_OBJECT
     Q_PROPERTY(QByteArray sourceCode READ sourceCode NOTIFY sourceCodeChanged)
@@ -85,7 +86,7 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
-#ifdef Q_CC_EMSCRIPTEN
+#ifdef WASM_FILEDIALOGS
     Q_INVOKABLE QString saveAllQMLZipped(const QString& docName, const QString& canvasName);
     Q_INVOKABLE bool importFontFolder();
     Q_INVOKABLE QString store(const QString& docName);

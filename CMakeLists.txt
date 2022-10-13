@@ -97,6 +97,10 @@ if(Qt5_FOUND)
     target_link_libraries(FigmaQML
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 elseif(EMSCRIPTEN)
+    subdirs(modules/zlib)
+    #set(ZLIB_INCLUDE_DIR modules/zlib)
+    #option(QUAZIP_USE_QT_ZLIB "" ON)
+    #subdirs(modules/quazip)
     execute_process(COMMAND em++ --version OUTPUT_VARIABLE out_p OUTPUT_STRIP_TRAILING_WHITESPACE)
     string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+"
         ver_p ${out_p})
@@ -106,7 +110,10 @@ elseif(EMSCRIPTEN)
     message("emsdk ${ver_p}")
     configure_file(favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
     target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os)
-    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
+    target_compile_definitions(FigmaQML PRIVATE
+        -DNO_CONCURRENT
+        -DNO_SSL -DNON_CONCURRENT
+        -DWASM_FILEDIALOGS)
     if(NOT DEFINED CMAKE_BUILD_TYPE)
         message(FATAL_ERROR "CMAKE_BUILD_TYPE is not set ${CMAKE_BUILD_TYPE}")
     endif()
@@ -118,6 +125,7 @@ elseif(EMSCRIPTEN)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
     target_link_libraries(FigmaQML
+      PRIVATE QuaZip zlib
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
     target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
