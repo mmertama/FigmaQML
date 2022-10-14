@@ -646,11 +646,8 @@ ApplicationWindow {
 
     function storeFile() {
         if(isWebAssmbly()) {
-            const path  = figmaQML.store(documentName + ".figmaqml");
-            if(path.size() > 0) {
-                errorNote.text = "Cannot store to \"" + path + "\""
-            } else {
-                info.text = path + " saved";
+            if(!figmaQML.store(documentName + ".figmaqml")) {
+                errorNote.text = "Cannot store";
             }
         } else {
             storeDialog.open();
@@ -679,7 +676,7 @@ ApplicationWindow {
     function restoreFile() {
         if(isWebAssmbly()) {
             const path  = figmaQML.restore();
-            if(path.size() > 0) {
+            if(figmaQML.restore()) {
                 errorNote.text = "Cannot restore";
             } else {
                 info.text = path + " restored";

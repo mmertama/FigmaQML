@@ -17,6 +17,7 @@
 #ifdef WASM_FILEDIALOGS
 #include <QTemporaryDir>
 #include <QFileDialog>
+#include <quazip/JlCompress.h>
 #endif
 
 #ifndef NO_CONCURRENT
@@ -802,11 +803,23 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 }
 
 #ifdef WASM_FILEDIALOGS
-QString FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasName) {
+bool FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasName) {
     QTemporaryDir temp;
     if(!saveAllQML(temp.path()))
-        return QString{}; // an error
-  //  QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
+        return false;
+     QDir dir(temp.path());
+     const auto temp_name = QString::fromLatin1(std::tmpnam(nullptr), -1);
+     if(!JlCompress::compressFiles(temp_name, dir.entryList())) {
+         return  false;
+     }
+     QFile dump(temp_name);
+     if(!dump.open(QIODevice::ReadOnly)) {
+         return false;
+     }
+     const auto data = dump.readAll();
+     const auto zipName = docName + "_" + canvasName + ".zip";
+     QFileDialog::saveFileContent(data, zipName);
+     return true;
 }
 
 bool FigmaQml::importFontFolder() {
@@ -814,14 +827,14 @@ bool FigmaQml::importFontFolder() {
     return false;
 }
 
-QString FigmaQml::store(const QString& docName) {
+bool FigmaQml::store(const QString& docName) {
   //  void QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
-    return QString{};
+    return {};
 }
 
 QString FigmaQml::restore() {
  //   QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
-    return QString{};
+    return {};
 }
 
 #endif

@@ -98,10 +98,15 @@ if(Qt5_FOUND)
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 elseif(EMSCRIPTEN)
     subdirs(modules/zlib)
-    set(ZLIB_INCLUDE  modules/zlib)
-    set(ZLIB_INCLUDE  modules/zlib)
+    add_custom_target(zlib_target DEPENDS zlibstatic)
+    set(ZLIB_INCLUDE  ${CMAKE_SOURCE_DIR}/modules/zlib)
+    set(ZCONF_INCLUDE  ${CMAKE_BINARY_DIR}/modules/zlib)
+    set(ZLIB_LIBRARY  zlibstatic)
     subdirs(modules/quazip)
     execute_process(COMMAND em++ --version OUTPUT_VARIABLE out_p OUTPUT_STRIP_TRAILING_WHITESPACE)
+    add_custom_target(quazip DEPENDS QuaZip)
+    add_dependencies(quazip zlib_target)
+    include_directories(${CMAKE_SOURCE_DIR}/modules/quazip ${ZLIB_INCLUDE} ${ZCONF_INCLUDE})
     string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+"
         ver_p ${out_p})
     if(NOT ${ver_p} STREQUAL "3.1.14")
@@ -125,7 +130,7 @@ elseif(EMSCRIPTEN)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
     target_link_libraries(FigmaQML
-      PRIVATE QuaZip zlib
+      PRIVATE QuaZip
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
     target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
