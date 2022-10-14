@@ -87,9 +87,9 @@ public:
     void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
 #ifdef WASM_FILEDIALOGS
-    Q_INVOKABLE QString saveAllQMLZipped(const QString& docName, const QString& canvasName);
+    Q_INVOKABLE bool saveAllQMLZipped(const QString& docName, const QString& canvasName);
     Q_INVOKABLE bool importFontFolder();
-    Q_INVOKABLE QString store(const QString& docName);
+    Q_INVOKABLE bool store(const QString& docName);
     Q_INVOKABLE QString restore();
 #endif
 public slots:
