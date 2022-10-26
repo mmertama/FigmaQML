@@ -2,6 +2,7 @@
 #include "figmaparser.h"
 #include "figmaqml.h"
 #include "fontcache.h"
+#include "utils.h"
 #include <QVersionNumber>
 #include <QTimer>
 #include <QFile>
@@ -11,7 +12,6 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QStandardPaths>
-#include <QEventLoop>
 #include <exception>
 
 #ifdef WASM_FILEDIALOGS
@@ -25,11 +25,6 @@
 template <class T> using Future = QFuture<T>;
 namespace Concurrent = QtConcurrent;
 template <class T> using FutureWatcher = QFutureWatcher<T>;
-#else
-//#include "NonConcurrent.hpp"
-//template <class T> using Future = NonConcurrent::Future<T>;
-//namespace Concurrent = NonConcurrent;
-//template <class T> using FutureWatcher = NonConcurrent::FutureWatcher<T>;
 #endif
 
 #include <QTime>
@@ -309,6 +304,10 @@ void FigmaQml::cancel() {
     emit cancelled();
 }
 
+void FigmaQml::doCancel() {
+    m_doCancel = true;
+}
+
 void FigmaQml::setFilter(const QMap<int, QSet<int>>& filter) {
     m_filter = filter;
 }
@@ -372,12 +371,13 @@ bool FigmaQml::addImageFile(const QString& imageRef, bool isRendering, const QSt
 }
 
 bool FigmaQml::ensureDirExists(const QString& e) const {
-    QDir dir(e);
-    if(!dir.exists() && !dir.mkpath(".")) {
-        emit error(QString("Cannot use dir %1").arg(dir.absolutePath()));
-        return false;
-    }
-    return true;
+     QDir dir(e);
+     if(!dir.mkpath(".")) {
+         emit error(QString("Cannot use dir %1").arg(dir.absolutePath()));
+         return false;
+     }
+     qDebug() << "Foo" << e << "is ok";
+     return true;
 }
 
 QVariantMap FigmaQml::fonts() const {
@@ -395,6 +395,7 @@ void FigmaQml::setFonts(const QVariantMap& map) {
 }
 
 void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
+
     const auto json = object(data);
     if(!json)
         return;
@@ -530,11 +531,10 @@ void FigmaQml::setSignals(bool allow) {
 
 template<class T>
 std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
-    std::atomic_bool doCancel = false;
-    const auto d = QObject::connect(this, &FigmaQml::cancelled, this, [&doCancel]() {
-        doCancel = true;
-    }, Qt::UniqueConnection);
-    RAII(([d, this](){QObject::disconnect(d);}));
+    const_cast<FigmaQml*>(this)->m_doCancel = false; // uff UniqueConnection requires a member func
+    const auto d = QObject::connect(this, &FigmaQml::cancelled, this, &FigmaQml::doCancel, Qt::UniqueConnection);
+
+    RAII(([d](){QObject::disconnect(d);}));
 
     m_busy = true;
     emit busyChanged();
@@ -543,8 +543,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     auto doc = std::make_unique<T>(targetDir, FigmaParser::name(obj));
 
     std::atomic_bool ok = true;
-    const auto errorFunction = [this, &ok, &doCancel](const QString& str, bool isFatal) {
-        if(!doCancel) {
+    const auto errorFunction = [this, &ok](const QString& str, bool isFatal) {
+        if(!m_doCancel) {
             if(isFatal) {
                 ok = false;
                 emit error(str);
@@ -567,8 +567,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         return value;
     };
 
-    const auto imageFunction = [this, &doCancel, &ok, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
-        if(!ok || doCancel)
+    const auto imageFunction = [this, &ok, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
+        if(!ok || m_doCancel)
             return QByteArray();
         if(imageRef == FigmaParser::PlaceHolder)
             return m_brokenPlaceholder;
@@ -606,18 +606,18 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #endif
     }
 
-    auto components = FigmaParser::components(obj, errorFunction, [this, &doCancel, &ok](const QString& id) {
-        if(!ok || doCancel)
+    auto components = FigmaParser::components(obj, errorFunction, [this, &ok](const QString& id) {
+        if(!ok || m_doCancel)
             return QByteArray();
         return mNodeProvider(id);
     });
 
     TIMED_START(t3)
 
-#ifdef NON_CONCURRENT
+#ifdef NO_CONCURRENT
     for(const auto& c : components) {
       const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
-      if(!ok || doCancel)
+      if(!ok || m_doCancel)
           return nullptr;
 
       if(component.data().isEmpty()) {
@@ -725,7 +725,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     TIMED_START(t4)
 
     int currentCanvas = 0;
-#ifdef NON_CONCURRENT
+#ifdef NO_CONCURRENT
     int currentElement = 0;
 #else
     std::atomic_int currentElement = 0;
@@ -735,9 +735,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
         ++currentCanvas;
         currentElement = 0;
         auto canvas = doc->addCanvas(c.name());
-#ifdef NON_CONCURRENT
+#ifdef NO_CONCURRENT
         for(const auto& f : c.elements()) {
-            if(doCancel)
+            if(m_doCancel)
                 return nullptr;
             bool hasElement = true;
             if(!m_filter.isEmpty()) {
@@ -745,6 +745,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
                 if(!m_filter.keys().contains(currentCanvas) || !m_filter[currentCanvas].contains(currentElement))
                     hasElement = false;
             }
+
             const auto element = hasElement ? FigmaParser::element(f, m_flags, errorFunction, imageFunction, fontFunction, components) : FigmaParser::Element();
 #else
         auto elements = c.elements();
@@ -781,7 +782,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 
         for(const auto& element : elementData) {
 #endif
-            if(doCancel)
+            if(m_doCancel)
                 return nullptr;
             if(!ok) {
                 return nullptr;
@@ -805,15 +806,18 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #ifdef WASM_FILEDIALOGS
 bool FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasName) {
     QTemporaryDir temp;
-    if(!saveAllQML(temp.path()))
+    if(!saveAllQML(temp.path())) {
+        qDebug() << "Failded to save" << temp.path();
         return false;
-     QDir dir(temp.path());
+    }
      const auto temp_name = QString::fromLatin1(std::tmpnam(nullptr), -1);
-     if(!JlCompress::compressFiles(temp_name, dir.entryList())) {
+     if(!JlCompress::compressDir(temp_name, temp.path())) {
+          qDebug() << "Failded to compress" << temp_name << "of" << temp.path();
          return  false;
      }
      QFile dump(temp_name);
      if(!dump.open(QIODevice::ReadOnly)) {
+         qDebug() << "Cannot open" << temp_name;
          return false;
      }
      const auto data = dump.readAll();

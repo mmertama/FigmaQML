@@ -13,13 +13,8 @@ CheckBox {
     id: main
     width: parent ? parent.width : contentItem.width
     background: Rectangle {
-<<<<<<< HEAD:qml/Qt6CheckBox.qml
-        width: 400
-        height: 40
-=======
         width: main.width
         height: main.height
->>>>>>> initial wasm version:qml/QtCheckBox.qml
         color: "black"
     }
     contentItem: Text {

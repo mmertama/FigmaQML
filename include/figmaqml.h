@@ -13,6 +13,7 @@ class FigmaDataDocument;
 class FontCache;
 
 
+
 class FigmaQml : public QObject {
     Q_OBJECT
     Q_PROPERTY(QByteArray sourceCode READ sourceCode NOTIFY sourceCodeChanged)
@@ -84,7 +85,7 @@ public:
     Q_INVOKABLE void setFontMapping(const QString& key, const QString& value);
     Q_INVOKABLE void resetFontMappings();
     Q_INVOKABLE void setSignals(bool allow);
-    void takeSnap(const QString& pngName) const;
+    //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
 #ifdef WASM_FILEDIALOGS
     Q_INVOKABLE bool saveAllQMLZipped(const QString& docName, const QString& canvasName);
@@ -122,6 +123,8 @@ signals:
     void fontsChanged();
     void fontFolderChanged();
     void refresh();
+private slots:
+    void doCancel();
 private:
     bool addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir);
     bool ensureDirExists(const QString& dirname) const;
@@ -146,6 +149,7 @@ private:
     QString m_snap;
     std::unique_ptr<FontCache> m_fontCache;
     QString m_fontFolder;
+    std::atomic_bool m_doCancel = false;
 };
 
 

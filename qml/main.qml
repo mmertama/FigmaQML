@@ -597,6 +597,7 @@ ApplicationWindow {
         width: 200
         height: 200
     }
+
     Button {
       anchors.centerIn: parent
       text: "Interrupt"

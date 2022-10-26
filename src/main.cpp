@@ -2,6 +2,8 @@
 #include "figmaqml.h"
 #include "clipboard.h"
 #include "downloads.h"
+#include "functorslot.h"
+#include "figmadata.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -205,7 +207,10 @@ int main(int argc, char *argv[]) {
     QSurfaceFormat::setDefaultFormat(format);
 
     QTemporaryDir dir;
-
+    if(!dir.isValid()) {
+        ::print() << "Cannot create temp directory (" << dir.path() << ")";
+        app.exit(-12);
+    }
 
     std::unique_ptr<FigmaGet> figmaGet(new FigmaGet(dir.path() + "/images/"));
     std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(), fontFolder,
@@ -226,6 +231,7 @@ int main(int argc, char *argv[]) {
 
     bool supressErrors = false;
 
+    Execute onDataChange;
 
     if(state & CmdLine || !snapFile.isEmpty()) {
         unsigned qmlFlags = 0;
@@ -284,6 +290,7 @@ int main(int argc, char *argv[]) {
             figmaGet->setProperty("throttle", parser.value(throttleParameter));
      }
 
+
      if(state & CmdLine) {
          auto start = QTime::currentTime();
          QObject::connect(figmaGet->downloadProgress(), &Downloads::bytesReceivedChanged, [&start]() {
@@ -320,7 +327,8 @@ int main(int argc, char *argv[]) {
             });  //delay must be big enough so all threads notice app.exit side effect is to cease all eventloop.execs!
          });
 
-         QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state]() {
+
+         QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state, &onDataChange]() {
              int excode = 0;
              if(state & Store) {
                  const auto saveName = output.endsWith(".figmaqml") ? output : output + ".figmaqml";
@@ -355,10 +363,9 @@ int main(int argc, char *argv[]) {
                  figmaQml->createDocumentSources(figmaGet->data());
              });
          } else {
-             QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
-                              figmaQml.get(), [&figmaGet, &figmaQml]() {
+             onDataChange = [&figmaGet, &figmaQml]() {
                  figmaQml->createDocumentSources(figmaGet->data());
-             });
+             };
              figmaGet->update();
         }
      }
@@ -450,21 +457,19 @@ int main(int argc, char *argv[]) {
                   figmaQml->createDocumentView(figmaGet->data(), false);
              });
          } else {
-             QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
-                              figmaQml.get(), [&figmaGet, &figmaQml]() {
+             onDataChange = [&figmaGet, &figmaQml]() {
                  figmaQml->createDocumentView(figmaGet->data(), false);
-             });
+             };
              figmaGet->update();
          }
      }
 
      if(!(state & CmdLine)) {
-         QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
-                          figmaQml.get(), [&figmaGet, &figmaQml]() {
-             figmaQml->createDocumentView(figmaGet->data(), true);
-         });
+         onDataChange = [&figmaGet, &figmaQml]() {
+                      figmaQml->createDocumentView(figmaGet->data(), true);
+                  };
 
-         QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, figmaGet.get(), &FigmaGet::documentCreated);
+        QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, figmaGet.get(), &FigmaGet::documentCreated);
 
         if(parser.isSet(showParameter)) {
                 auto connection = std::make_shared<QMetaObject::Connection>();
@@ -513,12 +518,14 @@ int main(int argc, char *argv[]) {
          engine.load(QUrl("qrc:/main.qml"));
      }
 
-
+     QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
+                      &onDataChange, &Execute::execute, Qt::QueuedConnection);
 
 
      if(!restore.isEmpty()) {
          figmaGet->restore(restore);
      }
+     qDebug()  << "FOO: start app";
     return app.exec();
 }
 
