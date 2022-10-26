@@ -1,12 +1,12 @@
-import QtQuick 2.15
-import QtQuick.Window 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Window
+import QtQuick.Controls
 
 Popup {
     id: main
     modal: true
     focus: true
-    width: 560
+    width: Math.min(560, buttonRow.width + 20)
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
     property var fonts
     signal pickFolder
@@ -21,8 +21,10 @@ Popup {
             id: fontFolderText
             width: list.width
             Component.onCompleted: {
-                if(text.length === 0)
-                    text = "Choose Font folder"
+                if(text.length === 0) {
+                    text = isWebAssembly ?
+                        "Import font" : "Choose font folder";
+                }
             }
             onClicked: main.pickFolder()
         }
@@ -83,6 +85,7 @@ Popup {
             }
         }
         Row {
+            id: buttonRow
             CheckBox {
                 id: alternativeSearchAlgorithmCheck
                 text: "Use alternative font match"

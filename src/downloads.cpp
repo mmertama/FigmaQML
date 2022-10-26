@@ -1,8 +1,10 @@
 #include "downloads.h"
 #include <QNetworkReply>
 #include <QQmlEngine>
-#include <QEventLoop>
 #include <QTimer>
+
+
+
 
 Downloads::Downloads(QObject* parent) : QObject(parent) {
     qmlRegisterUncreatableType<Downloads>("FigmaGet", 1, 0, "Downloads", "");

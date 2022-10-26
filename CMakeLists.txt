@@ -12,10 +12,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-if(NOT DEFINED CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif()
-
 if(LET_QT5)
     find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
     if(Qt5_FOUND)
@@ -61,6 +57,12 @@ qt_add_executable(FigmaQML
   include/figmadata.h
   include/figmadocument.h
   include/fontcache.h
+  include/common.h
+  include/providers.h
+  src/figmaparser.cpp
+  include/orderedmap.h
+  include/utils.h
+  include/functorslot.h
 )
 
 if(WIN32)
@@ -77,7 +79,6 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 endif()
 
-#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXXFLAGS_DEBUG} -DNON_CONCURRENT")
 
 if (APPLE)
     set_target_properties(FigmaQML PROPERTIES
@@ -86,6 +87,8 @@ if (APPLE)
 endif()
 
 include_directories(include)
+
+target_compile_definitions(FigmaQML PRIVATE ASSERT_NESTED=1)
 
 if(NOT EMSCRIPTEN)
 target_compile_definitions(FigmaQML
@@ -97,6 +100,7 @@ if(Qt5_FOUND)
     target_link_libraries(FigmaQML
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 elseif(EMSCRIPTEN)
+    set(QT_WASM_INITIAL_MEMORY, "300MB")
     subdirs(modules/zlib)
     add_custom_target(zlib_target DEPENDS zlibstatic)
     set(ZLIB_INCLUDE  ${CMAKE_SOURCE_DIR}/modules/zlib)
@@ -117,23 +121,20 @@ elseif(EMSCRIPTEN)
     target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os)
     target_compile_definitions(FigmaQML PRIVATE
         -DNO_CONCURRENT
-        -DNO_SSL -DNON_CONCURRENT
+        -DNO_SSL
         -DWASM_FILEDIALOGS)
-    if(NOT DEFINED CMAKE_BUILD_TYPE)
-        message(FATAL_ERROR "CMAKE_BUILD_TYPE is not set ${CMAKE_BUILD_TYPE}")
-    endif()
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_NAME}.html ${CMAKE_BUILD_TYPE}/${PROJECT_NAME}.html
-        COMMAND ${CMAKE_COMMAND} -E copy qtloader.js ${CMAKE_BUILD_TYPE}/qtloader.js
-        COMMAND ${CMAKE_COMMAND} -E copy qtlogo.svg ${CMAKE_BUILD_TYPE}/qtlogo.svg
-        COMMAND ${CMAKE_COMMAND} -E copy favicon.ico ${CMAKE_BUILD_TYPE}/favicon.ico
+        COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_NAME}.html $<CONFIG>/${PROJECT_NAME}.html
+        COMMAND ${CMAKE_COMMAND} -E copy qtloader.js $<CONFIG>/qtloader.js
+        COMMAND ${CMAKE_COMMAND} -E copy qtlogo.svg $<CONFIG>/qtlogo.svg
+        COMMAND ${CMAKE_COMMAND} -E copy favicon.ico $<CONFIG>/favicon.ico
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
     target_link_libraries(FigmaQML
       PRIVATE QuaZip
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
-    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL -DNON_CONCURRENT)
+    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL)
     target_link_libraries(FigmaQML
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent Qt6::Core5Compat ${EXTRA})
 endif()
