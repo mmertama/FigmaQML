@@ -1,6 +1,7 @@
 #ifndef FIGMACANVAS_H
 #define FIGMACANVAS_H
 
+#include "figmaprovider.h"
 #include <QObject>
 #include <QVariantMap>
 #include <QUrl>
@@ -14,7 +15,7 @@ class FontCache;
 
 
 
-class FigmaQml : public QObject {
+class FigmaQml : public QObject, public FigmaParserData {
     Q_OBJECT
     Q_PROPERTY(QByteArray sourceCode READ sourceCode NOTIFY sourceCodeChanged)
     Q_PROPERTY(QUrl element READ element NOTIFY elementChanged)
@@ -50,9 +51,12 @@ public:
     };
     Q_ENUM(Flags)
 public:
-    using ImageProvider = std::function<std::pair<QByteArray, int> (const QString&, bool isRendering, const QSize&)>;
-    using NodeProvider = std::function<QByteArray (const QString&)>;
-    FigmaQml(const QString& qmlDir, const QString& fontFolder, const ImageProvider& byteProvider, const NodeProvider& nodeProvider, QObject* parent = nullptr);
+     void parseError(const QString&, bool isFatal) override;
+     QByteArray imageData(const QString&, bool isRendering) override;
+     QByteArray nodeData(const QString&) override;
+     QString fontInfo(const QString&) override;
+public:
+    FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject* parent = nullptr);
     ~FigmaQml();
     QByteArray sourceCode() const;
     QUrl element() const;
@@ -126,17 +130,19 @@ signals:
 private slots:
     void doCancel();
 private:
-    bool addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir);
+    void addImageFile(const QString& imageRef, bool isRendering);
+    bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);
     bool ensureDirExists(const QString& dirname) const;
     bool saveImages(const QString &folder) const;
     template<class T>
-    std::unique_ptr<T> construct(const QJsonObject& data, const QString& targetDir, bool embedImages) const;
+    std::unique_ptr<T> construct(const QJsonObject& data);
     std::optional<QJsonObject> object(const QByteArray& bytes) const;
     void cleanDir(const QString& dirName) const;
+    std::optional<std::tuple<QByteArray, int>> getImage(const QString& imageRef, bool isRendering);
+    void suspend();
 private:
     const QString m_qmlDir;
-    const ImageProvider mImageProvider;
-    const NodeProvider mNodeProvider;
+    FigmaProvider& mProvider;
     std::unique_ptr<FigmaFileDocument> m_uiDoc;
     std::unique_ptr<FigmaDataDocument> m_sourceDoc;
     QVariantMap m_imports;
@@ -149,7 +155,12 @@ private:
     QString m_snap;
     std::unique_ptr<FontCache> m_fontCache;
     QString m_fontFolder;
-    std::atomic_bool m_doCancel = false;
+    std::atomic_bool m_doCancel = false;    
+    std::atomic_bool m_ok = true;
+    QString m_targetDir = {};
+    bool m_embedImages = false;
+    enum class State {Constructing, Failed, Suspend};
+    State m_state = State::Constructing;
 };
 
 

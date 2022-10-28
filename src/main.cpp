@@ -213,14 +213,7 @@ int main(int argc, char *argv[]) {
     }
 
     std::unique_ptr<FigmaGet> figmaGet(new FigmaGet(dir.path() + "/images/"));
-    std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(), fontFolder,
-                                           [&figmaGet](const QString& id, bool isRendering, const QSize& maxSize) {
-        return isRendering  ? figmaGet->getRendering(id) : figmaGet->getImage(id, maxSize);
-    },
-    [&figmaGet](const QString& key) {
-        return figmaGet->getNode(key);
-    }));
-
+    std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(), fontFolder, *figmaGet));
 
     QQmlApplicationEngine engine;
     Clipboard clipboard;

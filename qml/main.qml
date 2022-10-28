@@ -225,6 +225,7 @@ ApplicationWindow {
                     horizontalAlignment: Qt.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
                     text: connectButton.text
+                    font.strikeout: !connectButton.enabled // is this working? in UI sense?
                 }
             }
             RowButton {
@@ -784,12 +785,14 @@ ApplicationWindow {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
         contentItem: ColumnLayout {
             TextField {
+                id: user_token_text
                 Layout.fillWidth: true
                 placeholderText:  "Figma User Token"
                 Component.onCompleted: text = figmaGet.userToken
                 onTextEdited: figmaGet.userToken = text
             }
              TextField {
+                id: project_token_text
                 Layout.fillWidth: true
                 placeholderText: "Figma Project Token"
                 Component.onCompleted: text = figmaGet.projectToken

@@ -217,8 +217,8 @@ QByteArray FigmaQml::sourceCode() const {
       return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
 }
 
-FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, const ImageProvider& byteProvider, const NodeProvider& dataProvider, QObject *parent) : QObject(parent),
-    m_qmlDir(qmlDir), mImageProvider(byteProvider), mNodeProvider(dataProvider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
+FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject *parent) : QObject(parent),
+    m_qmlDir(qmlDir), mProvider(provider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
         m_sourceDoc->getCurrent()->setCurrent(m_uiDoc->getCurrent()->currentIndex());
@@ -342,11 +342,24 @@ bool FigmaQml::saveImages(const QString &folder) const {
     return true;
 }
 
-bool FigmaQml::addImageFile(const QString& imageRef, bool isRendering, const QString& targetDir) {
-    const auto& [bytes, mime] = mImageProvider(imageRef, isRendering, QSize(m_imageDimensionMax, m_imageDimensionMax));
+void FigmaQml::addImageFile(const QString& imageRef, bool isRendering) {
+    if(isRendering){
+        mProvider.getRendering(imageRef);
+        QObject::connect(&mProvider, &FigmaProvider::imageReady, this, [this](const QString& imageRef, const QByteArray& bytes, int format) {
+            addImageFileData(imageRef, bytes, format, true);
+    });
+    } else {
+        mProvider.getImage(imageRef, QSize(m_imageDimensionMax, m_imageDimensionMax));
+        QObject::connect(&mProvider, &FigmaProvider::imageReady, this, [this](const QString& imageRef, const QByteArray& bytes, int format) {
+            addImageFileData(imageRef, bytes, format, false);
+    });
+    }
+}
+
+bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering) {
     if(bytes.isEmpty())
         return false;
-    const auto path = targetDir + Images.mid(1);
+    const auto path = m_targetDir + Images.mid(1);
     int count = 1;
     const QRegularExpression re(R"([\\\/:*?"<>|\s;])");
     auto name = imageRef;
@@ -410,7 +423,11 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     emit canvasCountChanged();
     emit elementCountChanged();
     emit documentNameChanged();
-    auto doc = construct<FigmaFileDocument>(*json, m_qmlDir + qmlViewPath, true);
+    m_targetDir = m_qmlDir + qmlViewPath;
+    m_embedImages = true;
+
+    auto doc = construct<FigmaFileDocument>(*json);
+
     if(doc) {
         m_uiDoc.swap(doc);
         emit isValidChanged();
@@ -447,7 +464,9 @@ void FigmaQml::createDocumentSources(const QByteArray &data) {
     const auto json = object(data);
     if(!json)
         return;
-    auto doc = construct<FigmaDataDocument>(*json, m_qmlDir + sourceViewPath, m_flags & EmbedImages);
+    m_targetDir = m_qmlDir + sourceViewPath;
+    m_embedImages = m_flags & EmbedImages;
+    auto doc = construct<FigmaDataDocument>(*json);
     if(doc) {
         m_sourceDoc.swap(doc);
         emit sourceCodeChanged();
@@ -529,8 +548,94 @@ void FigmaQml::setSignals(bool allow) {
     blockSignals(!allow);
 }
 
+void FigmaQml::parseError(const QString& str, bool isFatal) {
+    if(!m_doCancel) {
+        if(isFatal) {
+            m_ok = false;
+            emit error(str);
+        } else
+            emit warning(str);
+    }
+}
+
+std::optional<std::tuple<QByteArray, int>> FigmaQml::getImage(const QString& imageRef, bool isRendering) {
+    if(isRendering) {
+        const auto imageData = mProvider.cachedRendering(imageRef);
+        if(imageData)
+            return imageData;
+        mProvider.getRendering(imageRef);
+    } else {
+        const auto imageData = mProvider.cachedImage(imageRef);
+        if(imageData)
+            return imageData;
+        mProvider.getImage(imageRef, QSize(m_imageDimensionMax, m_imageDimensionMax));
+    }
+    return std::nullopt;
+}
+
+void FigmaQml::suspend() {
+    m_state = State::Suspend;
+}
+
+QByteArray FigmaQml::imageData(const QString& imageRef, bool isRendering) {
+    if(!m_ok || m_doCancel)
+        return QByteArray();
+    if(imageRef == FigmaParser::PlaceHolder)
+        return m_brokenPlaceholder;
+    else {
+        if(m_embedImages) {
+            const auto imageData = getImage(imageRef, isRendering);
+            if(imageData) {
+                suspend();
+                return{};
+            }
+            const auto& [bytes, mime] = imageData.value();
+            if(bytes.isEmpty())
+                return QByteArray();
+            Q_ASSERT(mime == JPEG || mime == PNG);
+            const QByteArray mimeString = mime == JPEG ? "jpeg" : "png";
+            return "data:image/" + mimeString + ";base64," + bytes.toBase64();
+        } else {
+            if(!m_imageFiles.contains(imageRef)) {
+                const auto imageData = getImage(imageRef, isRendering);
+                if(!imageData) {
+                    suspend();
+                    return{};
+                }
+                const auto& [bytes, mime] = imageData.value();
+                if(!addImageFileData(imageRef, bytes, mime, isRendering))
+                    return {};
+            }
+            return (Images.mid(1) +  m_imageFiles[imageRef].second).toLatin1();
+        }
+    }
+}
+
+QByteArray FigmaQml::nodeData(const QString& id) {
+    if(!m_ok || m_doCancel)
+        return QByteArray();
+    const auto node = mProvider.cachedNode(id);
+    if(!node) {
+        mProvider.getNode(id);
+        suspend();
+        return {};
+    }
+    return *node;
+}
+
+QString FigmaQml::fontInfo(const QString& requestedFont) {
+    if(m_flags & KeepFigmaFontName)
+        return requestedFont;
+    if(m_fontCache->contains(requestedFont))
+        return (*m_fontCache)[requestedFont];
+    const auto value = nearestFontFamily(requestedFont, m_flags & AltFontMatch);
+    m_fontCache->insert(requestedFont, value);
+    return value;
+}
+
 template<class T>
-std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& targetDir, bool embedImages) const {
+std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj) {
+
     const_cast<FigmaQml*>(this)->m_doCancel = false; // uff UniqueConnection requires a member func
     const auto d = QObject::connect(this, &FigmaQml::cancelled, this, &FigmaQml::doCancel, Qt::UniqueConnection);
 
@@ -540,56 +645,11 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
     emit busyChanged();
     RAII([this]() {m_busy = false; emit busyChanged();});
 
-    auto doc = std::make_unique<T>(targetDir, FigmaParser::name(obj));
-
-    std::atomic_bool ok = true;
-    const auto errorFunction = [this, &ok](const QString& str, bool isFatal) {
-        if(!m_doCancel) {
-            if(isFatal) {
-                ok = false;
-                emit error(str);
-            } else
-                emit warning(str);
-        }
-    };
+    auto doc = std::make_unique<T>(m_targetDir, FigmaParser::name(obj));
 
     Q_ASSERT(m_imageDimensionMax > 0);
 
-    const auto fontFunction = [this](const QString& requestedFont) {
-        if(m_flags & KeepFigmaFontName)
-            return requestedFont;
-
-        if(m_fontCache->contains(requestedFont))
-            return (*m_fontCache)[requestedFont];
-
-        const auto value = nearestFontFamily(requestedFont, m_flags & AltFontMatch);
-        m_fontCache->insert(requestedFont, value);
-        return value;
-    };
-
-    const auto imageFunction = [this, &ok, &targetDir, embedImages](const QString& imageRef, bool isRendering) {
-        if(!ok || m_doCancel)
-            return QByteArray();
-        if(imageRef == FigmaParser::PlaceHolder)
-            return m_brokenPlaceholder;
-        else {
-            if(embedImages) {
-                const auto& [bytes, mime] = mImageProvider(imageRef, isRendering, QSize(m_imageDimensionMax, m_imageDimensionMax));
-                if(bytes.isEmpty())
-                    return QByteArray();
-                Q_ASSERT(mime == JPEG || mime == PNG);
-                const QByteArray mimeString = mime == JPEG ? "jpeg" : "png";
-                return "data:image/" + mimeString + ";base64," + bytes.toBase64();
-            } else {
-                if(!m_imageFiles.contains(imageRef) && !const_cast<FigmaQml*>(this)->addImageFile(imageRef, isRendering, targetDir)) //cache a like stuff is ok to const casted
-                    return QByteArray();
-                return (Images.mid(1) +  m_imageFiles[imageRef].second).toLatin1();
-                }
-            }
-
-        };
-
-   if(!ensureDirExists(targetDir))
+   if(!ensureDirExists(m_targetDir))
        return nullptr;
 
     QByteArray header = QString(FileHeader).toLatin1();
@@ -606,18 +666,14 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #endif
     }
 
-    auto components = FigmaParser::components(obj, errorFunction, [this, &ok](const QString& id) {
-        if(!ok || m_doCancel)
-            return QByteArray();
-        return mNodeProvider(id);
-    });
+    auto components = FigmaParser::components(obj, *this);
 
     TIMED_START(t3)
 
 #ifdef NO_CONCURRENT
     for(const auto& c : components) {
-      const auto component = FigmaParser::component(c->object(), m_flags, errorFunction, imageFunction, fontFunction, components);
-      if(!ok || m_doCancel)
+      const auto component = FigmaParser::component(c->object(), m_flags, *this, components);
+      if(!m_ok || m_doCancel)
           return nullptr;
 
       if(component.data().isEmpty()) {
@@ -634,7 +690,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
           componentNames.append(compname);
       }
 
-      QFile componentFile(targetDir + "/" + validFileName(c->name()) + ".qml");
+      QFile componentFile(m_targetDir + "/" + validFileName(c->name()) + ".qml");
       if(componentFile.exists()) {
           emit error(toStr("File aleady exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
           return nullptr;
@@ -730,7 +786,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #else
     std::atomic_int currentElement = 0;
 #endif
-    const auto canvases = FigmaParser::canvases(obj, errorFunction);
+    const auto canvases = FigmaParser::canvases(obj, *this);
     for(const auto& c : canvases) {
         ++currentCanvas;
         currentElement = 0;
@@ -746,7 +802,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
                     hasElement = false;
             }
 
-            const auto element = hasElement ? FigmaParser::element(f, m_flags, errorFunction, imageFunction, fontFunction, components) : FigmaParser::Element();
+            const auto element = hasElement ? FigmaParser::element(f, m_flags, *this, components) : FigmaParser::Element();
 #else
         auto elements = c.elements();
         Future<FigmaParser::Element> elementData =
@@ -784,7 +840,7 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj, const QString& ta
 #endif
             if(m_doCancel)
                 return nullptr;
-            if(!ok) {
+            if(!m_ok) {
                 return nullptr;
             }
             if(!element.data().isEmpty())

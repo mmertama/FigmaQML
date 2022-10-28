@@ -1,14 +1,12 @@
 #ifndef FIGMAGET_H
 #define FIGMAGET_H
 
-#include <QObject>
+#include "figmaprovider.h"
 #include <QTime>
-#include <QSize>
 #include <QMutex>
 #include <QTimer>
 #include <QQueue>
 #include <QNetworkReply>
-#include <limits>
 #include <memory>
 
 class FigmaData;
@@ -16,7 +14,7 @@ class Downloads;
 class Timeout;
 class Execute;
 
-class FigmaGet : public QObject {
+class FigmaGet : public FigmaProvider {
     Q_OBJECT
     Q_PROPERTY(QByteArray data READ data NOTIFY dataChanged)
     Q_PROPERTY(QString userToken MEMBER m_userToken NOTIFY userTokenChanged)
@@ -27,12 +25,14 @@ public:
     explicit FigmaGet(const QString& dataDir, QObject *parent = nullptr);
     ~FigmaGet();
     Q_INVOKABLE void update();
-    std::pair<QByteArray, int> getImage(const QString& imageRef,
+
+    void getImage(const QString& imageRef,
                                         const QSize& maxSize = QSize(std::numeric_limits<int>::max(),
-                                                                     std::numeric_limits<int>::max()));
-    std::pair<QByteArray, int> getRendering(const QString& figmaId);
-    QByteArray getNode(const QString& figmaId);
+                                                                     std::numeric_limits<int>::max())) override;
+    void getRendering(const QString& figmaId) override;
+    void getNode(const QString& figmaId) override;
     QByteArray data() const;
+
     Downloads* downloadProgress();
     Q_INVOKABLE bool store(const QString& filename, unsigned flag, const QVariantMap& imports) const;
     Q_INVOKABLE bool restore(const QString& filename);
