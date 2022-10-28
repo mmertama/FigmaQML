@@ -24,7 +24,7 @@ using namespace std::chrono_literals;
 #define IMAGE_TIMEOUT
 
 #ifdef IMAGE_TIMEOUT
-constexpr auto ImageTimeout = 10 * 1000;
+constexpr auto ImageTimeout = 60 * 1000;
 #endif
 
 #ifdef ASSERT_NESTED
@@ -48,6 +48,9 @@ private:
     Deldelegate m_d;
 };
 
+extern int _nested_count;
+#define NESTED_START qDebug() << " nested in" << _nested_count; if(++_nested_count > 1) std::abort();
+#define NESTED_END qDebug() << " nested out" << _nested_count; if(--_nested_count < 0) std::abort();
 
 #define FOO  RAII_ r{[fn = __FUNCTION__](){qDebug() << "FOO Out - " << fn; }}; qDebug() << "FOO: In - " << __FUNCTION__
 #define FOOBAR ; RAII_ r{[fn = __FUNCTION__, ln = __LINE__ ](){qDebug() << "FOO ouT - " << fn << ln; }}; qDebug() << "FOO: iN - " << __FUNCTION__ << __LINE__
@@ -72,7 +75,7 @@ void FigmaGet::timerEvent(QTimerEvent* event)
 }
 */
 
-FigmaGet::FigmaGet(const QString& /*dataDir*/, QObject *parent) : QObject(parent),
+FigmaGet::FigmaGet(const QString& /*dataDir*/, QObject *parent) : FigmaProvider(parent),
     m_accessManager(new QNetworkAccessManager(this)),
     m_timeout{new Timeout(this)},
     m_error{new Execute(this)},
@@ -98,9 +101,10 @@ FigmaGet::FigmaGet(const QString& /*dataDir*/, QObject *parent) : QObject(parent
          m_nodes->clean();
      });
 
-     QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
-         emit error("Downloads cancel");
-     });
+     //cancel -> downloads cancel -> error -> cancel loop
+     //QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
+     //    emit error("Downloads cancel");
+     //});
 
      //QObject::connect(this, &FigmaGet::foobar, this, &FigmaGet::foobared, Qt::QueuedConnection);
      QObject::connect(this, &FigmaGet::replyComplete, this, &FigmaGet::replyCompleted, Qt::QueuedConnection);
@@ -125,12 +129,14 @@ bool foobar = false;
 void FigmaGet::doFinished(QNetworkReply* rep)
 {
     FOO << rep;
-    auto& reply_data = m_replies[rep];
-    auto data = std::get<std::shared_ptr<QByteArray>>(reply_data);
-    *data += rep->readAll();
-    Q_ASSERT(rep->isFinished());
-    std::get<FinishedFunction>(reply_data)();
-    m_replies.remove(rep);
+    if(rep->error() == QNetworkReply::NoError) { // error handled after this
+        auto& reply_data = m_replies[rep];
+        auto data = std::get<std::shared_ptr<QByteArray>>(reply_data);
+        *data += rep->readAll();
+        Q_ASSERT(rep->isFinished());
+        std::get<FinishedFunction>(reply_data)();
+        m_replies.remove(rep);
+    }
 }
 
 void FigmaGet::retrieveImage(const QString& id,  FigmaData* target, const QSize& maxSize) {
@@ -350,8 +356,13 @@ bool FigmaGet::ensurePopulated(const QString &imageRef) {
 }
 
 
+
 std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSize& maxSize) {
     FOO;
+    static bool get_one = false;
+    if(get_one)
+        return NoData;
+    get_one = true;
 
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     Q_ASSERT(!imageRef.isEmpty());
@@ -418,6 +429,8 @@ std::pair<QByteArray, int> FigmaGet::getImage(const QString &imageRef, const QSi
 QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, const QSize &maxSize) {
     FOO;
     QNetworkRequest request;
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
     const QUrl uri = target->url(id);
     if(!uri.isValid()) {
         FOOBAR;
@@ -487,6 +500,9 @@ QNetworkReply* FigmaGet::doPopulateImages() {
     m_populationOngoing = true;
 
     QNetworkRequest request;
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
+
     request.setUrl(QUrl("https://api.figma.com/v1/files/" + m_projectToken + "/images"));
     request.setRawHeader("X-Figma-Token", m_userToken.toLatin1());
 
@@ -610,6 +626,9 @@ QNetworkReply* FigmaGet::doRequestRendering() {
         return nullptr;
 
     QNetworkRequest request;
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
+
     const QStringList params{
         "ids=" + m_rendringQueue.join(','),
         "use_absolute_bounds=true"
@@ -688,6 +707,9 @@ void FigmaGet::update() {
     }
 
     QNetworkRequest request;
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
+
     const QStringList params{
         {"geometry=paths"}
     };
@@ -753,6 +775,9 @@ void FigmaGet::doRetrieveNode(const QString& id) {
     FOO;
 
     QNetworkRequest request;
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
+    request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
+
     const auto uri = m_nodes->url(id);
     request.setUrl(uri);
     request.setRawHeader("X-Figma-Token", m_userToken.toLatin1());
@@ -810,6 +835,7 @@ void FigmaGet::onReplyError(QNetworkReply::NetworkError err)
     if(it == keys.end())
         return;
     const auto reply = *it;
+    m_replies.remove(reply);
     if(err == QNetworkReply::UnknownContentError) { //Too Many Requests
         const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
         const auto code = statusCode.isValid() ? statusCode.toInt() : -1;
@@ -825,7 +851,6 @@ void FigmaGet::onReplyError(QNetworkReply::NetworkError err)
     } else {
         emit error("Network error: " + QString::number(err) + ", "  + reply->errorString());
     }
-    reply->deleteLater();
 }
 
 void FigmaGet::monitorReply(QNetworkReply* reply,
@@ -835,6 +860,7 @@ void FigmaGet::monitorReply(QNetworkReply* reply,
     FOO << reply;
     Q_ASSERT(!m_replies.contains(reply));
     m_replies.insert(reply, {bytes, finalize});
+    Q_ASSERT(!reply->attribute(QNetworkRequest::SynchronousRequestAttribute).toBool());
 
     QObject::connect(reply, &QNetworkReply::errorOccurred, this, &FigmaGet::onReplyError, Qt::QueuedConnection);
 

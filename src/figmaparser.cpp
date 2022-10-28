@@ -72,14 +72,14 @@ FigmaParser::ItemType FigmaParser::type(const QJsonObject& obj) {
 }
 
 
-FigmaParser::Components FigmaParser::components(const QJsonObject& project, ErrorFunc err, NodeFunc nodes) {
+FigmaParser::Components FigmaParser::components(const QJsonObject& project, FigmaParserData& data) {
         Components map;
         try {
             auto componentObjects = getObjectsByType(project["document"].toObject(), "COMPONENT");
             const auto components = project["components"].toObject();
             for (const auto& key : components.keys()) {
                 if(!componentObjects.contains(key)) {
-                    const auto response = nodes(key);
+                    const auto response = data.nodeData(key);
                     if(response.isEmpty()) {
                         ERR(toStr("Component not found", key, "for"))
                     }
@@ -117,13 +117,13 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Erro
                                     std::move(componentObjects[key]))));
             }
         } catch(Exception e) {
-            err(e.what(), true);
+            data.parseError(e.what(), true);
         }
 
         return map;
     }
 
-    FigmaParser::Canvases FigmaParser::canvases(const QJsonObject& project, ErrorFunc err) {
+    FigmaParser::Canvases FigmaParser::canvases(const QJsonObject& project, FigmaParserData& data) {
         Canvases array;
         try {
             const auto doc = project["document"].toObject();
@@ -141,27 +141,27 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Erro
                                     std::move(vec)});
             }
         } catch(Exception e) {
-            err(e.what(), true);
+            data.parseError(e.what(), true);
         }
         return array;
     }
 
-     FigmaParser::Element FigmaParser::component(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components) {
-        FigmaParser p(flags | Flags::ParseComponent, data, resolveFont, &components);
+     FigmaParser::Element FigmaParser::component(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
+        FigmaParser p(flags | Flags::ParseComponent, data, &components);
         try {
             return p.getElement(obj);
         } catch(Exception e) {
-            err(e.what(), true);
+            data.parseError(e.what(), true);
         }
         return Element();
     }
 
-     FigmaParser::Element FigmaParser::element(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components) {
-        FigmaParser p(flags, data, resolveFont, &components);
+     FigmaParser::Element FigmaParser::element(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
+        FigmaParser p(flags, data, &components);
         try {
             return p.getElement(obj);
         } catch(Exception e) {
-            err(e.what(), true);
+            data.parseError(e.what(), true);
         }
         return Element();
     }
@@ -185,7 +185,7 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Erro
         return name;
     }
 
-    FigmaParser::FigmaParser(unsigned flags, ImageFunc data, FontFunc resolveFont, const Components* components) : m_flags(flags), mImageProvider(data), mResolveFont(resolveFont), m_components(components) {}
+    FigmaParser::FigmaParser(unsigned flags, FigmaParserData& data, const Components* components) : m_flags(flags), m_data(data), m_components(components) {}
 
 
     QHash<QString, QJsonObject> FigmaParser::getObjectsByType(const QJsonObject& obj, const QString& type) {
@@ -476,12 +476,12 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Erro
 
     QByteArray FigmaParser::makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder) {
         QByteArray out;
-        auto imageData = mImageProvider(image, isRendering);
+        auto imageData = m_data.imageData(image, isRendering);
         if(imageData.isEmpty()) {
             if(placeHolder.isEmpty()) {
                 ERR("Cannot read imageRef", image)
             } else {
-                imageData = mImageProvider(placeHolder, isRendering);
+                imageData = m_data.imageData(placeHolder, isRendering);
                  if(imageData.isEmpty()) {
                      ERR("Cannot load placeholder");
                  }
@@ -1124,7 +1124,7 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Erro
 
     QJsonObject FigmaParser::toQMLTextStyles(const QJsonObject& obj) const {
         QJsonObject styles;
-        const auto resolvedFunction = mResolveFont(obj["fontFamily"].toString());
+        const auto resolvedFunction = m_data.fontInfo(obj["fontFamily"].toString());
         styles.insert("font.family", QString("\"%1\"").arg(resolvedFunction));
         styles.insert("font.italic", QString(obj["italic"].toBool() ? "true" : "false"));
         styles.insert("font.pixelSize", QString::number(static_cast<int>(std::floor(obj["fontSize"].toDouble()))));

@@ -1,6 +1,7 @@
 #ifndef FIGMAPARSER_H
 #define FIGMAPARSER_H
 
+#include "figmaprovider.h"
 #include "orderedmap.h"
 #include <QJsonDocument>
 #include <QRegularExpression>
@@ -91,10 +92,6 @@ public:
     };
 public:
     inline static const QString PlaceHolder = "placeholder";
-    using ErrorFunc = std::function<void (const QString&, bool isFatal)>;
-    using ImageFunc = std::function<QByteArray (const QString&, bool isRendering)>;
-    using NodeFunc = std::function<QByteArray (const QString&)>;
-    using FontFunc = std::function<QString (const QString&)>;
     enum Flags {
         PrerenderShapes = 2,
         PrerenderGroups = 4,
@@ -106,29 +103,17 @@ public:
         AntializeShapes = 2048
     };
 public:
-    static Components components(const QJsonObject& project, ErrorFunc err, NodeFunc nodes);
-    static Canvases canvases(const QJsonObject& project, ErrorFunc err);
-    static Element component(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components);
-    static Element element(const QJsonObject& obj, unsigned flags, ErrorFunc err, ImageFunc data, FontFunc resolveFont, const Components& components);
+    static Components components(const QJsonObject& project,  FigmaParserData& data);
+    static Canvases canvases(const QJsonObject& project, FigmaParserData& data);
+    static Element component(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
+    static Element element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static QString name(const QJsonObject& project);
     static QString validFileName(const QString& itemName);
-    
+
 private:
     enum class StrokeType {Normal, Double, OnePix};
     enum class ItemType {None, Vector, Text, Frame, Component, Boolean, Instance};
-
-    FigmaParser(unsigned flags, ImageFunc data, FontFunc resolveFont, const Components* components);
-
-    const unsigned m_flags;
-    const ImageFunc mImageProvider;
-    const FontFunc mResolveFont;
-    const Components* m_components;
-    const QString m_intendent = "    ";
-    QSet<QString> m_componentIds;
-    const QJsonObject* m_parent;
-
-    static QByteArray fontWeight(double v);
-    static FigmaParser::ItemType type(const QJsonObject& obj);
+    
 private:
 
     static QHash<QString, QJsonObject> getObjectsByType(const QJsonObject& obj, const QString& type);
@@ -182,12 +167,12 @@ private:
      QByteArray makeVectorNormalFill(const QJsonObject& obj, int intendents);
      QByteArray makeVectorNormalFill(const QString& image, const QJsonObject& obj, int intendents);
      QByteArray makeVectorNormal(const QJsonObject& obj, int intendents);
-    QByteArray makeVectorInsideFill(const QJsonObject& obj, int intendents);
-    QByteArray makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents);
-    QByteArray makeVectorInside(const QJsonObject& obj, int intendentsBase);
-    QByteArray makeVectorOutsideFill(const QJsonObject& obj, int intendents);
-    QByteArray makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents);
-    QByteArray makeVectorOutside(const QJsonObject& obj, int intendentsBase);
+     QByteArray makeVectorInsideFill(const QJsonObject& obj, int intendents);
+     QByteArray makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents);
+     QByteArray makeVectorInside(const QJsonObject& obj, int intendentsBase);
+     QByteArray makeVectorOutsideFill(const QJsonObject& obj, int intendents);
+     QByteArray makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents);
+     QByteArray makeVectorOutside(const QJsonObject& obj, int intendentsBase);
 
     QByteArray parseVector(const QJsonObject& obj, int intendents);
 
@@ -225,6 +210,19 @@ private:
 
      OrderedMap<QString, QByteArray> parseChildrenItems(const QJsonObject& obj, int intendents);
 
+private:
+
+    FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
+
+    const unsigned m_flags;
+    FigmaParserData& m_data;
+    const Components* m_components;
+    const QString m_intendent = "    ";
+    QSet<QString> m_componentIds;
+    const QJsonObject* m_parent;
+
+    static QByteArray fontWeight(double v);
+    static FigmaParser::ItemType type(const QJsonObject& obj);
 };
 
 #endif // FIGMAPARSER_H

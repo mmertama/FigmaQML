@@ -11,7 +11,6 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 if(LET_QT5)
     find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
     if(Qt5_FOUND)
@@ -20,14 +19,14 @@ if(LET_QT5)
         message(FATAL_ERROR "Qt5 is not found!")
     endif()
 elseif(EMSCRIPTEN)
-    find_package(Qt6 QUIET COMPONENTS Core Quick Core5Compat)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat)
     if(Qt6_FOUND)
         message("Project is Qt6 Emscripten")
     else()
          message(FATAL_ERROR "Qt6 Emscripten is not found!")
      endif()
 else()
-    find_package(Qt6 QUIET COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
     if(Qt6_FOUND)
         message("Project is Qt6")
     else()
@@ -57,12 +56,12 @@ qt_add_executable(FigmaQML
   include/figmadata.h
   include/figmadocument.h
   include/fontcache.h
-  include/common.h
   include/providers.h
   src/figmaparser.cpp
   include/orderedmap.h
   include/utils.h
   include/functorslot.h
+  include/figmaprovider.h
 )
 
 if(WIN32)
@@ -118,7 +117,7 @@ elseif(EMSCRIPTEN)
     endif()
     message("emsdk ${ver_p}")
     configure_file(favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
-    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os)
+    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os -sASYNCIFY_STACK_SIZE=65535 -sASSERTIONS=2 -sRUNTIME_LOGGING=1 -sASYNCIFY_DEBUG=1 -sSAFE_HEAP=1)
     target_compile_definitions(FigmaQML PRIVATE
         -DNO_CONCURRENT
         -DNO_SSL
