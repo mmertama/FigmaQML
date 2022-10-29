@@ -49,7 +49,7 @@ QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
     const auto list = str.split(';');
     QVector<QPair<QString, QString>> pairs;
     for(const auto& pair : list) {
-        QRegularExpression rex(R"(^\s*(.+)\s*\:\s*(.+)\s*$)");
+        static const QRegularExpression rex(R"(^\s*(.+)\s*\:\s*(.+)\s*$)");
         const auto m = rex.match(pair);
         if(!m.hasMatch()) {
             ::print() << "Error: Invalid font map" << pair << "in" << str << Qt::endl;
@@ -212,8 +212,8 @@ int main(int argc, char *argv[]) {
         app.exit(-12);
     }
 
-    std::unique_ptr<FigmaGet> figmaGet(new FigmaGet(dir.path() + "/images/"));
-    std::unique_ptr<FigmaQml> figmaQml(new FigmaQml(dir.path(), fontFolder, *figmaGet));
+    auto figmaGet = std::make_unique<FigmaGet>();
+    auto figmaQml = std::make_unique<FigmaQml>(dir.path(), fontFolder, *figmaGet);
 
     QQmlApplicationEngine engine;
     Clipboard clipboard;
@@ -341,7 +341,8 @@ int main(int argc, char *argv[]) {
              }
              if(state & ShowFonts) {
                  const auto fonts = figmaQml->fonts();
-                 for(const auto& k : fonts.keys()) {
+                 const auto keys = fonts.keys();
+                 for(const auto& k : keys) {
                      ::print() << "Font: " << k << "->" << fonts[k].toString() << Qt::endl;
                  }
              }

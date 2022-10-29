@@ -115,7 +115,7 @@ ApplicationWindow {
 
     Timer {
         id: updater
-        interval: 1000
+        interval: 1000 * 20
         repeat: true
         triggeredOnStart: true
         property bool  updating: false

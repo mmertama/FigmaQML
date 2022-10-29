@@ -117,7 +117,7 @@ elseif(EMSCRIPTEN)
     endif()
     message("emsdk ${ver_p}")
     configure_file(favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
-    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os -sASYNCIFY_STACK_SIZE=65535 -sASSERTIONS=2 -sRUNTIME_LOGGING=1 -sASYNCIFY_DEBUG=1 -sSAFE_HEAP=1)
+    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os -sNO_DISABLE_EXCEPTION_CATCHING -sASYNCIFY_STACK_SIZE=65535 -sASSERTIONS=2 -sRUNTIME_LOGGING=1 -sSAFE_HEAP=1)
     target_compile_definitions(FigmaQML PRIVATE
         -DNO_CONCURRENT
         -DNO_SSL

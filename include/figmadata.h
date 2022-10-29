@@ -91,7 +91,8 @@ public:
     void write(QDataStream& stream) const {
         const int size = std::accumulate(m_data.begin(), m_data.end(), 0, [](const auto &a, const auto& c){return std::get<State>(c) != State::Committed ? a : a + 1;});
         stream << size;
-        for(const auto& key : m_data.keys()) {
+        const auto keys = m_data.keys();
+        for(const auto& key : keys) {
             if(std::get<State>(m_data[key]) == State::Committed) {
                 stream
                         << key

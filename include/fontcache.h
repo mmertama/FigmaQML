@@ -27,7 +27,8 @@ public:
     QVector<QPair<QString, QString>> content() const {
         QMutexLocker lock(&m_mutex);
         QVector<QPair<QString, QString>> c;
-        for(const auto k : m_fontMap.keys()) {
+        const auto keys = m_fontMap.keys();
+        for(const auto& k : keys) {
             c.append({k, m_fontMap[k]});
         }
         return c;

@@ -153,7 +153,7 @@ QString FigmaQml::validFileName(const QString& name) {
    return FigmaParser::validFileName(name);
 }
 
-bool FigmaQml::saveAllQML(const QString& folderName) const {
+bool FigmaQml::saveAllQML(const QString& folderName) {
 #ifdef Q_OS_WINDOWS
     QDir d(folderName.startsWith('/') ? folderName.mid(1) : folderName);
 #else
@@ -324,7 +324,7 @@ QByteArray FigmaQml::prettyData(const QByteArray& data) const {
     return bytes;
 }
 
-bool FigmaQml::saveImages(const QString &folder) const {
+bool FigmaQml::saveImages(const QString &folder) {
     if(!ensureDirExists(folder))
         return false;
     for(const auto& i : m_imageFiles) {
@@ -361,7 +361,7 @@ bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes
         return false;
     const auto path = m_targetDir + Images.mid(1);
     int count = 1;
-    const QRegularExpression re(R"([\\\/:*?"<>|\s;])");
+    static const QRegularExpression re(R"([\\\/:*?"<>|\s;])");
     auto name = imageRef;
     name.replace(re, QLatin1String("_"));
     Q_ASSERT(mime == PNG || mime == JPEG);
@@ -383,7 +383,7 @@ bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes
     return true;
 }
 
-bool FigmaQml::ensureDirExists(const QString& e) const {
+bool FigmaQml::ensureDirExists(const QString& e) {
      QDir dir(e);
      if(!dir.mkpath(".")) {
          emit error(QString("Cannot use dir %1").arg(dir.absolutePath()));
@@ -402,9 +402,34 @@ QVariantMap FigmaQml::fonts() const {
 }
 
 void FigmaQml::setFonts(const QVariantMap& map) {
-    for(const auto& k : map.keys()) {
-       m_fontCache->insert(k, map[k].toString());
-    }
+  const auto keys = map.keys();
+  for (const auto &k : keys) {
+    m_fontCache->insert(k, map[k].toString());
+  }
+}
+
+template<class FigmaDocType>
+void FigmaQml::createDocument(const QJsonObject& json) {
+    m_state = State::Suspend;
+    auto ctimer = new QTimer(this);
+    QObject::connect(ctimer, &QTimer::timeout, this, [ctimer, this, json](){
+        if(m_state == State::Suspend) {
+            if(mProvider.isReady()) {
+                m_state = State::Constructing;
+                auto doc = doCreateDocument<FigmaDocType>(json);
+                if(doc) {
+                    ctimer->stop();
+                    ctimer->deleteLater();
+                    emit figmaDocumentCreated(doc.release());
+                }
+            }
+        } else {
+            ctimer->stop();
+            ctimer->deleteLater();
+            emit figmaDocumentCreated(static_cast<FigmaDocType*>(nullptr));
+        }
+    });
+    ctimer->start(500);
 }
 
 void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
@@ -412,8 +437,6 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     const auto json = object(data);
     if(!json)
         return;
-    const auto restoredCanvas = currentCanvas();
-    const auto restoredElement = currentElement();
     cleanDir(m_qmlDir);
     m_imageFiles.clear();
     m_uiDoc.reset();
@@ -426,24 +449,32 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     m_targetDir = m_qmlDir + qmlViewPath;
     m_embedImages = true;
 
-    auto doc = construct<FigmaFileDocument>(*json);
+    const auto restoredCanvas = currentCanvas();
+    const auto restoredElement = currentElement();
 
-    if(doc) {
-        m_uiDoc.swap(doc);
-        emit isValidChanged();
-        emit canvasCountChanged();
-        emit elementCountChanged();
-        emit documentNameChanged();
-        emit elementChanged();
-        createDocumentSources(data);
-        emit fontsChanged();
-    } else {
-        emit error("Invalid document");
-    }
-    if(restoreView) {
-        if(setCurrentCanvas(restoredCanvas))
-            setCurrentElement(restoredElement);
-    }
+    QObject::connect(this, QOverload<FigmaFileDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this, restoreView, data, restoredElement, restoredCanvas](FigmaFileDocument* doc){
+        if(doc) {
+            m_uiDoc.reset(doc);
+            emit isValidChanged();
+            emit canvasCountChanged();
+            emit elementCountChanged();
+            emit documentNameChanged();
+            emit elementChanged();
+            createDocumentSources(data);
+            emit fontsChanged();
+        } else {
+            emit error("Invalid document");
+        }
+        if(restoreView) {
+
+            if(setCurrentCanvas(restoredCanvas))
+                setCurrentElement(restoredElement);
+        }
+    });
+
+    createDocument<FigmaFileDocument>(*json);
+
+
 }
 
 
@@ -466,14 +497,19 @@ void FigmaQml::createDocumentSources(const QByteArray &data) {
         return;
     m_targetDir = m_qmlDir + sourceViewPath;
     m_embedImages = m_flags & EmbedImages;
-    auto doc = construct<FigmaDataDocument>(*json);
-    if(doc) {
-        m_sourceDoc.swap(doc);
-        emit sourceCodeChanged();
-        emit documentCreated();
-    } else {
-        emit error("Invalid document");
-    }
+
+    QObject::connect(this, QOverload<FigmaDataDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this](FigmaDataDocument* doc){
+        if(doc) {
+            m_sourceDoc.reset(doc);
+            emit sourceCodeChanged();
+            emit documentCreated();
+        } else {
+            emit error("Invalid document");
+        }
+    });
+
+    createDocument<FigmaDataDocument>(*json);
+
 }
 
 void FigmaQml::restore(int flags, const QVariantMap& imports) {
@@ -481,7 +517,7 @@ void FigmaQml::restore(int flags, const QVariantMap& imports) {
     m_imports = imports;
 }
 
-void FigmaQml::cleanDir(const QString& dirName) const {
+void FigmaQml::cleanDir(const QString& dirName) {
     QDir dir(dirName);
     const auto entries = dir.entryInfoList();
     for(const auto& e : entries) {
@@ -490,7 +526,7 @@ void FigmaQml::cleanDir(const QString& dirName) const {
     }
 }
 
-std::optional<QJsonObject> FigmaQml::object(const QByteArray &data) const {
+std::optional<QJsonObject> FigmaQml::object(const QByteArray &data) {
     if(data.isEmpty())
         return std::nullopt;
 
@@ -549,12 +585,14 @@ void FigmaQml::setSignals(bool allow) {
 }
 
 void FigmaQml::parseError(const QString& str, bool isFatal) {
-    if(!m_doCancel) {
-        if(isFatal) {
-            m_ok = false;
-            emit error(str);
-        } else
-            emit warning(str);
+    if(m_state != State::Suspend) {
+        if(!m_doCancel) {
+            if(isFatal) {
+                m_ok = false;
+                emit error(str);
+            } else
+                emit warning(str);
+        }
     }
 }
 
@@ -585,7 +623,7 @@ QByteArray FigmaQml::imageData(const QString& imageRef, bool isRendering) {
     else {
         if(m_embedImages) {
             const auto imageData = getImage(imageRef, isRendering);
-            if(imageData) {
+            if(!imageData) {
                 suspend();
                 return{};
             }
@@ -634,9 +672,9 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
 }
 
 template<class T>
-std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj) {
-
-    const_cast<FigmaQml*>(this)->m_doCancel = false; // uff UniqueConnection requires a member func
+std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
+    m_ok = true;
+    m_doCancel = false; // uff UniqueConnection requires a member func
     const auto d = QObject::connect(this, &FigmaQml::cancelled, this, &FigmaQml::doCancel, Qt::UniqueConnection);
 
     RAII(([d](){QObject::disconnect(d);}));
@@ -653,7 +691,8 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj) {
        return nullptr;
 
     QByteArray header = QString(FileHeader).toLatin1();
-    for(const auto& k : m_imports.keys()) {
+    const auto keys =  m_imports.keys();
+    for(const auto& k : keys) {
 #ifdef QT5
         const auto ver = QVersionNumber::fromString(m_imports[k].toString());
         if(ver.isNull()) {
@@ -792,7 +831,10 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj) {
         currentElement = 0;
         auto canvas = doc->addCanvas(c.name());
 #ifdef NO_CONCURRENT
-        for(const auto& f : c.elements()) {
+        const auto elements = c.elements();
+        for(const auto& f : elements) {
+            if(m_state == State::Suspend)
+                return nullptr;
             if(m_doCancel)
                 return nullptr;
             bool hasElement = true;
@@ -838,6 +880,9 @@ std::unique_ptr<T> FigmaQml::construct(const QJsonObject& obj) {
 
         for(const auto& element : elementData) {
 #endif
+            if(m_state == State::Suspend)
+                return nullptr;
+
             if(m_doCancel)
                 return nullptr;
             if(!m_ok) {

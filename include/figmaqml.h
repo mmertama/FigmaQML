@@ -79,7 +79,7 @@ public:
     void setFilter(const QMap<int, QSet<int>>& filter);
     void restore(int flags, const QVariantMap& imports);
     QString documentsLocation() const;
-    Q_INVOKABLE bool saveAllQML(const QString& folderName) const;
+    Q_INVOKABLE bool saveAllQML(const QString& folderName);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;
@@ -101,13 +101,15 @@ public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
 signals:
+    void figmaDocumentCreated(FigmaFileDocument* doc);
+    void figmaDocumentCreated(FigmaDataDocument* doc);
     void documentCreated();
     void sourceCodeChanged();
     void elementChanged();
     void flagsChanged();
-    void error(const QString& errorString) const;
-    void warning(const QString& warningString) const;
-    void info(const QString& infoString) const;
+    void error(const QString& errorString);
+    void warning(const QString& warningString);
+    void info(const QString& infoString);
     void canvasCountChanged();
     void elementCountChanged();
     void currentElementChanged();
@@ -116,7 +118,7 @@ signals:
     void elementNameChanged();
     void imageDimensionMaxChanged();
     void documentNameChanged();
-    void busyChanged() const;
+    void busyChanged();
     void isValidChanged();
     void cancelled();
     void componentsChanged();
@@ -132,12 +134,14 @@ private slots:
 private:
     void addImageFile(const QString& imageRef, bool isRendering);
     bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);
-    bool ensureDirExists(const QString& dirname) const;
-    bool saveImages(const QString &folder) const;
-    template<class T>
-    std::unique_ptr<T> construct(const QJsonObject& data);
-    std::optional<QJsonObject> object(const QByteArray& bytes) const;
-    void cleanDir(const QString& dirName) const;
+    bool ensureDirExists(const QString& dirname);
+    bool saveImages(const QString &folder);
+    template<class FigmaDocType>
+    std::unique_ptr<FigmaDocType> doCreateDocument(const QJsonObject& data);
+    template<class FigmaDocType>
+    void createDocument(const QJsonObject& json);
+    std::optional<QJsonObject> object(const QByteArray& bytes);
+    void cleanDir(const QString& dirName);
     std::optional<std::tuple<QByteArray, int>> getImage(const QString& imageRef, bool isRendering);
     void suspend();
 private:
