@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QHash>
 
 class Execute : public QObject {
     Q_OBJECT
@@ -18,25 +19,45 @@ private:
 class Timeout : public QObject {
     Q_OBJECT
 public:
-    explicit Timeout(QObject* parent = nullptr) : QObject(parent), mTimer(new QTimer(this)) {
-        mTimer->setSingleShot(true);
-        QObject::connect(mTimer, &QTimer::timeout, this, &Timeout::onTimeout, Qt::QueuedConnection);
+    explicit Timeout(QObject* parent = nullptr) : QObject(parent) {}
+
+    int pending() const {
+        return mTimers.size();
     }
-    void set(int ms, const std::function<void ()>& fn) {
-        Q_ASSERT(!mTimer->isActive());
-        mFn = fn;
-        mTimer->start(ms);
+
+    void set(const QString& id, int ms, const std::function<void ()>& fn) {
+        Q_ASSERT(!mTimers.contains(id));
+        auto t = new QTimer(this);
+        mTimers.insert(id, {fn, t});
+        t->setSingleShot(true);
+        t->start(ms);
+        QObject::connect(t, &QTimer::timeout, this, [this, id](){
+            auto t = std::get<QTimer*>(mTimers[id]);
+            t->deleteLater();
+            mTimers.remove(id);
+        });
     }
-    void cancel() {
-        mTimer->stop();
+
+    void cancel(const QString& id) {
+        Q_ASSERT(mTimers.contains(id));
+        auto t = std::get<QTimer*>(mTimers[id]);
+        t->stop();
+        t->deleteLater();
+        mTimers.remove(id);
+        if(mTimers.isEmpty())
+            emit purged();
     }
-private slots:
-    void onTimeout() {
-        mFn();
+
+    void reset() {
+        const auto keys = mTimers.keys();
+        for(const auto& k : keys) {
+            cancel(k);
+        }
     }
+signals:
+    void purged();
 private:
-    std::function<void ()> mFn = nullptr;
-    QTimer* mTimer;
+    QHash<QString, std::tuple<std::function<void ()>, QTimer*>> mTimers;
 };
 
 

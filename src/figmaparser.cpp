@@ -21,7 +21,29 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-#define ERR(...) throw FigmaParser::Exception(toStr(__VA_ARGS__));
+class Exception;
+class Exception  {
+public:
+    void tryIt(const std::function<Exception ()>& fn) {
+        m_issue.clear();
+        fn();
+    }
+    void catchIt(const std::function<void (const Exception&)>& fn) {
+        if(!m_issue.isEmpty())
+            fn(*this);
+    }
+    Exception() : m_issue{} {}
+    auto raise(const QString& issue) { m_issue = QString("FigmaParser exception: %1").arg(issue); return std::nullopt; }
+    const QString what() const {
+        return m_issue;
+      }
+private:
+    QString m_issue;
+};
+
+static Exception exception;
+
+#define ERR(...) return exception.raise(toStr(__VA_ARGS__));
 
 static inline bool eq(double a, double b) {return std::fabs(a - b) < std::numeric_limits<double>::epsilon();}
 
@@ -46,7 +68,7 @@ QByteArray FigmaParser::fontWeight(double v) {
    return weights.back().first;
 }
 
-FigmaParser::ItemType FigmaParser::type(const QJsonObject& obj) {
+std::optional<FigmaParser::ItemType> FigmaParser::type(const QJsonObject& obj) {
    const QHash<QString, ItemType> types { //this to make sure we have a case for all types
        {"RECTANGLE", ItemType::Vector},
        {"TEXT", ItemType::Text},
@@ -72,98 +94,81 @@ FigmaParser::ItemType FigmaParser::type(const QJsonObject& obj) {
 }
 
 
-FigmaParser::Components FigmaParser::components(const QJsonObject& project, FigmaParserData& data) {
+std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject& project, FigmaParserData& data) {
         Components map;
-        try {
-            auto componentObjects = getObjectsByType(project["document"].toObject(), "COMPONENT");
-            const auto components = project["components"].toObject();
-            for (const auto& key : components.keys()) {
-                if(!componentObjects.contains(key)) {
-                    const auto response = data.nodeData(key);
-                    if(response.isEmpty()) {
-                        ERR(toStr("Component not found", key, "for"))
-                    }
-                    QJsonParseError err;
-                    const auto obj = QJsonDocument::fromJson(response, &err).object();
-                    if(err.error == QJsonParseError::NoError) {
-                        const auto receivedObjects = getObjectsByType(obj["nodes"]
-                                .toObject()[key]
-                                .toObject()["document"]
-                                .toObject(), "COMPONENT");
-                        if(!receivedObjects.contains(key)) {
-                             ERR(toStr("Unrecognized component", key));
-                        }
-                        componentObjects.insert(key, receivedObjects[key]);
-                    } else {
-                        ERR(toStr("Invalid component", key));
-                    }
+        auto componentObjects = getObjectsByType(project["document"].toObject(), "COMPONENT");
+        const auto components = project["components"].toObject();
+        for (const auto& key : components.keys()) {
+            if(!componentObjects.contains(key)) {
+                const auto response = data.nodeData(key);
+                if(response.isEmpty()) {
+                    ERR(toStr("Component not found", key, "for"))
                 }
-                const auto c = components[key].toObject();
-                const auto componentName = c["name"].toString();
-                auto uniqueComponentName = validFileName(componentName); //names are expected to be unique, so we ensure so
-                int count = 1;
-                while(std::find_if(map.begin(), map.end(), [&uniqueComponentName](const auto& c) {
-                    return c->name() == uniqueComponentName;
-                }) != map.end()) {
-                    uniqueComponentName = validFileName(QString("%1_%2").arg(componentName).arg(count));
-                    ++count;
+                QJsonParseError err;
+                const auto obj = QJsonDocument::fromJson(response, &err).object();
+                if(err.error == QJsonParseError::NoError) {
+                    const auto receivedObjects = getObjectsByType(obj["nodes"]
+                            .toObject()[key]
+                            .toObject()["document"]
+                            .toObject(), "COMPONENT");
+                    if(!receivedObjects.contains(key)) {
+                         ERR(toStr("Unrecognized component", key));
+                    }
+                    componentObjects.insert(key, receivedObjects[key]);
+                } else {
+                    ERR(toStr("Invalid component", key));
                 }
-
-                map.insert(key, std::shared_ptr<Component>(new Component(
-                                    uniqueComponentName,
-                                    key,
-                                    c["key"].toString(),
-                                    c["description"].toString(),
-                                    std::move(componentObjects[key]))));
             }
-        } catch(Exception e) {
-            data.parseError(e.what(), true);
-        }
+            const auto c = components[key].toObject();
+            const auto componentName = c["name"].toString();
+            auto uniqueComponentName = validFileName(componentName); //names are expected to be unique, so we ensure so
+            int count = 1;
+            while(std::find_if(map.begin(), map.end(), [&uniqueComponentName](const auto& c) {
+                return c->name() == uniqueComponentName;
+            }) != map.end()) {
+                uniqueComponentName = validFileName(QString("%1_%2").arg(componentName).arg(count));
+                ++count;
+            }
 
+            map.insert(key, std::shared_ptr<Component>(new Component(
+                                uniqueComponentName,
+                                key,
+                                c["key"].toString(),
+                                c["description"].toString(),
+                                std::move(componentObjects[key]))));
+
+        }
         return map;
     }
 
-    FigmaParser::Canvases FigmaParser::canvases(const QJsonObject& project, FigmaParserData& data) {
+    std::optional<FigmaParser::Canvases> FigmaParser::canvases(const QJsonObject& project, FigmaParserData& data) {
         Canvases array;
-        try {
-            const auto doc = project["document"].toObject();
-            const auto canvases = doc["children"].toArray();
-            for(const auto& c : canvases) {
-                const auto canvas = c.toObject();
-                const auto children = canvas["children"].toArray();
-                Canvas::ElementVector vec;
-                std::transform(children.begin(), children.end(), std::back_inserter(vec), [](const auto& f){return f.toObject();});
-                const auto col = canvas["backgroundColor"].toObject();
-                array.push_back({
-                                    canvas["name"].toString(),
-                                    canvas["id"].toString(),
-                                    toColor(col["r"].toDouble(), col["g"].toDouble(), col["b"].toDouble(), col["a"].toDouble()),
-                                    std::move(vec)});
-            }
-        } catch(Exception e) {
-            data.parseError(e.what(), true);
+
+        const auto doc = project["document"].toObject();
+        const auto canvases = doc["children"].toArray();
+        for(const auto& c : canvases) {
+            const auto canvas = c.toObject();
+            const auto children = canvas["children"].toArray();
+            Canvas::ElementVector vec;
+            std::transform(children.begin(), children.end(), std::back_inserter(vec), [](const auto& f){return f.toObject();});
+            const auto col = canvas["backgroundColor"].toObject();
+            array.push_back({
+                                canvas["name"].toString(),
+                                canvas["id"].toString(),
+                                toColor(col["r"].toDouble(), col["g"].toDouble(), col["b"].toDouble(), col["a"].toDouble()),
+                                std::move(vec)});
         }
         return array;
     }
 
-     FigmaParser::Element FigmaParser::component(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
+     std::optional<FigmaParser::Element> FigmaParser::component(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
         FigmaParser p(flags | Flags::ParseComponent, data, &components);
-        try {
-            return p.getElement(obj);
-        } catch(Exception e) {
-            data.parseError(e.what(), true);
-        }
-        return Element();
+        return p.getElement(obj);
     }
 
-     FigmaParser::Element FigmaParser::element(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
+     std::optional<FigmaParser::Element> FigmaParser::element(const QJsonObject& obj, unsigned flags, FigmaParserData& data, const Components& components) {
         FigmaParser p(flags, data, &components);
-        try {
-            return p.getElement(obj);
-        } catch(Exception e) {
-            data.parseError(e.what(), true);
-        }
-        return Element();
+        return p.getElement(obj);
     }
 
     QString FigmaParser::name(const QJsonObject& project) {
@@ -175,9 +180,10 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
             return QString();
         Q_ASSERT(!itemName.endsWith(FIGMA_SUFFIX));
         auto name = itemName + FIGMA_SUFFIX;
-        const QRegularExpression re(R"([\\\/:*?"<>|\s])");
+        static const QRegularExpression re(R"([\\\/:*?"<>|\s])");
         name.replace(re, QLatin1String("_"));
-        name = name.replace(QRegularExpression(R"([^a-zA-Z0-9_])"), "_");
+        static const QRegularExpression ren(R"([^a-zA-Z0-9_])");
+        name = name.replace(ren, "_");
         if(!((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= 'A' && name[0] <= 'Z'))) {
             name.insert(0, "C");
         }
@@ -196,7 +202,8 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
             const auto children = obj["children"].toArray();
             for(const auto& child : children) {
                 const auto childrenobjects = getObjectsByType(child.toObject(), type);
-                for(const auto& k : childrenobjects.keys()) {
+                const auto keys = childrenobjects.keys();
+                for(const auto& k : keys) {
                     objects.insert(k, childrenobjects[k]);
                 }
             }
@@ -306,7 +313,8 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
 
      QByteArray FigmaParser::qmlId(const QString& id)  {
         QString cid = id;
-        return "figma_" + cid.replace(QRegularExpression(R"([^a-zA-Z0-9])"), "_").toLower().toLatin1();
+        static const QRegularExpression re(R"([^a-zA-Z0-9])");
+        return "figma_" + cid.replace(re, "_").toLower().toLatin1();
     }
 
      QByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents) {
@@ -322,7 +330,6 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
 
     QByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int intendents) {
         QByteArray out;
-        const auto intendent = tabs(intendents - 1);
         const auto intendent1 = tabs(intendents);
         out += makeComponentInstance(type, obj, intendents);
         out += makeEffects(obj, intendents);
@@ -474,7 +481,7 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
         return out;
     }
 
-    QByteArray FigmaParser::makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder) {
+    std::optional<QByteArray> FigmaParser::makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder) {
         QByteArray out;
         auto imageData = m_data.imageData(image, isRendering);
         if(imageData.isEmpty()) {
@@ -498,19 +505,21 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
         return out;
     }
 
-    QByteArray FigmaParser::makeImageRef(const QString& image, int intendents) {
+    std::optional<QByteArray> FigmaParser::makeImageRef(const QString& image, int intendents) {
         QByteArray out;
         const auto intendent = tabs(intendents + 1);
         out += tabs(intendents) + "Image {\n";
         out += intendent + "anchors.fill: parent\n";
         out += intendent + "mipmap: true\n";
         out += intendent + "fillMode: Image.PreserveAspectCrop\n";
-        out += makeImageSource(image, false, intendents + 1);
+        const auto os = makeImageSource(image, false, intendents + 1);
+        if(!os) return os;
+        out += *os;
         out += tabs(intendents) + "}\n";
         return out;
     }
 
-    QByteArray FigmaParser::makeFill(const QJsonObject& obj, int intendents) {
+    std::optional<QByteArray> FigmaParser::makeFill(const QJsonObject& obj, int intendents) {
         QByteArray out;
         const auto invisible = obj.contains("visible") && !obj["visible"].toBool();
         if(obj.contains("color")) {
@@ -524,17 +533,21 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
             out  += tabs(intendents) + "color: \"transparent\"\n";
         }
         if(obj.contains("imageRef")) {
-            out += makeImageRef(obj["imageRef"].toString(), intendents + 1);
+            const auto os = makeImageRef(obj["imageRef"].toString(), intendents + 1);
+            if(!os) return os;
+            out += *os;
         }
         return out;
     }
 
-    QByteArray FigmaParser::makeVector(const QJsonObject& obj, int intendents) {
+    std::optional<QByteArray> FigmaParser::makeVector(const QJsonObject& obj, int intendents) {
         QByteArray out;
         out += makeExtents(obj, intendents);
         const auto fills = obj["fills"].toArray();
         if(fills.size() > 0) {
-            out += makeFill(fills[0].toObject(), intendents);
+           const auto os = makeFill(fills[0].toObject(), intendents);
+           if(!os) return os;
+           out += *os;
         } else if(!obj["fills"].isString()) {
             out += tabs(intendents) + "color: \"transparent\"\n";
         }
@@ -637,7 +650,7 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
         return out;
     }
 
-    QByteArray FigmaParser::parse(const QJsonObject& obj, int intendents) {
+    std::optional<QByteArray> FigmaParser::parse(const QJsonObject& obj, int intendents) {
         const auto type = obj["type"].toString();
         const QHash<QString, std::function<QByteArray (const QJsonObject&, int)> > parsers {
             {"RECTANGLE", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
@@ -669,9 +682,10 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
 
     bool FigmaParser::isGradient(const QJsonObject& obj) const {
          if(obj.contains("fills")) {
-                 for(const auto& f : obj["fills"].toArray())
-                    if(f.toObject().contains("gradientHandlePositions"))
-                        return true;
+             const auto array = obj["fills"].toArray();
+             for(const auto& f : array)
+                if(f.toObject().contains("gradientHandlePositions"))
+                    return true;
          }
          return false;
     }
@@ -1291,14 +1305,13 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
      }
 
 
-     QByteArray FigmaParser::parseBooleanOperation(const QJsonObject& obj, int intendents) {
+     std::optional<QByteArray> FigmaParser::parseBooleanOperation(const QJsonObject& obj, int intendents) {
          if((m_flags & Flags::BreakBooleans) == 0)
             return parseVector(obj, intendents);
 
          const auto children = obj["children"].toArray();
          if(children.size() < 2) {
              ERR("Boolean needs at least two elemetns");
-             return QByteArray();
          }
          const auto operation = obj["booleanOperation"].toString();
 
@@ -1315,7 +1328,9 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
              out += intendent1 + "anchors.fill: parent\n";
              const auto fills = obj["fills"].toArray();
              if(fills.size() > 0) {
-                 out += makeFill(fills[0].toObject(), intendents + 1);
+                 const auto os = makeFill(fills[0].toObject(), intendents + 1);
+                 if(!os) return os;
+                 out += *os;
              } else if(!obj["fills"].isString()) {
                  out += intendent1 + "color: \"transparent\"\n";
              }
@@ -1438,7 +1453,6 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
 
                    const auto intendent2 = tabs(intendents + 2);
                    const auto intendent3 = tabs(intendents + 3);
-                   const auto intendent4 = tabs(intendents + 4);
                    out += intendent1 + "readonly property string shaderSource: \"\n";
                    out += intendent2 + "uniform lowp sampler2D colorSource;\n";
                    out += intendent2 + "uniform lowp sampler2D prevMask;\n";
@@ -1639,7 +1653,7 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
         return QJsonValue();
     }
 
-     QByteArray FigmaParser::parseInstance(const QJsonObject& obj, int intendents) {
+     std::optional<QByteArray> FigmaParser::parseInstance(const QJsonObject& obj, int intendents) {
          QByteArray out;
          const auto isInstance = type(obj) == ItemType::Instance;
          const auto componentId = (isInstance ? obj["componentId"] : obj["id"]).toString();
@@ -1668,7 +1682,9 @@ FigmaParser::Components FigmaParser::components(const QJsonObject& project, Figm
              }
 
              out += makeItem(comp->name(), instanceObject, intendents);
-             out += makeVector(instanceObject, intendents);
+             const auto os = makeVector(instanceObject, intendents);
+             if(!os) return os;
+             out += *os;
 
              out += makeInstanceChildren(obj, comp->object(), intendents);
          }

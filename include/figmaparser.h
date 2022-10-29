@@ -17,7 +17,7 @@
 #include <optional>
 #include <cmath>
 
-const QString FIGMA_SUFFIX("_figma");
+constexpr auto FIGMA_SUFFIX{"_figma"};
 
 
 class FigmaParser {
@@ -81,15 +81,7 @@ public:
     };
     using Components = QHash<QString, std::shared_ptr<Component>>;
     using Canvases = std::vector<Canvas>;
-    class Exception : public std::exception {
-    public:
-        Exception(const QString& issue) : m_issue((QString("FigmaParser exception: %1").arg(issue)).toLatin1()) {}
-        virtual const char* what() const throw() override {
-            return m_issue.constData();
-          }
-    private:
-        const QByteArray m_issue;
-    };
+
 public:
     inline static const QString PlaceHolder = "placeholder";
     enum Flags {
@@ -103,10 +95,10 @@ public:
         AntializeShapes = 2048
     };
 public:
-    static Components components(const QJsonObject& project,  FigmaParserData& data);
-    static Canvases canvases(const QJsonObject& project, FigmaParserData& data);
-    static Element component(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
-    static Element element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
+    static std::optional<Components> components(const QJsonObject& project,  FigmaParserData& data);
+    static std::optional<Canvases> canvases(const QJsonObject& project, FigmaParserData& data);
+    static std::optional<Element> component(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
+    static std::optional<Element> element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static QString name(const QJsonObject& project);
     static QString validFileName(const QString& itemName);
 
@@ -139,17 +131,17 @@ private:
     QByteArray makeColor(const QJsonObject& obj, int intendents, double opacity = 1.);
     QByteArray makeEffects(const QJsonObject& obj, int intendents);
     QByteArray makeTransforms(const QJsonObject& obj, int intendents);
-    QByteArray makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder = QString());
-    QByteArray makeImageRef(const QString& image, int intendents);
-    QByteArray makeFill(const QJsonObject& obj, int intendents);
-    QByteArray makeVector(const QJsonObject& obj, int intendents);
+    std::optional<QByteArray> makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder = QString());
+    std::optional<QByteArray> makeImageRef(const QString& image, int intendents);
+    std::optional<QByteArray> makeFill(const QJsonObject& obj, int intendents);
+    std::optional<QByteArray> makeVector(const QJsonObject& obj, int intendents);
     QByteArray makeStrokeJoin(const QJsonObject& stroke, int intendent);
     QByteArray makeShapeStroke(const QJsonObject& obj, int intendents, StrokeType type = StrokeType::Normal);
     QByteArray makeShapeFill(const QJsonObject& obj, int intendents);
     QByteArray makePlainItem(const QJsonObject& obj, int intendents);
     QByteArray makeSvgPath(int index, bool isFill, const QJsonObject& obj, int intendents);
 
-    QByteArray parse(const QJsonObject& obj, int intendents);
+    std::optional<QByteArray> parse(const QJsonObject& obj, int intendents);
 
     bool isGradient(const QJsonObject& obj) const;
 
@@ -194,7 +186,7 @@ private:
 
      QByteArray parseComponent(const QJsonObject& obj, int intendents);
 
-     QByteArray parseBooleanOperation(const QJsonObject& obj, int intendents);
+     std::optional<QByteArray> parseBooleanOperation(const QJsonObject& obj, int intendents);
 
 
      QSizeF getSize(const QJsonObject& obj) const;
@@ -222,7 +214,7 @@ private:
     const QJsonObject* m_parent;
 
     static QByteArray fontWeight(double v);
-    static FigmaParser::ItemType type(const QJsonObject& obj);
+    static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);
 };
 
 #endif // FIGMAPARSER_H
