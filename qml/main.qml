@@ -18,9 +18,28 @@ ApplicationWindow {
     readonly property string documentName:  (figmaQml && figmaQml.isValid ? (figmaQml.documentName.length > 0 ?  figmaQml.documentName : "figma") : "")
     readonly property string elementName:  (figmaQml && figmaQml.isValid ? (figmaQml.elementName.length > 0 ?  figmaQml.elementName : "figmaItem") : "")
 
-    function after(ms, f) {
-        const t = Qt.createQmlObject("import QtQuick 2.14; Timer{running:true;repeat:false;interval:" + ms + ";}", main, "main::after")
-        t.triggered.connect(function(){t.destroy();f();});
+    Timer {
+        id: delayedEvents
+        property var timedEvents: []
+        repeat: false
+        running: false
+        onTriggered: {
+            const data = timedEvents.shift();
+            data.fn();
+            if(timedEvents.length > 0) {
+                delayedEvents.interval = timedEvents[0].ms;
+                delayedEvents.start();
+            }
+        }
+    }
+
+    function after(ms, fn) {
+        delayedEvents.timedEvents.push({ms:ms, fn:fn});
+        if(!delayedEvents.running) {
+            delayedEvents.interval = ms;
+            delayedEvents.start();
+        }
+
     }
 
     function sourceCodeError(error, container) {
@@ -115,7 +134,7 @@ ApplicationWindow {
 
     Timer {
         id: updater
-        interval: 1000 * 20
+        interval: 1000 * 5
         repeat: true
         triggeredOnStart: true
         property bool  updating: false
@@ -834,7 +853,7 @@ ApplicationWindow {
             removeMappings = true;
             close();
         }
-        onAboutToHide: {
+        onClosed: {
             after(300, function() {  //let dialog be closed before long run opt
                 figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
                 if(fontMap.alternativeSearchAlgorithm)

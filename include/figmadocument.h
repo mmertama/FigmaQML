@@ -60,7 +60,7 @@ public:
         }
 
         QString name(int index) const {
-            return m_elements[index]->name();
+            return index >= 0 && m_elements.size() > index ? m_elements[index]->name() : QString();
         }
     protected:
         const QString m_name;
@@ -127,6 +127,10 @@ protected:
     QHash<QString, QSet<QString>> m_componentMap;
 };
 
+enum class DocumentType {
+    FileDocument, DataDocument
+};
+
 class FigmaFileDocument : public FigmaDocument {
     class CanvasFile : public FigmaDocument::Canvas {
         class ElementFile : public FigmaDocument::Canvas::Element {
@@ -162,6 +166,7 @@ class FigmaFileDocument : public FigmaDocument {
         const QString* m_directory;
     };
 public:
+     static DocumentType type() {return DocumentType::FileDocument;}
      FigmaFileDocument(const QString& directory, const QString& name) : FigmaDocument(name), m_directory(directory) {
      }
 
@@ -214,6 +219,7 @@ class FigmaDataDocument : public FigmaDocument {
          }
     };
 public:
+    static DocumentType type() {return DocumentType::DataDocument;}
     FigmaDataDocument(const QString& directory, const QString& name) : FigmaDocument(name) {
         Q_UNUSED(directory);
     }

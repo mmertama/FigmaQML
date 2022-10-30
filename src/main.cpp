@@ -45,7 +45,8 @@ QTextStream& print() {
 }
 #endif
 
-QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
+
+static QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
     const auto list = str.split(';');
     QVector<QPair<QString, QString>> pairs;
     for(const auto& pair : list) {
@@ -68,12 +69,24 @@ QVector<QPair<QString, QString>> parseFontMap(const QString& str, bool useAlt) {
    return pairs;
 }
 
+enum {
+    CmdLine = 1,
+    Store = 2,
+    ShowFonts = 4
+};
+
+
+
+
+
+ ///main
+
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
+    QCommandLineParser parser;
     const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
 
-    QCommandLineParser parser;
     parser.setApplicationDescription(QString("Figma to QML generator, version: %1, Markus Mertama 2020").arg(versionNumber));
     parser.addHelpOption();
     const QCommandLineOption renderFrameParameter("render-frame", "Render frames as images.");
@@ -97,7 +110,6 @@ int main(int argc, char *argv[]) {
     parser.addPositionalArgument("argument 2", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the first parameter was the restored file. If empty, GUI is opened. Project token is expected if the first parameter was an user token.", "<OUTPUT if FIGMAQML_FILE>| PROJECT_TOKEN if USER_TOKEN");
     parser.addPositionalArgument("argument 3", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the user and project tokens were provided. ", "<OUTPUT if USER_TOKEN>");
 
-
     parser.addOptions({
                           renderFrameParameter,
                           imageDimensionMaxParameter,
@@ -116,13 +128,8 @@ int main(int argc, char *argv[]) {
                           throttleParameter,
                           figmaFontParameter
                       });
-    parser.process(app);
 
-    enum {
-        CmdLine = 1,
-        Store = 2,
-        ShowFonts = 4
-    };
+    parser.process(app);
 
     int state = 0;
 
@@ -134,7 +141,7 @@ int main(int argc, char *argv[]) {
         if(name.endsWith(".figmaqml") || QFile::exists(name)) {
           if(!QFile::exists(name)) {
               ::print() << "Error:" << name << " not found" << Qt::endl;
-              return -9;
+              return -1;
           };
           restore = name;
         } else
@@ -176,6 +183,7 @@ int main(int argc, char *argv[]) {
      const QString fontFolder = state & CmdLine ?
                  parser.value(fontFolderParameter) :
                  QSettings(COMPANY_NAME, PRODUCT_NAME).value(FONTFOLDER).toString();
+
 
     int canvas = 1;
     int element = 1;
@@ -432,6 +440,8 @@ int main(int argc, char *argv[]) {
          figmaQml->setProperty("fonts", settings.value(FONTMAP, QVariantMap()).toMap());
 
      }
+
+
 
      if(!snapFile.isEmpty()) {
          QObject::connect(figmaQml.get(), &FigmaQml::snapped, [&app]() {

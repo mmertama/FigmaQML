@@ -9,9 +9,9 @@ class Execute : public QObject {
     Q_OBJECT
 public:
     explicit Execute(QObject* parent = nullptr) : QObject(parent) {}
-    Execute& operator=(const std::function<void ()>& fn) {Q_ASSERT(!mFn); mFn = fn; return *this;}
+    Execute& operator=(const std::function<void ()>& fn) {Q_ASSERT(!mFn); Q_ASSERT(fn); mFn = fn; return *this;}
 public slots:
-    void execute() {Q_ASSERT(mFn); mFn(); mFn = nullptr;}
+    void execute() {Q_ASSERT(mFn); mFn();}
 private:
     std::function<void ()> mFn = nullptr;
 };
@@ -27,6 +27,7 @@ public:
 
     void set(const QString& id, int ms, const std::function<void ()>& fn) {
         Q_ASSERT(!mTimers.contains(id));
+        Q_ASSERT(fn);
         auto t = new QTimer(this);
         mTimers.insert(id, {fn, t});
         t->setSingleShot(true);
