@@ -11,7 +11,7 @@ public:
     const V& operator[](const K& k) const {
         return m_data[m_index[k]].second;
     }
-    QStringList keys() const {
+    auto keys() const {
         QStringList lst;
         std::transform(m_data.begin(), m_data.end(), std::back_inserter(lst), [](const auto& p){return p.first;});
         return lst;
@@ -20,14 +20,20 @@ public:
         m_index.insert(k, m_data.size());
         m_data.append({k, v});
     }
-    int size() const {
+    auto size() const {
         return m_index.size();
     }
-    typename QVector<QPair<K, V>>::Iterator begin() {
+    auto begin() {
         return m_data.begin();
     }
-    typename QVector<QPair<K, V>>::Iterator end() {
+    auto end() {
         return m_data.end();
+    }
+    auto begin() const {
+        return m_data.cbegin();
+    }
+    auto end() const {
+        return m_data.cend();
     }
     void clear() {
         m_data.clear();

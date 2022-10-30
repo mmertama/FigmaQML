@@ -165,6 +165,7 @@ private:
     bool m_embedImages = false;
     enum class State {Constructing, Failed, Suspend};
     State m_state = State::Constructing;
+    std::function<void (bool)> mRestore = nullptr;
 };
 
 

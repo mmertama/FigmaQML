@@ -35,6 +35,31 @@ else()
 endif()
 
 
+SET(SOURCES
+    src/main.cpp
+    qml/qml.qrc
+    src/figmaget.cpp
+    include/figmaget.h
+    src/figmaqml.cpp
+    include/figmaqml.h
+    include/clipboard.h
+    include/figmaparser.h
+    include/downloads.h
+    src/downloads.cpp
+    include/figmadata.h
+    include/figmadocument.h
+    include/fontcache.h
+    include/providers.h
+    src/figmaparser.cpp
+    include/orderedmap.h
+    include/utils.h
+    include/functorslot.h
+    include/figmaprovider.h
+)
+
+if(EMSCRIPTEN)
+    SET(SOURCES ${SOURCES} src/wasmdialogs.cpp)
+endif()
 
 
 set(VERSION_NUMBER "2.0.0")
@@ -42,27 +67,7 @@ set(VERSION_NUMBER "2.0.0")
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
 #add_executable(FigmaQML
-qt_add_executable(FigmaQML
-  src/main.cpp
-  qml/qml.qrc
-  src/figmaget.cpp
-  include/figmaget.h
-  src/figmaqml.cpp
-  include/figmaqml.h
-  include/clipboard.h
-  include/figmaparser.h
-  include/downloads.h
-  src/downloads.cpp
-  include/figmadata.h
-  include/figmadocument.h
-  include/fontcache.h
-  include/providers.h
-  src/figmaparser.cpp
-  include/orderedmap.h
-  include/utils.h
-  include/functorslot.h
-  include/figmaprovider.h
-)
+qt_add_executable(FigmaQML ${SOURCES})
 
 if(WIN32)
   #  Windows does not support dual mode, we pick cmd mode

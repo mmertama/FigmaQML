@@ -14,11 +14,7 @@
 #include <QStandardPaths>
 #include <exception>
 
-#ifdef WASM_FILEDIALOGS
-#include <QTemporaryDir>
-#include <QFileDialog>
-#include <quazip/JlCompress.h>
-#endif
+
 
 #ifndef NO_CONCURRENT
 #include <QtConcurrent>
@@ -249,6 +245,43 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
         }
     };
 
+    QObject::connect(this, QOverload<FigmaFileDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this](FigmaFileDocument* doc) {
+        Q_ASSERT(doc->type() == FigmaFileDocument::type());
+        Q_ASSERT(!m_uiDoc);
+        if(doc) {
+            m_uiDoc.reset(doc);
+            emit isValidChanged();
+            emit canvasCountChanged();
+            emit elementCountChanged();
+            emit documentNameChanged();
+            emit elementChanged();
+            emit fontsChanged();
+        } else {
+            emit error("Invalid document");
+        }
+        if(mRestore)
+            mRestore(doc);
+        mRestore = nullptr;
+    });
+
+    QObject::connect(this, &FigmaQml::error, this, [this](const QString&) {
+        if(mRestore)
+            mRestore(false);
+        mRestore = nullptr;
+    });
+
+    QObject::connect(this, QOverload<FigmaDataDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this](FigmaDataDocument* doc) {
+        Q_ASSERT(doc->type() == FigmaDataDocument::type());
+        Q_ASSERT(!m_sourceDoc);
+        if(doc) {
+            m_sourceDoc.reset(doc);
+            emit sourceCodeChanged();
+            emit documentCreated();
+        } else {
+            emit error("Invalid document");
+        }
+    });
+
     QObject::connect(this, &FigmaQml::fontFolderChanged, this, fontFolderChanged);
     fontFolderChanged();
 }
@@ -420,7 +453,10 @@ void FigmaQml::createDocument(const QJsonObject& json) {
                 if(doc) {
                     ctimer->stop();
                     ctimer->deleteLater();
+                    Q_ASSERT(FigmaDocType::type() == doc->type());
                     emit figmaDocumentCreated(doc.release());
+                } else if(m_state != State::Suspend) {
+                    parseError(FigmaParser::lastError(), true);
                 }
             }
         } else {
@@ -434,6 +470,8 @@ void FigmaQml::createDocument(const QJsonObject& json) {
 
 void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
 
+    if(mRestore)
+        return;
     const auto json = object(data);
     if(!json)
         return;
@@ -452,29 +490,16 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     const auto restoredCanvas = currentCanvas();
     const auto restoredElement = currentElement();
 
-    QObject::connect(this, QOverload<FigmaFileDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this, restoreView, data, restoredElement, restoredCanvas](FigmaFileDocument* doc){
-        if(doc) {
-            m_uiDoc.reset(doc);
-            emit isValidChanged();
-            emit canvasCountChanged();
-            emit elementCountChanged();
-            emit documentNameChanged();
-            emit elementChanged();
-            createDocumentSources(data);
-            emit fontsChanged();
-        } else {
-            emit error("Invalid document");
-        }
+    mRestore = [this, restoreView, restoredElement, restoredCanvas, data](bool has_doc){
+        if(has_doc)
+             createDocumentSources(data);
         if(restoreView) {
-
             if(setCurrentCanvas(restoredCanvas))
                 setCurrentElement(restoredElement);
         }
-    });
+    };
 
     createDocument<FigmaFileDocument>(*json);
-
-
 }
 
 
@@ -495,18 +520,11 @@ void FigmaQml::createDocumentSources(const QByteArray &data) {
     const auto json = object(data);
     if(!json)
         return;
+    m_sourceDoc.reset();
     m_targetDir = m_qmlDir + sourceViewPath;
     m_embedImages = m_flags & EmbedImages;
 
-    QObject::connect(this, QOverload<FigmaDataDocument*>::of(&FigmaQml::figmaDocumentCreated), this, [this](FigmaDataDocument* doc){
-        if(doc) {
-            m_sourceDoc.reset(doc);
-            emit sourceCodeChanged();
-            emit documentCreated();
-        } else {
-            emit error("Invalid document");
-        }
-    });
+
 
     createDocument<FigmaDataDocument>(*json);
 
@@ -705,16 +723,20 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
 #endif
     }
 
-    auto components = FigmaParser::components(obj, *this);
+    auto components_opt = FigmaParser::components(obj, *this);
 
     TIMED_START(t3)
 
 #ifdef NO_CONCURRENT
+    if(!components_opt) {
+        return nullptr;
+    }
+    const auto& components = components_opt.value();
     for(const auto& c : components) {
-      const auto component = FigmaParser::component(c->object(), m_flags, *this, components);
-      if(!m_ok || m_doCancel)
+      const auto component_opt = FigmaParser::component(c->object(), m_flags, *this, components);
+      if(!m_ok || m_doCancel || !component_opt)
           return nullptr;
-
+      const auto& component = component_opt.value();
       if(component.data().isEmpty()) {
           emit error(toStr("Invalid component", component.name()));
           return nullptr;
@@ -825,7 +847,10 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
 #else
     std::atomic_int currentElement = 0;
 #endif
-    const auto canvases = FigmaParser::canvases(obj, *this);
+    const auto canvases_opt = FigmaParser::canvases(obj, *this);
+    if(!canvases_opt)
+        return nullptr;
+    const auto& canvases = canvases_opt.value();
     for(const auto& c : canvases) {
         ++currentCanvas;
         currentElement = 0;
@@ -844,7 +869,10 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
                     hasElement = false;
             }
 
-            const auto element = hasElement ? FigmaParser::element(f, m_flags, *this, components) : FigmaParser::Element();
+            const auto element_opt = hasElement ? FigmaParser::element(f, m_flags, *this, components) : FigmaParser::Element();
+            if(!element_opt)
+                return nullptr;
+            const auto& element = element_opt.value();
 #else
         auto elements = c.elements();
         Future<FigmaParser::Element> elementData =
@@ -904,42 +932,4 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
     return doc;
 }
 
-#ifdef WASM_FILEDIALOGS
-bool FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasName) {
-    QTemporaryDir temp;
-    if(!saveAllQML(temp.path())) {
-        qDebug() << "Failded to save" << temp.path();
-        return false;
-    }
-     const auto temp_name = QString::fromLatin1(std::tmpnam(nullptr), -1);
-     if(!JlCompress::compressDir(temp_name, temp.path())) {
-          qDebug() << "Failded to compress" << temp_name << "of" << temp.path();
-         return  false;
-     }
-     QFile dump(temp_name);
-     if(!dump.open(QIODevice::ReadOnly)) {
-         qDebug() << "Cannot open" << temp_name;
-         return false;
-     }
-     const auto data = dump.readAll();
-     const auto zipName = docName + "_" + canvasName + ".zip";
-     QFileDialog::saveFileContent(data, zipName);
-     return true;
-}
 
-bool FigmaQml::importFontFolder() {
-    //QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
-    return false;
-}
-
-bool FigmaQml::store(const QString& docName) {
-  //  void QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
-    return {};
-}
-
-QString FigmaQml::restore() {
- //   QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
-    return {};
-}
-
-#endif

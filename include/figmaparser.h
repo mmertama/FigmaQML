@@ -94,6 +94,7 @@ public:
         BreakBooleans = 1024,
         AntializeShapes = 2048
     };
+    using EByteArray = std::optional<QByteArray>;
 public:
     static std::optional<Components> components(const QJsonObject& project,  FigmaParserData& data);
     static std::optional<Canvases> canvases(const QJsonObject& project, FigmaParserData& data);
@@ -101,19 +102,18 @@ public:
     static std::optional<Element> element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static QString name(const QJsonObject& project);
     static QString validFileName(const QString& itemName);
-
+    static QString lastError();
 private:
     enum class StrokeType {Normal, Double, OnePix};
     enum class ItemType {None, Vector, Text, Frame, Component, Boolean, Instance};
     
 private:
-
     static QHash<QString, QJsonObject> getObjectsByType(const QJsonObject& obj, const QString& type);
     static QJsonObject delta(const QJsonObject& instance, const QJsonObject& base,
                              const QSet<QString>& ignored,
                              const QHash<QString, std::function<QJsonValue (const QJsonValue&, const QJsonValue&)>>& compares);
     static QHash<QString, QString> children(const QJsonObject& obj);
-    Element getElement(const QJsonObject& obj);
+    std::optional<Element> getElement(const QJsonObject& obj);
     QString tabs(int intendents) const;
 #if 0
     QRectF boundingRect(const QJsonObject& obj);
@@ -131,23 +131,23 @@ private:
     QByteArray makeColor(const QJsonObject& obj, int intendents, double opacity = 1.);
     QByteArray makeEffects(const QJsonObject& obj, int intendents);
     QByteArray makeTransforms(const QJsonObject& obj, int intendents);
-    std::optional<QByteArray> makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder = QString());
-    std::optional<QByteArray> makeImageRef(const QString& image, int intendents);
-    std::optional<QByteArray> makeFill(const QJsonObject& obj, int intendents);
-    std::optional<QByteArray> makeVector(const QJsonObject& obj, int intendents);
+    EByteArray makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder = QString());
+    EByteArray makeImageRef(const QString& image, int intendents);
+    EByteArray makeFill(const QJsonObject& obj, int intendents);
+    EByteArray makeVector(const QJsonObject& obj, int intendents);
     QByteArray makeStrokeJoin(const QJsonObject& stroke, int intendent);
     QByteArray makeShapeStroke(const QJsonObject& obj, int intendents, StrokeType type = StrokeType::Normal);
     QByteArray makeShapeFill(const QJsonObject& obj, int intendents);
-    QByteArray makePlainItem(const QJsonObject& obj, int intendents);
+    EByteArray makePlainItem(const QJsonObject& obj, int intendents);
     QByteArray makeSvgPath(int index, bool isFill, const QJsonObject& obj, int intendents);
 
-    std::optional<QByteArray> parse(const QJsonObject& obj, int intendents);
+    EByteArray parse(const QJsonObject& obj, int intendents);
 
     bool isGradient(const QJsonObject& obj) const;
 
     std::optional<QString> imageFill(const QJsonObject& obj) const;
 
-     QByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId);
+     EByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId);
      QByteArray makeShapeFillData(const QJsonObject& obj, int shapeIntendents);
      QByteArray makeAntialising(int intendents) const;
 
@@ -157,50 +157,56 @@ private:
       * cases managed
     */
      QByteArray makeVectorNormalFill(const QJsonObject& obj, int intendents);
-     QByteArray makeVectorNormalFill(const QString& image, const QJsonObject& obj, int intendents);
-     QByteArray makeVectorNormal(const QJsonObject& obj, int intendents);
+     EByteArray makeVectorNormalFill(const QString& image, const QJsonObject& obj, int intendents);
+     EByteArray makeVectorNormal(const QJsonObject& obj, int intendents);
      QByteArray makeVectorInsideFill(const QJsonObject& obj, int intendents);
-     QByteArray makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents);
-     QByteArray makeVectorInside(const QJsonObject& obj, int intendentsBase);
+     EByteArray makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents);
+     EByteArray makeVectorInside(const QJsonObject& obj, int intendentsBase);
      QByteArray makeVectorOutsideFill(const QJsonObject& obj, int intendents);
-     QByteArray makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents);
-     QByteArray makeVectorOutside(const QJsonObject& obj, int intendentsBase);
+     EByteArray makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents);
+     EByteArray makeVectorOutside(const QJsonObject& obj, int intendentsBase);
 
-    QByteArray parseVector(const QJsonObject& obj, int intendents);
+     EByteArray parseVector(const QJsonObject& obj, int intendents);
 
 
     QJsonObject toQMLTextStyles(const QJsonObject& obj) const;
 
-    QByteArray parseStyle(const QJsonObject& obj, int intendents);
+    EByteArray parseStyle(const QJsonObject& obj, int intendents);
 
      bool isRendering(const QJsonObject& obj) const;
 
-    QByteArray parseText(const QJsonObject& obj, int intendents);
+    EByteArray parseText(const QJsonObject& obj, int intendents);
 
-    QByteArray parseSkip(const QJsonObject& obj, int intendents);
+     QByteArray parseSkip(const QJsonObject& obj, int intendents);
 
-     QByteArray parseFrame(const QJsonObject& obj, int intendents);
+     EByteArray parseFrame(const QJsonObject& obj, int intendents);
 
      QString delegateName(const QString& id);
 
 
-     QByteArray parseComponent(const QJsonObject& obj, int intendents);
+     EByteArray parseComponent(const QJsonObject& obj, int intendents);
 
-     std::optional<QByteArray> parseBooleanOperation(const QJsonObject& obj, int intendents);
+     EByteArray parseBooleanOperation(const QJsonObject& obj, int intendents);
 
 
      QSizeF getSize(const QJsonObject& obj) const;
 
 
-     QByteArray parseRendered(const QJsonObject& obj, int intendents);
+     EByteArray parseRendered(const QJsonObject& obj, int intendents);
 
-     QByteArray makeInstanceChildren(const QJsonObject& obj, const QJsonObject& comp, int intendents);
+     EByteArray makeInstanceChildren(const QJsonObject& obj, const QJsonObject& comp, int intendents);
      QJsonValue getValue(const QJsonObject& obj, const QString& key) const;
 
-     QByteArray parseInstance(const QJsonObject& obj, int intendents);
-     QByteArray parseChildren(const QJsonObject& obj, int intendents);
+     EByteArray parseInstance(const QJsonObject& obj, int intendents);
+     EByteArray parseChildren(const QJsonObject& obj, int intendents);
 
-     OrderedMap<QString, QByteArray> parseChildrenItems(const QJsonObject& obj, int intendents);
+     std::optional<OrderedMap<QString, QByteArray>> parseChildrenItems(const QJsonObject& obj, int intendents);
+
+     EByteArray parseBooleanOperationUnion(const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId);
+     EByteArray parseBooleanOperationSubtract(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId);
+     EByteArray parseBooleanOperationIntersect(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId);
+     EByteArray parseBooleanOperationExclude(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId);
+
 
 private:
 

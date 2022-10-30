@@ -1,12 +1,13 @@
 import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Popup {
     id: main
     modal: true
     focus: true
-    width: Math.min(560, buttonRow.width + 20)
+    width: buttonRow.width + 20
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
     property var fonts
     signal pickFolder
@@ -16,9 +17,10 @@ Popup {
     property alias fontFolder: fontFolderText.text
     property alias alternativeSearchAlgorithm: alternativeSearchAlgorithmCheck.checked
     property alias keepFigmaFont: keepFigmaFontCheck.checked
-    contentItem: Column {
+    contentItem: ColumnLayout {
         Button {
             id: fontFolderText
+            Layout.alignment: Qt.AlignRight
             width: list.width
             Component.onCompleted: {
                 if(text.length === 0) {
@@ -84,7 +86,7 @@ Popup {
 
             }
         }
-        Row {
+        RowLayout {
             id: buttonRow
             CheckBox {
                 id: alternativeSearchAlgorithmCheck
