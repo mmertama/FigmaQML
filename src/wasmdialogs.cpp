@@ -27,16 +27,41 @@ bool FigmaQml::saveAllQMLZipped(const QString& docName, const QString& canvasNam
 }
 
 bool FigmaQml::importFontFolder() {
-    //QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
+    m_fontFolder = "/tmp/fonts";
+    const QDir fontFolder(m_fontFolder);
+    if(!fontFolder.exists())
+        fontFolder.mkpath(".");
+    QFileDialog::getOpenFileContent("", [this](const QString & filename, const QByteArray & bytes) {
+            QFile file(m_fontFolder + '/' + filename);
+            if(!file.open(QIODevice::WriteOnly)) {
+                emit error("Cannot write fonts");
+            }
+            file.write(bytes);
+            file.close();
+            emit fontFolderChanged();
+    });
     return false;
 }
 
-bool FigmaQml::store(const QString& docName) {
-  //  void QFileDialog::saveFileContent(const QByteArray &fileContent, const QString &fileNameHint = QString())
-    return {};
+bool FigmaQml::store(const QString& docName, const QString& tempName) {
+    QFile file(tempName);
+    if(!file.open(QIODevice::ReadOnly))
+        return false;
+    const auto bytes = file.readAll();
+    QFileDialog::saveFileContent(bytes, docName);
+    return true;
 }
 
-QString FigmaQml::restore() {
- //   QFileDialog::getOpenFileContent(const QString &nameFilter, const std::function<void (const QString &, const QByteArray &)> &fileOpenCompleted)
-    return {};
+void FigmaQml::restore() {
+    QFileDialog::getOpenFileContent("FigmaQML (*.figmaqml)",
+                                    [this](const QString& name, const QByteArray& bytes) {
+        const QString file_name("/tmp/restore.figmaqml");
+        QFile file(file_name);
+        if(!file.open(QIODevice::WriteOnly)) {
+            emit error("Cannot restore");
+        }
+        file.write(bytes);
+        file.close();
+        emit wasmRestored(name, file_name);
+    });
 }
