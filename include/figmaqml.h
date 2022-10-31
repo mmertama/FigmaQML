@@ -94,8 +94,8 @@ public:
 #ifdef WASM_FILEDIALOGS
     Q_INVOKABLE bool saveAllQMLZipped(const QString& docName, const QString& canvasName);
     Q_INVOKABLE bool importFontFolder();
-    Q_INVOKABLE bool store(const QString& docName);
-    Q_INVOKABLE QString restore();
+    Q_INVOKABLE bool store(const QString& docName, const QString& tempName);
+    Q_INVOKABLE void restore();
 #endif
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
@@ -129,6 +129,9 @@ signals:
     void fontsChanged();
     void fontFolderChanged();
     void refresh();
+#ifdef WASM_FILEDIALOGS
+    void wasmRestored(const QString& name, const QString& file_name);
+#endif
 private slots:
     void doCancel();
 private:
@@ -151,7 +154,7 @@ private:
     std::unique_ptr<FigmaDataDocument> m_sourceDoc;
     QVariantMap m_imports;
     int m_imageDimensionMax = 1024;
-    mutable bool m_busy = false;
+    bool m_busy = false;
     unsigned m_flags = 0;
     QByteArray m_brokenPlaceholder;
     QMap<int, QSet<int>> m_filter;

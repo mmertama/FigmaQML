@@ -39,10 +39,10 @@ private:
     Deldelegate m_d;
 };
 
-
+/*
 #define FOO  RAII_ r{[fn = __FUNCTION__](){qDebug() << "FOO Out - " << fn; }}; qDebug() << "FOO: In - " << __FUNCTION__
 #define FOOBAR ; RAII_ r{[fn = __FUNCTION__, ln = __LINE__ ](){qDebug() << "FOO ouT - " << fn << ln; }}; qDebug() << "FOO: iN - " << __FUNCTION__ << __LINE__
-
+*/
 
 FigmaGet::FigmaGet(QObject *parent) : FigmaProvider(parent),
     m_accessManager(new QNetworkAccessManager(this)),
@@ -52,7 +52,7 @@ FigmaGet::FigmaGet(QObject *parent) : FigmaProvider(parent),
     m_images(new FigmaData),
     m_renderings(new FigmaData),
     m_nodes(new FigmaData) {
-        FOO;
+
      qmlRegisterUncreatableType<FigmaGet>("FigmaGet", 1, 0, "FigmaGet", "");
 
      QObject::connect(this, &FigmaGet::projectTokenChanged, this, &FigmaGet::reset);
@@ -89,7 +89,7 @@ FigmaGet::FigmaGet(QObject *parent) : FigmaProvider(parent),
 }
 
 void FigmaGet::onRetrievedImage(const QString& imageRef) {
-    FOO;
+
     if(m_images->contains(imageRef)) {
         if(!m_images->isEmpty(imageRef))
             emit imageReady(imageRef, m_images->data(imageRef), m_images->format(imageRef));
@@ -106,7 +106,7 @@ void FigmaGet::onRetrievedImage(const QString& imageRef) {
 
 
 void FigmaGet::onRetrievedNode(const QString& nodeId) {
-    FOO;
+
      if(!m_nodes->isEmpty(nodeId))
          emit nodeReady(m_nodes->data(nodeId));
      else
@@ -116,20 +116,18 @@ void FigmaGet::onRetrievedNode(const QString& nodeId) {
 
 void FigmaGet::onError(const QString& errStr)
 {
-    FOO << errStr;
     if(m_lastError)
         m_lastError(errStr);
     m_lastError = nullptr;
 }
 
 bool FigmaGet::isReady() {
-    FOO;
+
     return m_callQueue.isEmpty() && m_timeout->pending() == 0;
 }
 
 void FigmaGet::doFinished(QNetworkReply* rep)
 {
-    FOO << rep;
     if(rep->error() == QNetworkReply::NoError) { // error handled after this
         auto& reply_data = m_replies[rep];
         auto data = std::get<std::shared_ptr<QByteArray>>(reply_data);
@@ -141,16 +139,16 @@ void FigmaGet::doFinished(QNetworkReply* rep)
 }
 
 void FigmaGet::retrieveImage(const QString& id,  FigmaData* target, const QSize& maxSize) {
-    FOO;
+
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     queueCall([this, id, target, maxSize]() {
-        FOOBAR;
+
         return doRetrieveImage(id, target, maxSize);
     });
 }
 
  void FigmaGet::requestRendering(const QString& imageId) {
-     FOO;
+
      if(!imageId.isEmpty()) {
         m_rendringQueue.append(imageId);
      }
@@ -169,7 +167,6 @@ void FigmaGet::retrieveNode(const QString& id) {
  }
 
 bool FigmaGet::store(const QString& filename, unsigned flags, const QVariantMap& imports) {
-    FOO;
 #ifdef Q_OS_WINDOWS
     QFile file(filename.startsWith('/') ? filename.mid(1) : filename);
 #else
@@ -189,11 +186,9 @@ bool FigmaGet::store(const QString& filename, unsigned flags, const QVariantMap&
 }
 
 FigmaGet::~FigmaGet() {
-    FOO;
 }
 
 bool FigmaGet::restore(const QString& filename) {
-    FOO;
 #ifdef Q_OS_WINDOWS
     QFile file(filename.startsWith('/') ? filename.mid(1) : filename);
 #else
@@ -217,7 +212,7 @@ bool FigmaGet::restore(const QString& filename) {
 }
 
 bool FigmaGet::write(QDataStream& stream, unsigned flags, const QVariantMap& imports) const {
-    FOO;
+
     stream << QString(StreamId);
     stream << m_projectToken;
     stream << m_data;
@@ -233,7 +228,7 @@ bool FigmaGet::write(QDataStream& stream, unsigned flags, const QVariantMap& imp
 }
 
 bool FigmaGet::read(QDataStream& stream) {
-    FOO;
+
     reset();
     QString streamid;
     stream >> streamid;
@@ -261,7 +256,7 @@ bool FigmaGet::read(QDataStream& stream) {
 }
 
 void FigmaGet::reset() {
-    FOO;
+
     m_downloads->reset();
     m_images->clear();
     m_renderings->clear();
@@ -269,7 +264,7 @@ void FigmaGet::reset() {
 }
 
 void FigmaGet::cancel() {
-    FOO;
+
     const auto replies = m_replies.keys();
     for(auto& r : replies) {
         m_replies.remove(r);
@@ -279,13 +274,12 @@ void FigmaGet::cancel() {
 }
 
 void FigmaGet::doCall() {
-    FOO << m_callQueue.size();
     if(m_callQueue.isEmpty()) {
-        FOOBAR;
+
         m_callTimer.stop();
     }
     else {
-        FOOBAR;
+
         const auto call = m_callQueue.dequeue();
         auto reply = call();
         m_downloads->monitor(reply, call);
@@ -293,7 +287,7 @@ void FigmaGet::doCall() {
 }
 
 void FigmaGet::queueCall(const NetworkFunction& call) {
-    FOO;
+
     m_callQueue.enqueue(call);
 #ifndef NO_THROTTLED_CALL
     qDebug()
@@ -312,7 +306,7 @@ void FigmaGet::queueCall(const NetworkFunction& call) {
 }
 
 QByteArray FigmaGet::data() const {
-    FOO;
+
     return m_data;
 }
 
@@ -327,7 +321,7 @@ void FigmaGet::notFoundRendering(const QString& imageRef) {
 
 void FigmaGet::setTimeout(const std::shared_ptr<QMetaObject::Connection>& connection, const QString& id) {
     m_timeout->set(id, TimeoutTime, [this, id, connection]() {
-                FOOBAR;
+
                 if(connection.use_count() > 1)
                     emit error("Timeout on: " + id);
             });
@@ -339,14 +333,14 @@ void FigmaGet::setTimeout(QNetworkReply* reply, const QString& id) {
         m_timeout->cancel(id);
     });
     m_timeout->set(id, TimeoutTime, [this, id, connection]() {
-                FOOBAR;
+
                 if(connection.use_count() > 1)
                     emit error("Timeout on: " + id);
             });
 }
 
 void FigmaGet::getImage(const QString &imageRef, const QSize& maxSize) {
-    FOO;
+
 
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     Q_ASSERT(!imageRef.isEmpty());
@@ -383,13 +377,13 @@ void FigmaGet::getImage(const QString &imageRef, const QSize& maxSize) {
 
 
 QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, const QSize &maxSize) {
-    FOO;
+
     QNetworkRequest request;
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
     const QUrl uri = target->url(id);
     if(!uri.isValid()) {
-        FOOBAR;
+
         emit error(QString("Url not valid \"%1\"").arg(uri.toString()));
         return nullptr;
     }
@@ -400,13 +394,12 @@ QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, c
 
     std::shared_ptr<QByteArray> bytes(new QByteArray);
 
-    const auto finished = [reply, this, bytes, target, maxSize, id]() {
-        FOOBAR << reply;
+    const auto finished = [this, bytes, target, maxSize, id]() {
         QBuffer imageBuffer(bytes.get(), this);
         QImageReader imageReader(&imageBuffer);
         const auto format = imageReader.format();
         if(!(format == "png" || format == "jpeg" || format == "jpg")) {
-            FOOBAR;
+
             emit error(QString("Image format not supported \"%1\"").arg(QString(format)));
             return;
         }
@@ -428,7 +421,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, c
                     emit error(QString("Image cannot be resized \"%1\" to %2x%3").arg(id).arg(maxSize.width()).arg(maxSize.height()));
                     return;
                 }
-                FOOBAR;
+
                 QImageWriter writer(&buffer, format);
                 if(!writer.write(scaled)) {
                     emit error(QString("Image cannot be resized \"%1\" %2")
@@ -452,7 +445,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const QString& id, FigmaData *target, c
 }
 
 QNetworkReply* FigmaGet::populateImages() {
-    FOO;
+
 
     m_populationOngoing = true;
 
@@ -467,7 +460,6 @@ QNetworkReply* FigmaGet::populateImages() {
     std::shared_ptr<QByteArray> bytes(new QByteArray);
 
     const auto finished = [reply, this, bytes]() {
-        FOOBAR << reply;
         RAII_([this](){m_populationOngoing = false;});
         if(bytes->isEmpty()) {
            qDebug() << "foo" << reply;
@@ -508,7 +500,7 @@ QNetworkReply* FigmaGet::populateImages() {
 }
 
 void FigmaGet::getRendering(const QString& imageId) {
-    FOO;
+
     if(!m_renderings->contains(imageId)) {
         auto connection = std::make_shared<QMetaObject::Connection>();
         setTimeout(connection, imageId);
@@ -542,7 +534,7 @@ void FigmaGet::getRendering(const QString& imageId) {
 
 
 QNetworkReply* FigmaGet::doRequestRendering(const QString& id) {
-    FOO;
+
     if(m_rendringQueue.isEmpty())
         return nullptr;
 
@@ -568,8 +560,7 @@ QNetworkReply* FigmaGet::doRequestRendering(const QString& id) {
            }
     });
 
-    const auto finished =  [reply, this, bytes]() {
-        FOOBAR << reply;
+    const auto finished =  [this, bytes]() {
         if(bytes->isEmpty()) {
            emit error("Error on rendering - no data");
            return;
@@ -619,7 +610,7 @@ void FigmaGet::replyCompleted(const std::shared_ptr<QByteArray>& bytes) {
 }
 
 void FigmaGet::update() {
-    FOO;
+
 
     if(m_downloads->downloading()) {
         emit updateCompleted(false);
@@ -639,7 +630,6 @@ void FigmaGet::update() {
     auto reply = m_accessManager->get(request);
 
     const auto finished =  [reply, this, bytes]() {
-        FOOBAR << reply;
         reply->deleteLater();
         QObject::connect(reply, &QObject::destroyed, this, [this, bytes] (QObject*) { //since added after downloads, this is called after
             emit replyComplete(bytes);
@@ -651,12 +641,12 @@ void FigmaGet::update() {
 }
 
 void FigmaGet::documentCreated() {
-    FOO;
+
     m_connectionState = State::Complete;
 }
 
 void FigmaGet::getNode(const QString &id) {
-    FOO;
+
     if(!m_nodes->contains(id)) {
         const QStringList params{
             "ids=" + id,
@@ -676,7 +666,7 @@ void FigmaGet::getNode(const QString &id) {
 }
 
 void FigmaGet::doRetrieveNode(const QString& id) {
-    FOO;
+
 
     QNetworkRequest request;
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
@@ -701,11 +691,10 @@ void FigmaGet::doRetrieveNode(const QString& id) {
 
 
 void FigmaGet::replyReader() {
-    FOO;
+
     const auto replies = m_replies.keys();
     for(auto& reply : replies)
     {
-        FOO << reply;
         if(reply->bytesAvailable()) {
             auto data = std::get<std::shared_ptr<QByteArray>>(m_replies[reply]);
             *data += reply->readAll();
@@ -745,7 +734,6 @@ void FigmaGet::monitorReply(QNetworkReply* reply,
                             const std::shared_ptr<QByteArray>& bytes,
                             const std::function<void ()>& finalize,
                             bool showProgress) {
-    FOO << reply;
     Q_ASSERT(!m_replies.contains(reply));
     m_replies.insert(reply, {bytes, finalize});
 
@@ -769,7 +757,7 @@ void FigmaGet::monitorReply(QNetworkReply* reply,
 }
 
 Downloads* FigmaGet::downloadProgress() {
-    FOO;
+
     return m_downloads;
 }
 

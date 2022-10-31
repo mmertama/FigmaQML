@@ -116,6 +116,13 @@ ApplicationWindow {
                 container.onFigmaviewChanged.connect(snapFunction);
             }
         }
+        function onWasmRestored(name, file_name) {
+            let path = restoreDialog.currentFile.toString();
+            if(!figmaGet.restore(file_name)) {
+                errorNote.text = "Cannot restore from \"" + name + "\""
+            } else
+                info.text = name + " restored";
+        }
     }
 
 
@@ -667,8 +674,12 @@ ApplicationWindow {
 
     function storeFile() {
         if(isWebAssmbly()) {
-            if(!figmaQML.store(documentName + ".figmaqml")) {
-                errorNote.text = "Cannot store";
+            const temp_store_file = "/tmp/stored_figma.figmaqml";
+            if(!figmaGet.store(temp_store_file, figmaQml.flags, figmaQml.imports)) {
+                errorNote.text = "Cannot store data";
+            }
+            if(!figmaQML.store(documentName + ".figmaqml", temp_store_file)) {
+                errorNote.text = "Store not done";
             }
         } else {
             storeDialog.open();
@@ -694,16 +705,12 @@ ApplicationWindow {
         }
     }
 
+
     function restoreFile() {
         if(isWebAssmbly()) {
-            const path  = figmaQML.restore();
-            if(figmaQML.restore()) {
-                errorNote.text = "Cannot restore";
-            } else {
-                info.text = path + " restored";
-            }
+            figmaQML.restore();
         } else {
-            storeDialog.open();
+            restoreDialog.open();
         }
     }
 
@@ -833,60 +840,26 @@ ApplicationWindow {
 
     FontMap {
         id: fontMap
-        property var mappings: figmaQml.fonts //is manually updated due no signals
         anchors.centerIn: main.contentItem
-        fonts: mappings
+        fonts: figmaQml.fonts
         fontFolder: figmaQml.fontFolder
+        fontDialog: fontDialog
         onPickFolder: fontFolderDialog.open()
         alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.AltFontMatch
         keepFigmaFont: figmaQml.flags & figmaQml.KeepFigmaFontName
-        property bool removeMappings: false
-        onPickFont: {
-            fontDialog.key = fontName
+        onPickFont: function (key, family) {
+            fontDialog.key = key
+            fontDialog.currentFont.family = family
             fontDialog.open()
         }
-        onResetFont: {
-            mappings[fontName] = figmaQml.nearestFontFamily(fontName, alternativeSearchAlgorithm);
-            fonts = mappings;
-        }
-        onRemoveAllMappings: {
-            removeMappings = true;
-            close();
-        }
-        onClosed: {
-            after(300, function() {  //let dialog be closed before long run opt
-                figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
-                if(fontMap.alternativeSearchAlgorithm)
-                    figmaQml.flags |= FigmaQml.AltFontMatch
-                else
-                    figmaQml.flags &= ~FigmaQml.AltFontMatch
 
-                if(fontMap.keepFigmaFont)
-                    figmaQml.flags |= FigmaQml.KeepFigmaFontName
-                else
-                    figmaQml.flags &= ~FigmaQml.KeepFigmaFontName
-
-                figmaQml.setSignals(true);
-
-                if(fontMap.removeMappings) {
-                    figmaQml.resetFontMappings();
-                } else {
-                    for(const k in fontMap.mappings) {
-                        figmaQml.setFontMapping(k, fontMap.mappings[k]);
-                    }
-                    figmaQml.refresh();
-                }
-            });
-        }
     }
 
     FontDialog {
         id: fontDialog
         property string key
-        currentFont.family: key ? fontMap.mappings[key] : ""
         onAccepted: {
-            fontMap.mappings[key] = fontDialog.font.family;
-            fontMap.fonts = fontMap.mappings;
+            fontMap.set(key, fontDialog.selectedFont.family)
         }
     }
 
@@ -915,16 +888,6 @@ ApplicationWindow {
             if(!figmaQml.saveAllQML(path)) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
-        }
-    }
-
-    function importFonts() {
-        if(isWebAssembly) {
-            if(!figmaQml.importFontFolder()) {
-                errorNote.text = "Font import failed";
-            }
-        } else {
-            fontFolderDialog.open();
         }
     }
 

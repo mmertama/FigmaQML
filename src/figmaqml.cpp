@@ -932,4 +932,3 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
     return doc;
 }
 
-
