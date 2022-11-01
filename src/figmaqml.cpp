@@ -706,7 +706,10 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
 
     Q_ASSERT(m_imageDimensionMax > 0);
 
-   if(!ensureDirExists(m_targetDir))
+    // erase 1st
+    QDir dir(m_targetDir);
+    dir.removeRecursively();
+    if(!ensureDirExists(m_targetDir))
        return nullptr;
 
     QByteArray header = QString(FileHeader).toLatin1();
@@ -754,7 +757,7 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
 
       QFile componentFile(m_targetDir + "/" + validFileName(c->name()) + ".qml");
       if(componentFile.exists()) {
-          emit error(toStr("File aleady exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
+          emit error(toStr("File already exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
           return nullptr;
       }
       if(!componentFile.open(QIODevice::WriteOnly)) {
