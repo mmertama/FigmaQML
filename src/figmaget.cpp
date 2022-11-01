@@ -763,19 +763,25 @@ Downloads* FigmaGet::downloadProgress() {
 
 
 std::optional<std::tuple<QByteArray, int>> FigmaGet::cachedImage(const QString& imageRef) {
-    if(!m_images->contains(imageRef))
+    if(!m_images->contains(imageRef) ||
+            m_images->isEmpty(imageRef) ||
+            m_images->isPending(imageRef))
         return std::nullopt;
     return std::make_optional(std::make_tuple(m_images->data(imageRef), m_images->format(imageRef)));
 }
 
 std::optional<std::tuple<QByteArray, int>> FigmaGet::cachedRendering(const QString& figmaId) {
-    if(!m_renderings->contains(figmaId))
+    if(!m_renderings->contains(figmaId) ||
+            m_renderings->isEmpty(figmaId) ||
+            m_renderings->isPending(figmaId))
         return std::nullopt;
     return std::make_optional(std::make_tuple(m_renderings->data(figmaId), m_renderings->format(figmaId)));
 }
 
 std::optional<QByteArray> FigmaGet::cachedNode(const QString& figmaId) {
-    if(!m_nodes->contains(figmaId))
+    if(!m_nodes->contains(figmaId) ||
+            m_nodes->isEmpty(figmaId) ||
+            m_nodes->isPending(figmaId))
         return std::nullopt;
     return std::make_optional(m_nodes->data(figmaId));
 }

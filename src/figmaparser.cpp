@@ -68,7 +68,8 @@ std::optional<FigmaParser::ItemType> FigmaParser::type(const QJsonObject& obj) {
        {"GROUP", ItemType::Frame},
        {"FRAME", ItemType::Frame},
        {"SLICE", ItemType::None},
-       {"NONE", ItemType::None}
+       {"NONE", ItemType::None},
+       {"COMPONENT_SET", ItemType::Frame}
 
    };
    const auto type = obj["type"].toString();
@@ -108,6 +109,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             const auto componentName = c["name"].toString();
             auto uniqueComponentName = validFileName(componentName); //names are expected to be unique, so we ensure so
             int count = 1;
+            qDebug() << "uniqueComponentName" << uniqueComponentName;
             while(std::find_if(map.begin(), map.end(), [&uniqueComponentName](const auto& c) {
                 return c->name() == uniqueComponentName;
             }) != map.end()) {
@@ -163,8 +165,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     QString FigmaParser::validFileName(const QString& itemName) {
         if(itemName.isEmpty())
             return QString();
-        Q_ASSERT(!itemName.endsWith(FIGMA_SUFFIX));
-        auto name = itemName + FIGMA_SUFFIX;
+
+        // This was ASSERT, but COMPONENT_SET (case only?) may have this ext!
+        // but this 'if' seems to fix it
+        qWarning() << "Item" << itemName << "ends with " << FIGMA_SUFFIX;
+        auto name = itemName;
+        if(!itemName.endsWith(FIGMA_SUFFIX))
+            name += FIGMA_SUFFIX;
         static const QRegularExpression re(R"([\\\/:*?"<>|\s])");
         name.replace(re, QLatin1String("_"));
         static const QRegularExpression ren(R"([^a-zA-Z0-9_])");
