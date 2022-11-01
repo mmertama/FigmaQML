@@ -9,10 +9,11 @@ class FontCache {
 public:
     void insert(const QString& key, const QString& value) {
         QMutexLocker lock(&m_mutex);
-        if(m_fontMap.contains(key))
+        if(m_fontMap.contains(key)) {
             m_fontMap[key] = value;
-        else
+        } else {
             m_fontMap.insert(key, value);
+        }
     }
 
     bool contains(const QString& key) const {

@@ -504,6 +504,7 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
 
 
 void FigmaQml::setFontMapping(const QString& key, const QString& value) {
+    qDebug() << "set font" << key << "->" << value;
     m_fontCache->insert(key, value);
     emit refresh();
     emit fontsChanged();
