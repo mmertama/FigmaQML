@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
-import FigmaQml
+
 
 Popup {
     id: main
@@ -10,7 +10,7 @@ Popup {
     focus: true
     width: buttonRow.width + 20
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside
-    property var fonts
+    property var model
     property var fontDialog
     signal pickFolder
     signal pickFont(string fontName, string familyName)
@@ -18,35 +18,16 @@ Popup {
     property alias alternativeSearchAlgorithm: alternativeSearchAlgorithmCheck.checked
     property alias keepFigmaFont: keepFigmaFontCheck.checked
     property bool removeMappings: false
+    property var fonts : Object.keys(model)
+    property bool switcher: false
     function set(key, family) {
-        console.log(main.fonts[key], "->", family);
-        main.fonts[key] = family;
-        list.model = []
-        list.model = main.fonts
+       console.log(key, "->", family);
+        main.model[key] = family;
+        switcher = true
+        main.fonts = Object.keys(main.model)
+        switcher = false
     }
-    onClosed: {
-        figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
-        if(main.alternativeSearchAlgorithm)
-            figmaQml.flags |= FigmaQml.AltFontMatch
-        else
-            figmaQml.flags &= ~FigmaQml.AltFontMatch
 
-        if(main.keepFigmaFont)
-            figmaQml.flags |= FigmaQml.KeepFigmaFontName
-        else
-            figmaQml.flags &= ~FigmaQml.KeepFigmaFontName
-
-        figmaQml.setSignals(true);
-
-        if(main.removeMappings) {
-            figmaQml.resetFontMappings();
-        } else {
-            for(const k in main.fonts) {
-                figmaQml.setFontMapping(k, main.fonts[k]);
-            }
-            figmaQml.refresh();
-        }
-    }
     contentItem: ColumnLayout {
         Button {
             id: fontFolderText
@@ -69,7 +50,7 @@ Popup {
         }
         Text {
             id: placeHolder
-            visible: Object.keys(main.fonts).length === 0
+            visible: fonts.length === 0
             text: "No QML file with fonts available"
             height: list.height
             width: list.width
@@ -79,36 +60,38 @@ Popup {
             id: list
             height: 400
             width:  parent.width
-            model: Object.keys(main.fonts)
+            model: main.fonts
             clip: true
-            delegate: Row {
+            delegate: RowLayout {
                 spacing: 10
                 Text {
                     id: key
                     text: modelData
-                    height: 18
-                    width:  list.width / 2 - 30
+                    Layout.preferredHeight: 18
+                    Layout.preferredWidth:  list.width / 2 - 30
                     clip: true
                 }
                 Rectangle {
                     color: "lightgrey"
-                    width: list.width / 2 - 30
-                    height: key.height
+                    Layout.preferredWidth: list.width / 2 - 30
+                    Layout.preferredHeight: key.height
                     border.width: 1
                     clip: true
                     Text {
+                        id: name
                         anchors.centerIn: parent
-                        text: main.fonts[modelData]
+                        text: main.model[main.switcher ? "" : modelData]
                     }
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: main.pickFont(modelData, main.fonts[modelData])
+                        onClicked: main.pickFont(modelData, main.model[modelData])
                     }
                 }
                 Rectangle {
                     color: "lightgrey"
-                    height: key.height
-                    width: 40
+                    Layout.preferredHeight: key.height
+                    Layout.preferredWidth: 40
+                    Layout.alignment: Qt.AlignRight
                     border.width: 1
                     Text {
                         anchors.margins: 10
@@ -118,7 +101,7 @@ Popup {
                     MouseArea {
                         anchors.fill: parent
                         onClicked: {
-                            main.fonts[modelData] = figmaQml.nearestFontFamily(modelData,
+                            main.model[modelData] = figmaQml.nearestFontFamily(modelData,
                                                                               main.alternativeSearchAlgorithm);
                         }
                     }

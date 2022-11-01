@@ -841,7 +841,7 @@ ApplicationWindow {
     FontMap {
         id: fontMap
         anchors.centerIn: main.contentItem
-        fonts: figmaQml.fonts
+        model: figmaQml.fonts
         fontFolder: figmaQml.fontFolder
         fontDialog: fontDialog
         onPickFolder: fontFolderDialog.open()
@@ -851,6 +851,30 @@ ApplicationWindow {
             fontDialog.key = key
             fontDialog.currentFont.family = family
             fontDialog.open()
+        }
+        onClosed: {
+            figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
+            if(fontMap.alternativeSearchAlgorithm)
+                figmaQml.flags |= FigmaQml.AltFontMatch
+            else
+                figmaQml.flags &= ~FigmaQml.AltFontMatch
+
+            if(fontMap.keepFigmaFont)
+                figmaQml.flags |= FigmaQml.KeepFigmaFontName
+            else
+                figmaQml.flags &= ~FigmaQml.KeepFigmaFontName
+
+            figmaQml.setSignals(true);
+
+            if(fontMap.removeMappings) {
+                figmaQml.resetFontMappings();
+            } else {
+                for(const i in fontMap.fonts) {
+                    const k = fontMap.fonts[i]
+                    figmaQml.setFontMapping(k, fontMap.model[k]);
+                }
+            }
+            figmaQml.refresh();
         }
 
     }
