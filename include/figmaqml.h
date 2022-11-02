@@ -91,6 +91,10 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
+#ifdef USE_NATIVE_FONT_DIALOG
+    // sigh font native dialog wont work on WASM and QML dialog is buggy
+    Q_INVOKABLE void showFontDialog(const QString& currentFont);
+#endif
 #ifdef WASM_FILEDIALOGS
     Q_INVOKABLE bool saveAllQMLZipped(const QString& docName, const QString& canvasName);
     Q_INVOKABLE bool importFontFolder();
@@ -128,6 +132,10 @@ signals:
     void takeSnap(const QString& pngName, int canvasToWait, int elementToWait);
     void fontsChanged();
     void fontFolderChanged();
+    void fontLoaded(const QFont& font);
+#ifdef USE_NATIVE_FONT_DIALOG
+    void fontAdded(const QString& fontFamilyName);
+#endif
     void refresh();
 #ifdef WASM_FILEDIALOGS
     void wasmRestored(const QString& name, const QString& file_name);

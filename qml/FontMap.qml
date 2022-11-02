@@ -21,7 +21,6 @@ Popup {
     property var fonts : Object.keys(model)
     property bool switcher: false
     function set(key, family) {
-       console.log(key, "->", family);
         main.model[key] = family;
         switcher = true
         main.fonts = Object.keys(main.model)
