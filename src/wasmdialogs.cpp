@@ -1,6 +1,7 @@
 #include "figmaqml.h"
 #include <QTemporaryDir>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <quazip/JlCompress.h>
 
 
@@ -32,13 +33,13 @@ bool FigmaQml::importFontFolder() {
     if(!fontFolder.exists())
         fontFolder.mkpath(".");
     QFileDialog::getOpenFileContent("", [this](const QString & filename, const QByteArray & bytes) {
-            QFile file(m_fontFolder + '/' + filename);
-            if(!file.open(QIODevice::WriteOnly)) {
-                emit error("Cannot write fonts");
-            }
-            file.write(bytes);
-            file.close();
-            emit fontFolderChanged();
+        QFile file(m_fontFolder + '/' + filename);
+        if(!file.open(QIODevice::WriteOnly)) {
+            emit error("Cannot write font " + filename);
+        }
+        file.write(bytes);
+        file.close();
+        emit fontFolderChanged();
     });
     return false;
 }

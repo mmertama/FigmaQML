@@ -848,9 +848,7 @@ ApplicationWindow {
         alternativeSearchAlgorithm: figmaQml.flags & FigmaQml.AltFontMatch
         keepFigmaFont: figmaQml.flags & figmaQml.KeepFigmaFontName
         onPickFont: function (key, family) {
-            fontDialog.key = key
-            fontDialog.currentFont.family = family
-            fontDialog.open()
+            fontDialog.request(key, family)
         }
         onClosed: {
             figmaQml.setSignals(false); //this potentially make tons of new data-parsing requests, so we just block
@@ -879,9 +877,42 @@ ApplicationWindow {
 
     }
 
+    Connections {
+        target: figmaQml
+        function onFontLoaded(font) {
+            fontDialog.currentFont = font
+        }
+    }
+
+    /*
+    Connections {
+        id: fontDialog
+        target: figmaQml
+        property string key
+        function request(fontKey, family) {
+            key = fontKey;
+            console.log("fontKey - open", family);
+            figmaQml.showFontDialog(family);
+            console.log("fontKey - done", family);
+        }
+        function onFontAdded(fontFamily) {
+            console.log("onFontAdded", fontFamily);
+            fontMap.set(key, fontFamily)
+        }
+    }
+    */
+
     FontDialog {
         id: fontDialog
         property string key
+        function request(fontKey, family) {
+            key = fontKey;
+            currentFont.family = family;
+            open();
+        }
+        onCurrentFontChanged: {
+            console.log(currentFont);
+        }
         onAccepted: {
             fontMap.set(key, fontDialog.selectedFont.family)
         }

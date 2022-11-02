@@ -12,7 +12,10 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QStandardPaths>
-#include <exception>
+#ifdef USE_NATIVE_FONT_DIALOG
+#include <QFontDialog>
+#include <QApplication>
+#endif
 
 
 
@@ -239,9 +242,18 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
         if(!fontFolder.exists())
             emit warning(QString("Folder \"%1\", not found").arg(m_fontFolder));
         for(const auto& entry : fontFolder.entryInfoList()) {
-            emit info(entry.fileName());
-            if(!entry.fileName().endsWith(".txt")&& QFontDatabase::addApplicationFont(entry.absoluteFilePath()) < 0)
+            int id = -1;
+            if(!entry.isDir() && !entry.fileName().endsWith(".txt") &&  (id = QFontDatabase::addApplicationFont(entry.absoluteFilePath())) < 0)
                 emit warning(QString("Font \"%1\", cannot be loaded").arg(entry.absoluteFilePath()));
+            else {
+                const auto families = QFontDatabase::applicationFontFamilies(id);
+                if(!families.isEmpty()) {
+                    QFont font(families);
+                    emit info("font \"" + entry.fileName() + "\" loaded");
+                    qDebug() << "Font" << entry.absoluteFilePath() << "loaded "<< font;
+                    emit fontLoaded(font);
+                }
+             }
         }
     };
 
@@ -936,3 +948,17 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
     return doc;
 }
 
+#ifdef USE_NATIVE_FONT_DIALOG
+void FigmaQml::showFontDialog(const QString& currentFont) {
+    auto w = QApplication::activeWindow();
+    auto dlg = new QFontDialog(QFont(currentFont), w);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    dlg->setModal(true);
+    QObject::connect(dlg, &QFontDialog::fontSelected, [this](const QFont& font) {
+        const auto family = font.family();
+        qDebug() << "font selected" << family;
+        emit fontAdded(family);
+    });
+    dlg->show();
+}
+#endif
