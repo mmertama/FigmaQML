@@ -1,16 +1,17 @@
 # FigmaQML #
 
-FigmaQML is an application to generate [QML](https://doc.qt.io/qt-5/qtqml-index.html) sourcecode
-from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-5/qtquick-index.html) 
+FigmaQML is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
+from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-6/qtquick-index.html) 
 applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
 design using UI code. Omitting that tedious, reduntant step, will dramatically decrease development effort.
 FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality.  
 
-* Version 1.0.1
+* Version 2.0.0
 * License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
 
 ## Run ##
 
+ * FigmaQML can be run as a Web Assembly application - [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
  * FigmaQML can be run either in command line or as a gui application.
  * Gui application is interactive to see visuals and source code before saving.
  * Command line is for processing Figma documents to QML. 
@@ -20,8 +21,8 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
 
 ### Binaries ###
 
-* For [Windows 10](https://github.com/mmertama/FigmaQML/releases)
-* For [Mac OSX](https://github.com/mmertama/FigmaQML/releases)
+* For [Windows 10](https://github.com/mmertama/FigmaQML/releases) (update todo - currently version 1.0.0)
+* For [Mac OSX](https://github.com/mmertama/FigmaQML/releases) (update todo - currently version 1.0.0)
 * For Ubuntu, binaries release is not available, please compile from sources.
 
 ### Quick guide to FigmaQML UI ###
@@ -59,6 +60,7 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
 * Qt6
 * Python 3.8 (or later)
 * CMake 3.16 (or later)
+* For WebAssembly see [Qt 6.4 WebAssembly](https://doc-snapshots.qt.io/qt6-6.4/wasm.html)
 * For Windows 10: 
     * Git Bash
     * MSVC 19
@@ -114,4 +116,6 @@ There are few scripts in the [test]() folder that are used for testing. Since th
     * On OSX Checkbox was not working correctly so I did a quick styling to fix it.
     * Some minor fixes to get rid of warnings.
     * Build script and README updates.   
-    
+ * 2.0.0
+    * WebAssembly support
+    * Lot of fixes and refactoring code for the Web assembly
