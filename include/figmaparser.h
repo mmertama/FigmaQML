@@ -65,7 +65,7 @@ public:
             m_name(name), m_id(id), m_key(key),
             m_description(description), m_object(object) {}
         QString name() const {
-            Q_ASSERT(m_name.endsWith(FIGMA_SUFFIX) || validFileName(m_name) == m_name);
+            Q_ASSERT(m_name.endsWith(FIGMA_SUFFIX) || validFileName(m_name, false) == m_name);
             return m_name;
         }
         QString description() const {return m_description;}
@@ -101,13 +101,13 @@ public:
     static std::optional<Element> component(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static std::optional<Element> element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static QString name(const QJsonObject& project);
-    static QString validFileName(const QString& itemName);
     static QString lastError();
+    static QString makeFileName(const QString& itemName);
 private:
     enum class StrokeType {Normal, Double, OnePix};
     enum class ItemType {None, Vector, Text, Frame, Component, Boolean, Instance};
-    
 private:
+    static QString validFileName(const QString& itemName, bool inited);
     static QHash<QString, QJsonObject> getObjectsByType(const QJsonObject& obj, const QString& type);
     static QJsonObject delta(const QJsonObject& instance, const QJsonObject& base,
                              const QSet<QString>& ignored,

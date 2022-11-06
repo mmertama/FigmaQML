@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 if [ -z "${FILE_NAME}" ];
 	then FILE_NAME="fq_test";
 fi
@@ -28,9 +29,10 @@ echo Phase 2: Generate QML directory from the server.
 rm -rf ${FILE_NAME}_qml
 $1 $2 $3 ${FILE_NAME}_qml
 
-if [ $? -ne 0 ]; then 
-	echo Error: code $? 
-	exit -81
+pid=$?
+if [ $pid -ne 0 ]; then
+    echo "Error: code $pid ($1 $2 $3 ${FILE_NAME}_qml)"
+    exit -81
 fi
 
 if [ ! -d ${FILE_NAME}_qml ]; then

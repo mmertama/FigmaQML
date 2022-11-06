@@ -1,7 +1,9 @@
 #ifndef FIGMACANVAS_H
 #define FIGMACANVAS_H
 
+#include "figmadocument.h"
 #include "figmaprovider.h"
+#include "figmaparser.h"
 #include <QObject>
 #include <QVariantMap>
 #include <QUrl>
@@ -12,7 +14,6 @@
 class FigmaFileDocument;
 class FigmaDataDocument;
 class FontCache;
-
 
 
 class FigmaQml : public QObject, public FigmaParserData {
@@ -147,14 +148,15 @@ private:
     bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);
     bool ensureDirExists(const QString& dirname);
     bool saveImages(const QString &folder);
-    template<class FigmaDocType>
-    std::unique_ptr<FigmaDocType> doCreateDocument(const QJsonObject& data);
+    bool doCreateDocument(FigmaDocument& doc, const QJsonObject& json);
     template<class FigmaDocType>
     void createDocument(const QJsonObject& json);
     std::optional<QJsonObject> object(const QByteArray& bytes);
     void cleanDir(const QString& dirName);
     std::optional<std::tuple<QByteArray, int>> getImage(const QString& imageRef, bool isRendering);
     void suspend();
+    bool writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header);
+    bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;

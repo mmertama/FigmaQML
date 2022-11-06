@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QHash>
+#include <QDebug>
 
 class Execute : public QObject {
     Q_OBJECT
@@ -32,7 +33,8 @@ public:
         mTimers.insert(id, {fn, t});
         t->setSingleShot(true);
         t->start(ms);
-        QObject::connect(t, &QTimer::timeout, this, [this, id](){
+        QObject::connect(t, &QTimer::timeout, this, [this, id]() {
+            qDebug() << "Timeout" << id;
             auto t = std::get<QTimer*>(mTimers[id]);
             t->deleteLater();
             mTimers.remove(id);

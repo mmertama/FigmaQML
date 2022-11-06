@@ -17,6 +17,7 @@
 #include <QRegularExpression>
 #include <QFont>
 
+
 #ifndef NO_SSL
 QT_REQUIRE_CONFIG(ssl);
 #endif
@@ -331,29 +332,38 @@ int main(int argc, char *argv[]) {
 
          QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state, &onDataChange]() {
              int excode = 0;
-             if(state & Store) {
-                 const auto saveName = output.endsWith(".figmaqml") ? output : output + ".figmaqml";
-                 if(figmaGet->store(saveName, figmaQml->property(FLAGS).toUInt(), figmaQml->property(IMPORTS).value<QVariantMap>())) {
-                     ::print() << "\nStored to " << saveName << Qt::endl;
-                 } else {
-                     ::print() << "\nStore to " << saveName << " failed" << Qt::endl;
-                      excode = -1;
-                     }
-             } else if(!output.isEmpty()) {
-                if(figmaQml->saveAllQML(output)) {
-                    ::print() << "\nSaved to " << output << Qt::endl;
-                } else {
-                    ::print() << "\nSave to " << output << " failed" << Qt::endl;
-                    excode = -1;
-                }
-             }
-             if(state & ShowFonts) {
-                 const auto fonts = figmaQml->fonts();
-                 const auto keys = fonts.keys();
-                 for(const auto& k : keys) {
-                     ::print() << "Font: " << k << "->" << fonts[k].toString() << Qt::endl;
+             QEventLoop loop;
+             QTimer exit;
+             QObject::connect(&exit, &QTimer::timeout,[&]() { // correct way is to wait all...
+                 if(!figmaGet->isReady())
+                     return;
+                 if(state & Store) {
+                     const auto saveName = output.endsWith(".figmaqml") ? output : output + ".figmaqml";
+                     if(figmaGet->store(saveName, figmaQml->property(FLAGS).toUInt(), figmaQml->property(IMPORTS).value<QVariantMap>())) {
+                         ::print() << "\nStored to " << saveName << Qt::endl;
+                     } else {
+                         ::print() << "\nStore to " << saveName << " failed" << Qt::endl;
+                          excode = -1;
+                         }
+                 } else if(!output.isEmpty()) {
+                    if(figmaQml->saveAllQML(output)) {
+                        ::print() << "\nSaved to " << output << Qt::endl;
+                    } else {
+                        ::print() << "\nSave to " << output << " failed" << Qt::endl;
+                        excode = -1;
+                    }
                  }
-             }
+                 if(state & ShowFonts) {
+                     const auto fonts = figmaQml->fonts();
+                     const auto keys = fonts.keys();
+                     for(const auto& k : keys) {
+                         ::print() << "Font: " << k << "->" << fonts[k].toString() << Qt::endl;
+                     }
+                 }
+                 loop.quit();
+             });
+             exit.start(400);
+             loop.exec();
              QTimer::singleShot(0, &app, [&app, excode](){app.exit(excode);});
          });
 
@@ -529,8 +539,10 @@ int main(int argc, char *argv[]) {
      if(!restore.isEmpty()) {
          figmaGet->restore(restore);
      }
-     qDebug()  << "FOO: start app";
-    return app.exec();
+    //qDebug()  << "FOO: start app" << dir.path();
+    const auto return_value = app.exec();
+    //qDebug()  << "FOO: exit app" << dir.path();
+    return return_value;
 }
 
 

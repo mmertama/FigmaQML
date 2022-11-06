@@ -107,13 +107,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             }
             const auto c = components[key].toObject();
             const auto componentName = c["name"].toString();
-            auto uniqueComponentName = validFileName(componentName); //names are expected to be unique, so we ensure so
+            auto uniqueComponentName = validFileName(componentName, false); //names are expected to be unique, so we ensure so
             int count = 1;
-            qDebug() << "uniqueComponentName" << uniqueComponentName;
+            //qDebug() << "uniqueComponentName" << uniqueComponentName;
             while(std::find_if(map.begin(), map.end(), [&uniqueComponentName](const auto& c) {
                 return c->name() == uniqueComponentName;
             }) != map.end()) {
-                uniqueComponentName = validFileName(QString("%1_%2").arg(componentName).arg(count));
+                uniqueComponentName = validFileName(QString("%1_%2").arg(componentName, count), false);
                 ++count;
             }
 
@@ -162,16 +162,21 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          return project["name"].toString();
     }
 
-    QString FigmaParser::validFileName(const QString& itemName) {
+    QString FigmaParser::validFileName(const QString& itemName, bool inited) {
         if(itemName.isEmpty())
             return QString();
 
-        // This was ASSERT, but COMPONENT_SET (case only?) may have this ext!
-        // but this 'if' seems to fix it
-        qWarning() << "Item" << itemName << "ends with " << FIGMA_SUFFIX;
+        Q_ASSERT(inited == itemName.endsWith(FIGMA_SUFFIX));
         auto name = itemName;
-        if(!itemName.endsWith(FIGMA_SUFFIX))
+
+        if(!inited)
             name += FIGMA_SUFFIX;
+
+        return makeFileName(name);
+    }
+
+    QString FigmaParser::makeFileName(const QString& fileName) {
+        auto name = fileName;
         static const QRegularExpression re(R"([\\\/:*?"<>|\s])");
         name.replace(re, QLatin1String("_"));
         static const QRegularExpression ren(R"([^a-zA-Z0-9_])");
@@ -246,7 +251,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             return std::nullopt;
         QStringList ids(m_componentIds.begin(), m_componentIds.end());
         return Element(
-                validFileName(obj["name"].toString()),
+                validFileName(obj["name"].toString(), false),
                 obj["id"].toString(),
                 obj["type"].toString(),
                 std::move(bytes.value()),
@@ -1516,8 +1521,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          QByteArray out;
          out += makeItem("Item", obj, intendents);
          out += makeExtents(obj, intendents);
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
+         //const auto intendent = tabs(intendents);
+         //const auto intendent1 = tabs(intendents + 1);
          const auto sourceId =  "source_" + qmlId(obj["id"].toString());
          const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
          if(operation == "UNION") {
@@ -1642,7 +1647,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 if(deltaObject.contains("relativeTransform")) {
                     const auto transform = makeTransforms(objChild, intendents + 1);
                     if(!transform.isEmpty())
-                        out += intendent + QString("%1_transform: %2\n").arg(delegateId).arg(QString(transform));
+                        out += intendent + QString("%1_transform: %2\n").arg(delegateId, QString(transform));
                     const auto pos = position(objChild);
                     out += intendent + QString("%1_x: %2\n").arg(delegateId).arg(static_cast<int>(pos.x()));
                     out += intendent + QString("%1_y: %2\n").arg(delegateId).arg(static_cast<int>(pos.y()));

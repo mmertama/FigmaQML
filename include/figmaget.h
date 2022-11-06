@@ -41,6 +41,7 @@ public:
     std::optional<std::tuple<QByteArray, int>> cachedRendering(const QString& figmaId) override;
     std::optional<QByteArray> cachedNode(const QString& figmaId) override;
     bool isReady() override;
+    std::tuple<int, int, int> cacheInfo() const override;
 public slots:
     void reset();
     void cancel();
@@ -61,34 +62,37 @@ signals:
     void restored(unsigned flags, const QVariantMap& imports);
     void replyComplete(const std::shared_ptr<QByteArray>& bytes);
 private:
+    enum class IdType {IMAGE, RENDERING, NODE};
+    struct Id {
+        bool isEmpty() const {return id.isEmpty();}
+        const QString id; const IdType type;
+    };
     using FinishedFunction = std::function<void ()>;
     void monitorReply(QNetworkReply* reply, const std::shared_ptr<QByteArray>& bytes,
                       const FinishedFunction& finalize, bool showProgress = true);
     void queueCall(const NetworkFunction& call);
-    QByteArray image(const QString& imageRef, const QByteArray& imageData) const;
+    QByteArray image(const Id& imageRef, const QByteArray& imageData) const;
     bool write(QDataStream& stream, unsigned flag, const QVariantMap& imports) const;
     bool read(QDataStream& stream);
 private slots:
      void replyCompleted(const std::shared_ptr<QByteArray>& bytes);
      void doCall();
      void doFinished(QNetworkReply* reply);
-     void onError(const QString& errorStr);
      void onReplyError(QNetworkReply::NetworkError err);
      void replyReader();
      void onRetrievedImage(const QString& imageRef);
      void onRetrievedNode(const QString& nodeId);
 private:
     QNetworkReply* populateImages();
-    QNetworkReply* doRequestRendering(const QString& id);
-    void doRetrieveNode(const QString& id);
-    QNetworkReply* doRetrieveImage(const QString& id,  FigmaData* target, const QSize& maxSize);
-    void retrieveImage(const QString& id,  FigmaData* target, const QSize& maxSize = QSize(std::numeric_limits<int>::max(), std::numeric_limits<int>::max()));
-    void requestRendering(const QString& imageId);
-    void retrieveNode(const QString& id);
-    void notFoundImage(const QString& imageRef);
-    void notFoundRendering(const QString& imageRef);
-    void setTimeout(const std::shared_ptr<QMetaObject::Connection>& connection, const QString& id);
-    void setTimeout(QNetworkReply* reply, const QString& id);
+    QNetworkReply* doRequestRendering(const Id& id);
+    void doRetrieveNode(const Id& id);
+    QNetworkReply* doRetrieveImage(const Id& id,  FigmaData* target, const QSize& maxSize);
+    void retrieveImage(const Id& id,  FigmaData* target, const QSize& maxSize = QSize(std::numeric_limits<int>::max(), std::numeric_limits<int>::max()));
+    void requestRendering(const Id& imageId);
+    void retrieveNode(const Id& id);
+    void setError(const Id& imageRef, const QString& reason);
+    void setTimeout(const std::shared_ptr<QMetaObject::Connection>& connection, const Id& id);
+    void setTimeout(QNetworkReply* reply, const Id& id);
 private:
     enum class State {Loading, Complete, Error};
     QNetworkAccessManager* m_accessManager;

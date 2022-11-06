@@ -5,7 +5,7 @@
 #include "utils.h"
 #include <QVersionNumber>
 #include <QTimer>
-#include <QFile>
+#include <QSaveFile>
 #include <QSize>
 #include <QQmlEngine>
 #include <QDir>
@@ -149,7 +149,7 @@ bool FigmaQml::setCurrentCanvas(int current) {
 
 
 QString FigmaQml::validFileName(const QString& name) {
-   return FigmaParser::validFileName(name);
+   return FigmaParser::makeFileName(name);
 }
 
 bool FigmaQml::saveAllQML(const QString& folderName) {
@@ -164,8 +164,9 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
     QSet<QString> componentNames;
     for(const auto& c : *m_sourceDoc) {
         for(const auto& e : *c) {
-            const auto fullname = QString("%1/%2_%3.qml").arg(d.absolutePath()).arg(validFileName(c->name())).arg(e->name());
-            QFile file(fullname);
+            const auto sourceName = FigmaParser::makeFileName(c->name());
+            const auto fullname = QString("%1/%2_%3.qml").arg(d.absolutePath(), sourceName, e->name());
+            QSaveFile file(fullname);
             if(!file.open(QIODevice::WriteOnly)) {
                 emit error(QString("Failed to write %1 %2 %3 %4").arg(file.errorString(), fullname, d.absolutePath(), e->name()));
                 return false;
@@ -176,13 +177,14 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
             }
             const auto elementComponents = m_sourceDoc->components(e->name());
             componentNames.unite(QSet(elementComponents.begin(), elementComponents.end()));
+            file.commit();
         }
     }
 
     for(const auto& componentName : componentNames) {
         Q_ASSERT(componentName.endsWith(FIGMA_SUFFIX));
-        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath()).arg(componentName);
-        QFile file(fullname);
+        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath(), componentName);
+        QSaveFile file(fullname);
         if(!file.open(QIODevice::WriteOnly)) {
             emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
             return false;
@@ -198,6 +200,7 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
             emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
             return false;
         }
+        file.commit();
     }
 
     if(!saveImages(d.absolutePath() + Images))
@@ -372,15 +375,27 @@ QByteArray FigmaQml::prettyData(const QByteArray& data) const {
 bool FigmaQml::saveImages(const QString &folder) {
     if(!ensureDirExists(folder))
         return false;
-    for(const auto& i : m_imageFiles) {
+    for(const auto& i : qAsConst(m_imageFiles)) {
         const QFileInfo file(i.first + i.second);
         if(!file.exists()) {
-            emit error(QString("Invalid filename %1").arg(file.absoluteFilePath()));
+            qDebug() << "invalid filename:" << file.absoluteFilePath() << "not found";
+            emit error(QString("Invalid filename: %1 (not found)").arg(file.absoluteFilePath()));
             return false;
         }
         const auto target = folder + file.fileName();
+        const QFile targetEntry(target);
+        if(targetEntry.exists(target)) {
+            if(targetEntry.size() == file.size()) {
+                // I dont fully get what this means.... how they can be same, error elsewhere?
+                emit warning(QString("Are equal %1 to %2").arg(file.absoluteFilePath(), target));
+                continue;
+             } else {
+                emit error(QString("Cannot replace %1 to %2").arg(file.absoluteFilePath(), target));
+                return false;
+            }
+        }
         if(!QFile::copy(file.absoluteFilePath(), target)) {
-            emit error(QString("Cannot copy %1 to %2").arg(file.absoluteFilePath()).arg(target));
+            emit error(QString("Cannot copy %1 to %2").arg(file.absoluteFilePath(), target));
             return false;
         }
     }
@@ -401,7 +416,8 @@ void FigmaQml::addImageFile(const QString& imageRef, bool isRendering) {
     }
 }
 
-bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering) {
+bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool /*isRendering*/) {
+    //qDebug() << "FOO: addImageFileData" << imageRef;
     if(bytes.isEmpty())
         return false;
     const auto path = m_targetDir + Images.mid(1);
@@ -418,12 +434,14 @@ bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes
         }
     ensureDirExists(path);
     const auto filename = path + imageName;
-    QFile file(filename);
+    QSaveFile file(filename);
     if(!file.open(QIODevice::WriteOnly)) {
         emit warning("error when write:" + imageRef + " " +  filename + " " + file.errorString());
         return false;
     }
+    //qDebug() << "image saved" << imageRef << filename;
     file.write(bytes);
+    file.commit();
     m_imageFiles.insert(imageRef, {path, imageName});
     return true;
 }
@@ -434,7 +452,7 @@ bool FigmaQml::ensureDirExists(const QString& e) {
          emit error(QString("Cannot use dir %1").arg(dir.absolutePath()));
          return false;
      }
-     qDebug() << "Foo" << e << "is ok";
+     //qDebug() << "Foo" << e << "is ok";
      return true;
 }
 
@@ -456,19 +474,25 @@ void FigmaQml::setFonts(const QVariantMap& map) {
 template<class FigmaDocType>
 void FigmaQml::createDocument(const QJsonObject& json) {
     m_state = State::Suspend;
+    m_busy = true;
+    emit busyChanged();
     auto ctimer = new QTimer(this);
     QObject::connect(ctimer, &QTimer::timeout, this, [ctimer, this, json](){
         if(m_state == State::Suspend) {
             if(mProvider.isReady()) {
                 m_state = State::Constructing;
-                auto doc = doCreateDocument<FigmaDocType>(json);
-                if(doc) {
+                auto doc = std::make_unique<FigmaDocType>(m_targetDir, FigmaParser::name(json));
+                if(doCreateDocument(*doc, json)) {
                     ctimer->stop();
                     ctimer->deleteLater();
                     Q_ASSERT(FigmaDocType::type() == doc->type());
                     emit figmaDocumentCreated(doc.release());
                 } else if(m_state != State::Suspend) {
                     parseError(FigmaParser::lastError(), true);
+                }
+                if(m_state != State::Suspend) {
+                    m_busy = false;
+                    emit busyChanged();
                 }
             }
         } else {
@@ -702,63 +726,22 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
     return value;
 }
 
-template<class T>
-std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
-    m_ok = true;
-    m_doCancel = false; // uff UniqueConnection requires a member func
-    const auto d = QObject::connect(this, &FigmaQml::cancelled, this, &FigmaQml::doCancel, Qt::UniqueConnection);
-
-    RAII(([d](){QObject::disconnect(d);}));
-
-    m_busy = true;
-    emit busyChanged();
-    RAII([this]() {m_busy = false; emit busyChanged();});
-
-    auto doc = std::make_unique<T>(m_targetDir, FigmaParser::name(obj));
-
-    Q_ASSERT(m_imageDimensionMax > 0);
-
-    // erase 1st
-    QDir dir(m_targetDir);
-    dir.removeRecursively();
-    if(!ensureDirExists(m_targetDir))
-       return nullptr;
-
-    QByteArray header = QString(FileHeader).toLatin1();
-    const auto keys =  m_imports.keys();
-    for(const auto& k : keys) {
-#ifdef QT5
-        const auto ver = QVersionNumber::fromString(m_imports[k].toString());
-        if(ver.isNull()) {
-            emit error(toStr("Invalid imports version", m_imports[k].toString(), "for", k));
-            return nullptr;
-        }
-        header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
-#else
-        header += QString("import %1\n").arg(k);
-#endif
-    }
-
-    auto components_opt = FigmaParser::components(obj, *this);
-
-    TIMED_START(t3)
-
 #ifdef NO_CONCURRENT
-    if(!components_opt) {
-        return nullptr;
-    }
-    const auto& components = components_opt.value();
+
+bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header) {
+
     for(const auto& c : components) {
       const auto component_opt = FigmaParser::component(c->object(), m_flags, *this, components);
       if(!m_ok || m_doCancel || !component_opt)
-          return nullptr;
+          return false;
       const auto& component = component_opt.value();
       if(component.data().isEmpty()) {
           emit error(toStr("Invalid component", component.name()));
-          return nullptr;
+          return false;
       }
 
-      doc->addComponent(components[component.id()]->name(), components[component.id()]->object(), header + component.data());
+      doc.addComponent(components[component.id()]->name(),
+              components[component.id()]->object(), header + component.data());
 
       QStringList componentNames;
       for(const auto& id : component.components()) {
@@ -767,19 +750,26 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
           componentNames.append(compname);
       }
 
-      QFile componentFile(m_targetDir + "/" + validFileName(c->name()) + ".qml");
-      if(componentFile.exists()) {
-          emit error(toStr("File already exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name()).arg(c->description())));
-          return nullptr;
+      Q_ASSERT(c->name().endsWith(FIGMA_SUFFIX));
+      QSaveFile componentFile(m_targetDir + "/" + c->name() + ".qml");
+      /*
+       if(QFile(componentFile.fileName()).exists()) {
+          emit error(toStr("File already exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name(), c->description())));
+          return false;
       }
+      */
       if(!componentFile.open(QIODevice::WriteOnly)) {
           emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
-          return nullptr;
+          return false;
       }
       componentFile.write(header + component.data());
+      componentFile.commit();
     }
+    return true;
+}
 #else
 
+void FigmaQml::writeComponents(const FigmaParser::Components& components, const QString& header) {
     const auto componentData =
             Concurrent::mapped<FigmaParser::Components::iterator, std::function<FigmaParser::Element (const FigmaParser::Components::const_iterator::value_type &) >>
                           (components.begin(), components.end(), [&, this](const auto& c)->FigmaParser::Element {
@@ -851,43 +841,42 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
     for(const auto& c : componentData) {
         addComponent(c);
     }
+}
 
 #endif
 
-    TIMED_END(t3, "Component")
-    TIMED_START(t4)
-
+bool FigmaQml::setDocument(FigmaDocument& doc,
+                           const FigmaParser::Canvases& canvases,
+                           const FigmaParser::Components& components,
+                           const QByteArray& header) {
     int currentCanvas = 0;
 #ifdef NO_CONCURRENT
     int currentElement = 0;
 #else
     std::atomic_int currentElement = 0;
 #endif
-    const auto canvases_opt = FigmaParser::canvases(obj, *this);
-    if(!canvases_opt)
-        return nullptr;
-    const auto& canvases = canvases_opt.value();
     for(const auto& c : canvases) {
         ++currentCanvas;
         currentElement = 0;
-        auto canvas = doc->addCanvas(c.name());
+        auto canvas = doc.addCanvas(c.name());
 #ifdef NO_CONCURRENT
         const auto elements = c.elements();
         for(const auto& f : elements) {
             if(m_state == State::Suspend)
-                return nullptr;
+                return false;
             if(m_doCancel)
-                return nullptr;
+                return false;
             bool hasElement = true;
             if(!m_filter.isEmpty()) {
                 ++currentElement;
-                if(!m_filter.keys().contains(currentCanvas) || !m_filter[currentCanvas].contains(currentElement))
+                const auto keys = m_filter.keys();
+                if(!keys.contains(currentCanvas) || !m_filter[currentCanvas].contains(currentElement))
                     hasElement = false;
             }
 
             const auto element_opt = hasElement ? FigmaParser::element(f, m_flags, *this, components) : FigmaParser::Element();
             if(!element_opt)
-                return nullptr;
+                return false;
             const auto& element = element_opt.value();
 #else
         auto elements = c.elements();
@@ -925,12 +914,12 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
         for(const auto& element : elementData) {
 #endif
             if(m_state == State::Suspend)
-                return nullptr;
+                return false;
 
             if(m_doCancel)
-                return nullptr;
+                return false;
             if(!m_ok) {
-                return nullptr;
+                return false;
             }
             if(!element.data().isEmpty())
                 canvas->addElement(element.name(), header + element.data());
@@ -940,12 +929,88 @@ std::unique_ptr<T> FigmaQml::doCreateDocument(const QJsonObject& obj) {
             for(const auto& id : element.components()) {
                 componentNames.append(components[id]->name());
             }
-            doc->setComponents(element.name(), std::move(componentNames));
+            doc.setComponents(element.name(), std::move(componentNames));
         }
+    }
+    return true;
+}
+
+bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
+    m_ok = true;
+    m_doCancel = false; // uff UniqueConnection requires a member func
+    const auto d = QObject::connect(this, &FigmaQml::cancelled, this,
+                                    &FigmaQml::doCancel, Qt::UniqueConnection);
+
+    RAII(([d](){QObject::disconnect(d);}));
+
+
+    Q_ASSERT(m_imageDimensionMax > 0);
+
+    // erase 1st
+    QDir dir(m_targetDir);
+    const auto entries = dir.entryList();
+    //dir.removeRecursively(); // tempdir should be always empty at begging
+    if(!ensureDirExists(m_targetDir))
+       return false;
+
+    QByteArray header = QString(FileHeader).toLatin1();
+    const auto keys =  m_imports.keys();
+    for(const auto& k : keys) {
+#ifdef QT5
+        const auto ver = QVersionNumber::fromString(m_imports[k].toString());
+        if(ver.isNull()) {
+            emit error(toStr("Invalid imports version", m_imports[k].toString(), "for", k));
+            return nullptr;
+        }
+        header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
+#else
+        header += QString("import %1\n").arg(k);
+#endif
+    }
+
+    const auto components = FigmaParser::components(json, *this);
+
+    if(!components) {
+        return false;
+    }
+
+     TIMED_START(t3)
+
+    /*
+    const auto keys = components->keys();
+    for (const auto k : keys) {
+        qDebug().nospace()
+                << k << ';'
+                << (*components)[k]->id() << ';'
+                << (*components)[k]->key() << ';'
+                << (*components)[k]->name();
+    }
+
+
+    static int loopers = 0;
+    ++loopers;
+    const auto [i, r, n] = mProvider.cacheInfo();
+    qDebug() << "loopers" << loopers << i << r << n;
+    */
+
+    if(!writeComponents(doc, *components, header)) {
+        return false;
+    }
+
+    TIMED_END(t3, "Component")
+    TIMED_START(t4)
+
+
+    const auto canvases = FigmaParser::canvases(json, *this);
+    if(!canvases)
+        return false;
+
+    if(!setDocument(doc, *canvases, *components, header)) {
+        return false;
     }
 
     TIMED_END(t4, "elements")
-    return doc;
+    return true;
 }
 
 #ifdef USE_NATIVE_FONT_DIALOG

@@ -53,6 +53,17 @@ if [ ! -f  ${FILE_NAME}_frame.png ]; then
 	exit -98
 fi 
 
+
+if [ -z ${IMAGE_COMPARE} ]; then
+    echo "IMAGE_COMPARE is not set"
+    exit -45
+fi
+
+if [ ! -x ${IMAGE_COMPARE} ]; then
+    echo "${IMAGE_COMPARE} is not available"
+    exit -46
+fi
+
 compare_ratio=$(${IMAGE_COMPARE} ${FILE_NAME}.png ${FILE_NAME}_frame.png)
 ratio_ok=$(${PYTHON_3} -c "print('True') if float($compare_ratio) > float(${IMAGE_TRESHOLD}) else print('False')")
 

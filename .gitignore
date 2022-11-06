@@ -17,3 +17,6 @@ builds
 *.autosave
 
 .DS_Store
+__pycachhe
+__pycache
+__pycache__
