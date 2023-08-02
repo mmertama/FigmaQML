@@ -161,9 +161,9 @@ ApplicationWindow {
         Shortcut {
             sequence: StandardKey.Copy
             onActivated: {
-                if (tabs.currentItem === figmaSourceButton)
+                if (tabs.currentItem == figmaSourceButton)
                     clipboard.copy(figmaSource.text)
-                else if (tabs.currentItem === qmlSourceButton)
+                else if (tabs.currentItem == qmlSourceButton)
                     clipboard.copy(qmlText.text)
             }
         }
@@ -974,5 +974,10 @@ ApplicationWindow {
         buttons: MessageDialog.Ok
         visible: text.length > 0
         onButtonClicked: text = ""
+    }
+
+    // this function may invoked from C++ side if upon 1st start
+    function openTokens() {
+        tokens.open();
     }
 }

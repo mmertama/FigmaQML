@@ -528,8 +528,19 @@ int main(int argc, char *argv[]) {
              engine.clearComponentCache();
          });
 
+         const QUrl qml_source("qrc:/main.qml");
 
-         engine.load(QUrl("qrc:/main.qml"));
+         QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &engine, [qml_source, &figmaGet, &engine](QObject *object, const QUrl &url) {
+             if(object && url == qml_source) {
+                 // UI loaded - I should implement READ/WRITE for these properties, but this is the only place used in C++
+                 if(figmaGet->property("projectToken").toString().isEmpty() && figmaGet->property("userToken").toString().isEmpty()) {
+                     QMetaObject::invokeMethod(engine.rootObjects()[0], "openTokens");
+                 }
+             }
+         });
+
+         engine.load(qml_source);
+
      }
 
      QObject::connect(figmaGet.get(), &FigmaGet::dataChanged,
