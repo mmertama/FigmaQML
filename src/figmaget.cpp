@@ -112,7 +112,7 @@ void FigmaGet::onRetrievedImage(const QString& imageRef) {
         if(!m_renderings->isEmpty(imageRef)) {
             emit renderingReady(imageRef, m_renderings->data(imageRef), m_renderings->format(imageRef));
         } else {
-            m_images->setError(imageRef);
+            m_renderings->setError(imageRef);
             emit error(QString("Rendering cannot be retrieved \"%1\"").arg(imageRef));
         }
     }

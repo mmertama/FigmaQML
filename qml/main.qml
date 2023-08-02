@@ -570,7 +570,7 @@ ApplicationWindow {
                     } catch (error) {
                         //There is a reason line numbers wont match, and therefore we try to load a sourceCode
                         error = sourceCodeError(error, container);
-                        let errors = "Text {text:\"Error loading figma item\";}\n"
+                        let errors = "Text {text:\"Error loading a Figma item\";}\n"
 
                         console.debug("Catch error on create:", error)
 

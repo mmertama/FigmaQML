@@ -11,7 +11,7 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
 
 ## Run ##
 
- * FigmaQML can be run as a Web Assembly application - [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
+ * FigmaQML can be run as a Web Assembly application (There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!) - [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
  * FigmaQML can be run either in command line or as a gui application.
  * Gui application is interactive to see visuals and source code before saving.
  * Command line is for processing Figma documents to QML. 

@@ -17,6 +17,7 @@
 
 #include <QTimer>
 
+
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
@@ -108,14 +109,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             const auto c = components[key].toObject();
             const auto componentName = c["name"].toString();
             auto uniqueComponentName = validFileName(componentName, false); //names are expected to be unique, so we ensure so
+            /*
             int count = 1;
-            //qDebug() << "uniqueComponentName" << uniqueComponentName;
             while(std::find_if(map.begin(), map.end(), [&uniqueComponentName](const auto& c) {
                 return c->name() == uniqueComponentName;
             }) != map.end()) {
                 uniqueComponentName = validFileName(QString("%1_%2").arg(componentName, count), false);
                 ++count;
             }
+
+            qDebug() << "uniqueComponentName" << uniqueComponentName << " " << foo;*/
 
             map.insert(key, std::shared_ptr<Component>(new Component(
                                 uniqueComponentName,
@@ -169,8 +172,20 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         Q_ASSERT(inited == itemName.endsWith(FIGMA_SUFFIX));
         auto name = itemName;
 
-        if(!inited)
+        // static is a bit cheap solution to ensure unique names, but proper fix (be a class member) requires some refactoring
+        // TODO a 'elegant' fix.
+        static QMap<QString, int> unique_names;
+
+        if(!inited) {
+            auto it = unique_names.find(name);
+            if(it == unique_names.end()) {
+                unique_names.insert(name, 0);
+            } else {
+                *it += 1; // if there add a name - note that this can be non-unique as well... :-/ ooof but let's go with this untill
+                name += std::to_string(*it);    // properly done....(if ever)
+            }
             name += FIGMA_SUFFIX;
+           }
 
         return makeFileName(name);
     }
