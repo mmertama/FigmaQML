@@ -48,7 +48,8 @@ public:
         EmbedImages         = 0x80,
         Timed               = 0x100,
         AltFontMatch        = 0x200,
-        KeepFigmaFontName   = 0x400
+        KeepFigmaFontName   = 0x400,
+        QulMode             = 0x800,
     };
     Q_ENUM(Flags)
 public:
@@ -92,6 +93,7 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
+    Q_INVOKABLE void executeQul(const QVariantMap& parameters);
 #ifdef USE_NATIVE_FONT_DIALOG
     // sigh font native dialog wont work on WASM and QML dialog is buggy
     Q_INVOKABLE void showFontDialog(const QString& currentFont);

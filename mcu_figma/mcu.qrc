@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/mcu">
+        <file>mcu_figma.qml</file>
+        <file>CMakeLists.txt</file>
+        <file>build.sh</file>
+        <file>mcu_figma.qmlproject</file>
+        <file>fonts/DejaVuSansMono.ttf</file>
+        <file>fonts/LICENSE</file>
+        <file>images/icon.png</file>
+    </qresource>
+</RCC>

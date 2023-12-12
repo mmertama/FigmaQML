@@ -1,0 +1,15 @@
+set -e
+mkdir -p build
+pushd build
+QUL_ROOT=$QT_DIR/QtMCUs/$QUL_VER
+if [ ! -d "$QUL_ROOT" ]; then
+  exit 20
+fi
+QUL_TOOLS=$QT_DIR/Tools/QtMCUs
+if [ ! -d "$QUL_TOOLS" ]; then
+  exit 21
+fi
+cmake .. -G "Ninja" -DFIGMAQML_QTC_DIR=$QT_DIR -DFIGMAQML_MCU_VER=$QUL_VER -DQUL_COMPILER_NAME=gnu -DCMAKE_BUILD_TYPE=MinSizeRel -DQul_ROOT=$QUL_ROOT -DCMAKE_TOOLCHAIN_FILE=$QUL_ROOT/lib/cmake/Qul/toolchain/armgcc.cmake -DQUL_TARGET_TOOLCHAIN_DIR=$QUL_TOOLS/arm_gcc_10 -DQUL_BOARD_SDK_DIR:STRING=$QUL_TOOLS/STM/STM32Cube_FW_F7_V1.17.0 -DQUL_PLATFORM=$QUL_PLATFORM -DMCU_PLATFORM:STRING=STM32F769xx -DQMLPRJEXP:FILEPATH=$QUL_ROOT/bin/qmlprojectexporter
+cmake --build .
+popd
+
