@@ -10,6 +10,8 @@ set(BUG_199 TRUE)
 # This must be before the fetch content below!
 find_package(Qul PATHS ${FIGMAQML_QTC_DIR}/QtMCUs/${FIGMAQML_MCU_VER}/lib/cmake/Qul REQUIRED)
 
+include(FigmaQmlInterface/FigmaQmlInterface.cmake)
+FigmaQml_AddQml()
 add_subdirectory(FigmaQmlInterface)
 
 qul_add_target(${PROJECT_NAME} QML_PROJECT ${PROJECT_NAME}.qmlproject GENERATE_ENTRYPOINT)

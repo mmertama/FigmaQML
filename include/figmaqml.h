@@ -50,7 +50,7 @@ public:
         BreakBooleans       = 0x400,
         AntializeShapes     = 0x800,
         QulMode             = 0x1000,
-        GenerateAccess      = 0x2000,
+        StaticCode          = 0x2000,
         EmbedImages         = 0x10000,
         Timed               = 0x20000,
         AltFontMatch        = 0x40000,
@@ -134,6 +134,7 @@ signals:
     void warning(const QString& warningString) const;
     void info(const QString& infoString) const;
     void qulInfo(const QString& qulInfo, int level);
+    void qulInfoStop();
     void canvasCountChanged();
     void elementCountChanged();
     void currentElementChanged();
