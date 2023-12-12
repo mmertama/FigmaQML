@@ -66,6 +66,16 @@ FigmaQML will provide a QML code that is ready programmer to focus on implementi
     * MSVC 19
     * OpenSSL binaries (prebuilt version within Qt)
     * msvc_build.bat in x64 Native Tools Command Prompt
+    * If the batch files refuses to work, please look the following sequence:
+      ```
+      echo Expected to be executed in x64 Native Tools Command Prompt for VS 2019
+      set QT_DIR=C:\Qt\6.3.1\msvc2019_64
+      set CMAKE_PREFIX_PATH=%QT_DIR%\lib\cmake
+      mkdir build
+      pushd build
+      cmake ..
+      cmake --build . --config Release
+      ```
 * For Mac OSX
     * osx_build.sh
 * For Linux
