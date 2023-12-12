@@ -143,7 +143,7 @@ public:
         BreakBooleans   = 0x400,
         AntializeShapes = 0x800,
         QulMode         = 0x1000,
-        GenerateAccess  = 0x2000,
+        StaticCode      = 0x2000,
         LoaderPlaceHolders  = 0x100000,
 
     };
@@ -302,6 +302,7 @@ private:
  private:
     FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
     bool isQul() const {return m_flags & QulMode;}
+    bool generateAccess() const {return (m_flags & StaticCode) == 0;}
 private:
     const unsigned m_flags;
     FigmaParserData& m_data;

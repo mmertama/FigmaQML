@@ -6,6 +6,7 @@ Item {
         id: loader
         anchors.fill: parent
         source: FigmaQmlSingleton.currentView
+        onLoaded: {FigmaQmlSingleton.viewLoaded(FigmaQmlSingleton.currentView);}
     }
 }
 

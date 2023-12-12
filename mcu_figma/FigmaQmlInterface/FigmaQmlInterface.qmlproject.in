@@ -7,16 +7,16 @@ Project {
     }
     
     QmlFiles {
-        files: ["FigmaQmlUi.qml"]
+        files: ["FigmaQmlUi.qml" @DYNAMIC_LOADED_QML_FILES@ ]
     }
 
     InterfaceFiles {
-        files: ["FigmaQmlInterface.hpp"]
-        MCU.qmlImports: ["QtQuick"]
+        files: ["FigmaQmlInterface.hpp" @DYNAMIC_LOADED_CPP_FILES@]
+        MCU.qmlImports: ["QtQuick" @DYNAMIC_LOADED_MODULES@]
     }
 
     ImageFiles {
-        files: []
+        files: [@DYNAMIC_LOADED_IMAGES_FILES@]
         MCU.resourceCompression: false
         MCU.resourceImagePixelFormat: "Automatic"
         MCU.resourceOptimizeForRotation: false

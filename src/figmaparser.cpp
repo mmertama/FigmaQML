@@ -545,14 +545,14 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             out += indent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
 
          if(makeFileName(obj, "component").startsWith("Component__F")) {
-             qDebug() << "here is clear" <<  makeFileName(obj, "component") << bool(m_flags & GenerateAccess) << bool(m_flags & ParseComponent) << bool( m_componentLevel != 0);
+             qDebug() << "here is clear" <<  makeFileName(obj, "component") << generateAccess() << bool(m_flags & ParseComponent) << bool( m_componentLevel != 0);
 
              //if(!(m_flags & ParseComponent)) {
              //    qDebug() << "should be?";
              //}
          }
 
-         if((m_flags & GenerateAccess) && /*(m_flags & ParseComponent)*/ m_componentLevel != 0) { // when m_componentLevel is zero this is component to-file write
+         if(generateAccess() && m_componentLevel != 0) { // when m_componentLevel is zero this is component to-file write
              APPENDERR(out, makeComponentPropertyChangeHandler(obj, indents));
          }
 
@@ -572,19 +572,21 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              out += indent1 + "opacity: " +  QString::number(obj["opacity"].toDouble()) + "\n";
         }
 
-        const auto properties = getProperties(obj);
-        if(properties) {
-            const auto indent2 = tabs(indents + 1);
-            const auto& [obj_name, name, var, is_comp] = properties.value();
-            if(var.contains(ON_CLICK)) {
-                out += indent1 + "MouseArea {\n";
-                out += indent2 + "anchors.fill: parent\n";
-                /*out += indent2 + "x: " + mouse_area_name.first + ".x\n";
-                          out += indent2 + "y: " + mouse_area_name.first + ".y\n";
-                          out += indent2 + "width: " + mouse_area_name.first + ".width\n";
-                          out += indent2 + "height: " + mouse_area_name.first + ".height\n";*/
-                out += indent2 + "onClicked: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'click_event' ); }\n";
-                out += indent1 + "}\n";
+        if(generateAccess()) {
+            const auto properties = getProperties(obj);
+            if(properties) {
+                const auto indent2 = tabs(indents + 1);
+                const auto& [obj_name, name, var, is_comp] = properties.value();
+                if(var.contains(ON_CLICK)) {
+                    out += indent1 + "MouseArea {\n";
+                    out += indent2 + "anchors.fill: parent\n";
+                    /*out += indent2 + "x: " + mouse_area_name.first + ".x\n";
+                              out += indent2 + "y: " + mouse_area_name.first + ".y\n";
+                              out += indent2 + "width: " + mouse_area_name.first + ".width\n";
+                              out += indent2 + "height: " + mouse_area_name.first + ".height\n";*/
+                    out += indent2 + "onClicked: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'click_event' ); }\n";
+                    out += indent1 + "}\n";
+                }
             }
         }
 
@@ -1047,9 +1049,12 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(isRendering(obj))
             return parseContainer(obj, Content::Rendered, indents);
 
-        if(const auto properties = getProperties(obj); properties && properties.value().var.contains(AS_LOADER)) {
-            return parseContainer(obj, Content::Loader, indents);
+        if(generateAccess()) {
+            if(const auto properties = getProperties(obj); properties && properties.value().var.contains(AS_LOADER)) {
+                return parseContainer(obj, Content::Loader, indents);
+            }
         }
+
         return parsers[type](obj, indents);
     }
 
@@ -1720,11 +1725,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto keys = children.keys();
          for(const auto& key : keys) {
              const auto id = componentName(key);
-           //  const auto component_name = QString(id[0]).toUpper() + id.mid(1);
-//             out += indent + QString("Component {\n");
-//             out += indent2 + QString("id: comp_%1\n").arg(id);
-//             out += indent2 + children[key];
-//             out += indent + QString("}\n");
 #ifdef QUL_LOADER_WORKAROUND
             out += indent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
 #else
@@ -1741,14 +1741,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             out += indent + "Loader {\n";
             const auto id = componentName(key);
             out += indent2 + QString("id: loader_%1\n").arg(id);
-          //  out += indent2 + QString("sourceComponent: comp_%1\n").arg(id);
             out += indent + "}\n";
          }
 
-        //for(const auto& key : keys) {
-        //    const auto dname = componentName(key);
-        //    out += indent + dname + " {}\n";
-        // }
          return out;
      }
 
@@ -2102,16 +2097,25 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto indent4 = tabs(indents + 4);
          out += indent1 + "id: " + loaderId + "\n";
          out += indent1 + "anchors.fill: parent\n";
+         out += indent1 + "onLoaded: FigmaQmlSingleton.sourceLoaded('" + name + "')\n";
+         out += indent1 + "onItemChanged: {if(!item) FigmaQmlSingleton.sourceError('" + name + "');}\n";
          out += indent1 + "Connections {\n";
          out += indent2 + "target: FigmaQmlSingleton\n";
          out += indent2 + "onSetSource: {\n";
          out += indent3 + "if(element == '" + name + "')\n";
          out += indent4 + loaderId + ".source = source;\n";
          out += indent2 + "}\n";
+
+#ifndef QUL_CPP_HAS_SOURCE_COMPONENT  // I cannot find C++ implementatation of Component for QUL
+         if(!isQul()) {
+#endif
          out += indent2 + "onSetSourceComponent: {\n";
          out += indent3 + "if(element == '" + name + "')\n";
          out += indent4 + loaderId + ".sourceComponent = sourceComponent;\n";
          out += indent2 + "}\n";
+#ifndef QUL_CPP_HAS_SOURCE_COMPONENT
+         }
+#endif
          out += indent1 + "}\n";
          out += indent + "}\n";
 
@@ -2302,7 +2306,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
           // add alias set signal
 
-          if(!m_parent.parent->parent && (m_flags & GenerateAccess)) {
+          if(!m_parent.parent->parent && generateAccess()) {
             out += makePropertyChangeHandler(obj, indents);
             }
           return out;

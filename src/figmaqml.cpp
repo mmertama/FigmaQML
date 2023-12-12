@@ -1007,7 +1007,7 @@ QByteArray FigmaQml::makeHeader() const {
 #endif
     }
 */
-    if((m_flags & GenerateAccess) && !(m_flags & QulMode))
+    if( 0 == (m_flags & StaticCode) && !(m_flags & QulMode))
         header += QString("import FigmaQmlInterface\n");
 
     return header;

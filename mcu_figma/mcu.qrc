@@ -11,6 +11,7 @@
         <file>FigmaQmlInterface/CMakeLists.txt</file>
         <file>FigmaQmlInterface/FigmaQmlInterface.hpp</file>
         <file>FigmaQmlInterface/FigmaQmlUi.qml</file>
-        <file>FigmaQmlInterface/FigmaQmlInterface.qmlproject</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.qmlproject.in</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.cmake</file>
     </qresource>
 </RCC>

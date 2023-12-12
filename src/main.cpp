@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption fontMapParameter("font-map", "Provide a ';' separated list of <figma font>':'<system font> pairs.", "fontMap");
     const QCommandLineOption throttleParameter("throttle", "Milliseconds between server requests. Too frequent request may have issues, especially with big desings - default 300", "throttle");
     const QCommandLineOption qulmodeParameter("qul-mode", "QtQuick for Qt for MCU");
-    const QCommandLineOption generateAccessParameter("generate-access-mode", "Generate setters");
+    const QCommandLineOption staticCodeParameter("static-code", "Do not generate any dynamic, interactive code, property access, event handlers etc.");
 
     parser.addPositionalArgument("argument 1", "Optional: .figmaqml file or user token. GUI opened if empty.", "<FIGMAQML_FILE>|<USER_TOKEN>");
     parser.addPositionalArgument("argument 2", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the first parameter was the restored file. If empty, GUI is opened. Project token is expected if the first parameter was an user token.", "<OUTPUT if FIGMAQML_FILE>| PROJECT_TOKEN if USER_TOKEN");
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
                           fontMapParameter,
                           throttleParameter,
                           figmaFontParameter,
-                          generateAccessParameter,
+                          staticCodeParameter,
 #ifdef HAS_QUL
                           qulmodeParameter,
 #endif
@@ -266,8 +266,8 @@ int main(int argc, char *argv[]) {
                 qmlFlags |= FigmaQml::KeepFigmaFontName;
             if(parser.isSet(qulmodeParameter))
                 qmlFlags |= FigmaQml::QulMode;
-            if(parser.isSet(generateAccessParameter))
-                qmlFlags |= FigmaQml::GenerateAccess;
+            if(parser.isSet(staticCodeParameter))
+                qmlFlags |= FigmaQml::StaticCode;
             if(parser.isSet(importsParameter)) {
                 QMap<QString, QVariant> imports;
                 const auto p = parser.value(importsParameter).split(';');

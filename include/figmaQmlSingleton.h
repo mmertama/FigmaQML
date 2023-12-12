@@ -20,8 +20,11 @@
 class FigmaQmlSingleton : public QObject {
     Q_OBJECT
 public:
+    // The FigmaQML app does not contain that much view change logic - this is mostly just a suggestion
     Q_PROPERTY(QString currentView READ currentView NOTIFY currentViewChanged FINAL);
+
     Q_PROPERTY(int viewCount READ viewCount NOTIFY viewCountChanged)
+
     void setView(int index)  {
         if(index < viewCount()) {
             const auto el = m_fqml.elements();
@@ -29,9 +32,19 @@ public:
             m_fqml.setCurrentElement(el[index].toMap()["element"].toInt());
         }
     }
+
     FigmaQmlSingleton() = delete;
+
     Q_INVOKABLE void applyValue(const QString& element, const QString& value) {
         emit valueChanged(element, value);
+    }
+
+    Q_INVOKABLE QString view(int index) {
+        if(index < viewCount()) {
+            const auto el = m_fqml.elements();
+            return el[index].toMap()["element_name"].toString();
+        }
+        return {};
     }
     FigmaQmlSingleton(FigmaQml& fqml) : m_fqml(fqml) {
         QObject::connect(&m_fqml, &FigmaQml::elementsChanged, this, &FigmaQmlSingleton::viewCountChanged);
@@ -45,17 +58,21 @@ public:
     int viewCount() const {
         return m_fqml.elements().size();
     }
+
     QString currentView() const {
         return
             m_fqml.elementName();
     }
 signals:
     void valueChanged(const QString& element, const QString& value);
-    void eventReceived(const QString& element, const QString& value);
+    void eventReceived(const QString& element, const QString& event);
     void viewCountChanged();
     void currentViewChanged();
     void setSource(const QString& element, const QUrl& source);
     void setSourceComponent(const QString& element, const QQmlComponent* sourceComponent);
+    void sourceLoaded(const QString& element);
+    void sourceError(const QString& element);
+    void viewLoaded(const QString& view);
 private:
     // Propagates loader source change accross UI where loaders can than capture it
 

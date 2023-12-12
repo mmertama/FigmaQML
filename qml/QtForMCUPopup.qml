@@ -18,6 +18,10 @@ Dialog {
 
     signal saveRequest;
 
+    onClosed: {
+        figmaQml.qulInfoStop();
+    }
+
     function elements() {
         let els = []
         for(let i = 1; i < included_views.count; ++i) {  // starting from 1, 0 is current
@@ -161,7 +165,7 @@ Dialog {
 
             Button {
                 text: qsTr("Cancel")
-                DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
+                DialogButtonBox.buttonRole: DialogButtonBox.RejectRole
             }
 
             Button {

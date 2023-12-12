@@ -275,7 +275,7 @@ ApplicationWindow {
             }
             Button {
                 id: connectButton
-                text: !updater.running ? "Connect " : "Disconnect"
+                text: !updater.running ? "  Update  " : "Cancel update"
                 enabled: figmaGet.projectToken.length > 0
                          && figmaGet.userToken.length > 0
                 onClicked: !updater.running ? updater.start() : updater.stop()
@@ -349,13 +349,13 @@ ApplicationWindow {
                             }
                         }
                         QtCheckBox {
-                            text: "Generate access"
-                            checked: figmaQml.flags & FigmaQml.GenerateAccess
+                            text: "Static QML"
+                            checked: figmaQml.flags & FigmaQml.StaticCode
                             onCheckedChanged: {
                                 if(checked)
-                                    figmaQml.flags |= FigmaQml.GenerateAccess
+                                    figmaQml.flags |= FigmaQml.StaticCode
                                 else
-                                    figmaQml.flags &= ~FigmaQml.GenerateAccess
+                                    figmaQml.flags &= ~FigmaQml.StaticCode
                             }
                         }
                         QtCheckBox {
@@ -1190,7 +1190,7 @@ ApplicationWindow {
         }
 
         onEventReceived: {
-            console.log("FigmaQmlSingleton - Event:", element, value);
+            console.log("FigmaQmlSingleton - Event:", element, event);
         }
 
         onSetSource: {

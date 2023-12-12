@@ -36,9 +36,38 @@ public:
     Qul::Signal<void(SignalString element, SignalString value)> valueChanged;
 
     /**
+     * @brief valueChanged
+     */
+    Qul::Signal<void(SignalString element, SignalString source)> setSource;
+
+#ifdef QUL_CPP_HAS_SOURCE_COMPONENT // I cannot find C++ implementatation of Component for QUL
+    /**
+     * @brief valueChanged
+     */
+    Qul::Signal<void(SignalString element, const Qul::Object* sourceComponent)> setSourceComponent;
+#endif
+
+    /**
+     * @brief valueChanged
+     */
+    Qul::Signal<void(SignalString element)> sourceLoaded;
+
+
+    /**
+     * @brief valueChanged
+     */
+    Qul::Signal<void(SignalString view)> viewLoaded;
+
+    /**
+     * @brief valueChanged
+     */
+    Qul::Signal<void(SignalString element)> sourceError;
+
+
+    /**
      * @brief event
      */
-    Qul::Signal<void(SignalString element, SignalString value)> event;
+    Qul::Signal<void(SignalString element, SignalString event)> eventReceived;
 
     /**
      * @brief applyValue
@@ -65,6 +94,46 @@ public:
      * @return
      */
     std::string view(int index) const {return index < elements.size() ? elements[index] : std::string{};}
+
+    /**
+     * Mediator functions - see https://doc.qt.io/QtForMCUs-2.5/qml-qtquick-loader.html
+     * ...but more flexible as key value enables address unlike just a value exchange
+     **/
+
+    /** @brief sendInt
+     * @param key
+     * @param value
+     */
+    void sendInt(SignalString key, int value) {intReceived(key, value);}
+
+    /**
+     * @brief intReceived
+     */
+    Qul::Signal<void (SignalString key, int value)> intReceived;
+
+    /**
+     * @brief sendReal
+     * @param key
+     * @param value
+     */
+    void sendReal(SignalString key, double value) {realReceived(key, value);}
+
+    /**
+     * @brief realReceived
+     */
+    Qul::Signal<void (SignalString key, double value)> realReceived;
+
+    /**
+     * @brief sendString
+     * @param key
+     * @param value
+     */
+    void sendString(const std::string& key, const std::string& value) {stringReceived(key, value);}
+
+    /**
+     * @brief stringReceived
+     */
+    Qul::Signal<void (SignalString key, SignalString value)> stringReceived;
 
     /**
      * @brief elements, static and sole
