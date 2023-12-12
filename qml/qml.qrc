@@ -9,5 +9,6 @@
         <file>FontMap.qml</file>
         <file>QtDropShadow.qml</file>
         <file>QtCheckBox.qml</file>
+        <file>QtForMCUPopup.qml</file>
     </qresource>
 </RCC>

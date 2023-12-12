@@ -18,6 +18,9 @@
 #endif
 
 
+#ifdef HAS_QUL
+extern void executeQulApp(const QVariantMap& parameters);
+#endif
 
 #ifndef NO_CONCURRENT
 #include <QtConcurrent>
@@ -361,6 +364,10 @@ void FigmaQml::setFilter(const QMap<int, QSet<int>>& filter) {
 }
 
 QByteArray FigmaQml::prettyData(const QByteArray& data) const {
+    if(data.isEmpty()) {
+        //emit const_cast<FigmaQml*>(this)->error("No data");
+        return QString("No data").toLatin1();
+    }
     QJsonParseError error;
     const auto json = QJsonDocument::fromJson(data, &error);
     if(error.error != QJsonParseError::NoError) {
@@ -1027,3 +1034,12 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
     dlg->show();
 }
 #endif
+
+
+void FigmaQml::executeQul(const QVariantMap& parameters) {
+#ifdef HAS_QUL
+    executeQulApp(parameters);
+#else
+    (void) parameters;
+#endif
+}

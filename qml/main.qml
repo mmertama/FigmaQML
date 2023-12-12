@@ -186,6 +186,12 @@ ApplicationWindow {
                 onTriggered: saveAllQMLs();
             }
             MenuItem {
+                enabled: true //figmaQml && figmaQml.isValid && (figmaQml.flags & FigmaQml.QulMode)
+                visible: has_qul
+                text: "Verify Qt for MCU..."
+                onTriggered: qtForMCUPopup.open();
+            }
+            MenuItem {
                 text: "Edit imports..."
                 onTriggered: imports.open();
             }
@@ -302,6 +308,17 @@ ApplicationWindow {
                                     figmaQml.flags |= FigmaQml.EmbedImages
                                 else
                                     figmaQml.flags &= ~FigmaQml.EmbedImages
+                            }
+                        }
+                        QtCheckBox {
+                            text: "Qt for MCU"
+                            visible: has_qul
+                            checked: figmaQml.flags & FigmaQml.QulMode
+                            onCheckedChanged: {
+                                if(checked)
+                                    figmaQml.flags |= FigmaQml.QulMode
+                                else
+                                    figmaQml.flags &= ~FigmaQml.QulMode
                             }
                         }
                         Repeater {
@@ -794,7 +811,7 @@ ApplicationWindow {
                 }
             }
             Label {
-            text: "FigmaQML, Markus Mertama 2020 - 2022"
+            text: "FigmaQML, Markus Mertama 2020 - 2023"
             }
             Label {
             text: "Version: " + figmaQmlVersionNumber;
@@ -974,6 +991,11 @@ ApplicationWindow {
         buttons: MessageDialog.Ok
         visible: text.length > 0
         onButtonClicked: text = ""
+    }
+
+    QtForMCUPopup {
+        id: qtForMCUPopup
+        anchors.centerIn: parent
     }
 
     // this function may invoked from C++ side if upon 1st start

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 
 project(FigmaQML LANGUAGES CXX)
 
@@ -34,8 +34,9 @@ else()
     endif()
 endif()
 
+option(HAS_QUL "Build Qt for MCU support" FALSE)
 
-SET(SOURCES
+set(SOURCES
     src/main.cpp
     qml/qml.qrc
     src/figmaget.cpp
@@ -56,6 +57,14 @@ SET(SOURCES
     include/functorslot.h
     include/figmaprovider.h
 )
+
+if(HAS_QUL)
+    set(SOURCES
+        ${SOURCES}
+        src/executeQul.cpp
+        mcu_figma/mcu.qrc
+    )
+endif()
 
 if(EMSCRIPTEN)
     SET(SOURCES ${SOURCES} src/wasmdialogs.cpp)
@@ -99,6 +108,9 @@ target_compile_definitions(FigmaQML
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 endif()
 
+option(QT6_CONCURRENT FALSE)
+option(QT6_SSL FALSE)
+
 if(Qt5_FOUND)
     target_compile_definitions(FigmaQML PRIVATE -DQT5)
     target_link_libraries(FigmaQML
@@ -141,7 +153,23 @@ elseif(EMSCRIPTEN)
       PRIVATE QuaZip
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
-    target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT -DNO_SSL)
+    find_package(OpenSSL REQUIRED)
+    string(REPLACE "." ";" VERSION_LIST OPENSSL_VERSION)
+    list(GET VERSION_LIST 0 SSL_MAJOR)
+    if(${SSL_MAJOR} LESS 3 )
+        message(WARNING "SSL version must be at least 3.0.0, your runtime have ${OPENSSL_VERSION}. Hint for QtCreator try add $\{QT_DIR\}/plugins/tls in Run settings (LD_LIBRARY_PATH in Linux)")
+    endif()
+    if(NOT QT6_CONCURRENT)
+        target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT)
+    endif()
+    if(NOT QT6_SSL)
+        target_compile_definitions(FigmaQML PRIVATE -DNO_SSL)
+    endif()
+
+    if(HAS_QUL)
+        target_compile_definitions(FigmaQML PRIVATE -DHAS_QUL)
+    endif()
+
     target_link_libraries(FigmaQML
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent Qt6::Core5Compat ${EXTRA})
 endif()
