@@ -7,5 +7,7 @@
         <file>fonts/DejaVuSansMono.ttf</file>
         <file>fonts/LICENSE</file>
         <file>images/icon.png</file>
+        <file>run_STM32.sh</file>
     </qresource>
+    <qresource prefix="/"/>
 </RCC>

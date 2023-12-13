@@ -24,6 +24,7 @@ Dialog {
            property alias qulVerValue: qulVer.text
            property alias qulPlatformValue: qulPlatform.text
            property alias qtLicenseValue: qtLicense.text
+           property alias platformToolsValue: platformTools.text
        }
 
     component Input : RowLayout {
@@ -98,6 +99,18 @@ Dialog {
                 fileDialog.open()
             }
         }
+
+        Text {text: "Platform tools";font.weight: Font.Medium}
+        Input {
+            id: platformTools
+            text: "         "
+            buttonText: "Select..."
+            onClicked: {
+                folderDialog.title = "Select platform tools folder"
+                folderDialog.target = this
+                folderDialog.open()
+            }
+        }
     }
 
     onAccepted: figmaQml.executeQul(
@@ -105,7 +118,8 @@ Dialog {
                         'qtDir': qtDir.text,
                         'qulVer': qulVer.text,
                         'qulPlatform': qulPlatform.text,
-                        'qtLicense': qtLicense.text
+                        'qtLicense': qtLicense.text,
+                        'platformTools': platformTools.text
                     }
                     );
 

@@ -84,15 +84,17 @@ public:
 
 public:
     inline static const QString PlaceHolder = "placeholder";
-    enum Flags {
-        PrerenderShapes = 2,
-        PrerenderGroups = 4,
-        PrerenderComponents = 8,
-        PrerenderFrames = 16,
-        PrerenderInstances = 32,
-        ParseComponent = 512,
-        BreakBooleans = 1024,
-        AntializeShapes = 2048
+    enum Flags {        // WARNING these map values are same with figmaqml flags
+        PrerenderShapes     = 0x2,
+        PrerenderGroups     = 0x4,
+        PrerenderComponents = 0x8,
+        PrerenderFrames     = 0x10,
+        PrerenderInstances  = 0x20,
+        ParseComponent  = 0x200,
+        BreakBooleans   = 0x400,
+        AntializeShapes = 0x800,
+        QulMode = 0x1000
+
     };
     using EByteArray = std::optional<QByteArray>;
 public:
@@ -211,6 +213,7 @@ private:
 private:
 
     FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
+    bool isQul() const {return m_flags & QulMode;}
 
     const unsigned m_flags;
     FigmaParserData& m_data;

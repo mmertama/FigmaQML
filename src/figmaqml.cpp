@@ -19,7 +19,7 @@
 
 
 #ifdef HAS_QUL
-extern void executeQulApp(const QVariantMap& parameters);
+extern void executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml);
 #endif
 
 #ifndef NO_CONCURRENT
@@ -1038,7 +1038,7 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 
 void FigmaQml::executeQul(const QVariantMap& parameters) {
 #ifdef HAS_QUL
-    executeQulApp(parameters);
+    executeQulApp(parameters,*this);
 #else
     (void) parameters;
 #endif
