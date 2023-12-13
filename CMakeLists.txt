@@ -11,6 +11,14 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+
+option(HAS_QUL "Build Qt for MCU support" FALSE)
+
+if(NOT LINUX)
+    set(HAS_QUL FALSE)
+endif()
+
+
 if(LET_QT5)
     find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
     if(Qt5_FOUND)
@@ -26,15 +34,23 @@ elseif(EMSCRIPTEN)
          message(FATAL_ERROR "Qt6 Emscripten is not found!")
      endif()
 else()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Concurrent Core5Compat)
+    if(HAS_QUL)
+        set(EXTRA
+            ${EXTRA}
+            Qt6::SerialPort
+        )
+        set(EXTRA_PACKAGES
+            ${EXTRA_PACKAGES}
+            SerialPort
+        )
+    endif()
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Concurrent Core5Compat ${EXTRA_PACKAGES})
     if(Qt6_FOUND)
         message("Project is Qt6")
     else()
-         message(FATAL_ERROR "Qt6 is not found!")
+         message(FATAL_ERROR "Qt6 or extra stuff are not found!")
     endif()
 endif()
-
-option(HAS_QUL "Build Qt for MCU support" FALSE)
 
 set(SOURCES
     src/main.cpp
@@ -61,6 +77,7 @@ set(SOURCES
 if(HAS_QUL)
     set(SOURCES
         ${SOURCES}
+        include/qulInfo.h
         src/executeQul.cpp
         mcu_figma/mcu.qrc
     )

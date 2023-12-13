@@ -338,7 +338,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += intendent + type + " {\n";
          Q_ASSERT(obj.contains("type") && obj.contains("id"));
          out += intendent1 + "id: " + qmlId(obj["id"].toString()) + "\n";
-         out += intendent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
+
+         if(!isQul()) // what was the role of objectName? To document, however not applicable for Qt for MCU
+            out += intendent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
          return out;
      }
 
@@ -760,7 +762,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
 
      QByteArray FigmaParser::makeAntialising(int intendents) const {
-         return (m_flags & AntializeShapes) ?
+         return !isQul() && (m_flags & AntializeShapes) ?
             (tabs(intendents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 

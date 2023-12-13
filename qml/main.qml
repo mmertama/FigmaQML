@@ -93,6 +93,9 @@ ApplicationWindow {
             tooManyRequestsNote.visible = false;
             container.create();
         }
+        function onQulInfo(qulInfo) {
+            console.log(qulInfo);
+        }
 
         function onTakeSnap(pngFile, canvasIndex, elementIndex) {
             const snapFunction = function() {
@@ -186,7 +189,7 @@ ApplicationWindow {
                 onTriggered: saveAllQMLs();
             }
             MenuItem {
-                enabled: true //figmaQml && figmaQml.isValid && (figmaQml.flags & FigmaQml.QulMode)
+                enabled: figmaQml && figmaQml.isValid && (figmaQml.flags & FigmaQml.QulMode)
                 visible: has_qul
                 text: "Verify Qt for MCU..."
                 onTriggered: qtForMCUPopup.open();
@@ -690,7 +693,7 @@ ApplicationWindow {
 
 
     function storeFile() {
-        if(isWebAssmbly()) {
+        if(isWebAssembly) {
             const temp_store_file = "/tmp/stored_figma.figmaqml";
             if(!figmaGet.store(temp_store_file, figmaQml.flags, figmaQml.imports)) {
                 errorNote.text = "Cannot store data";
@@ -724,7 +727,7 @@ ApplicationWindow {
 
 
     function restoreFile() {
-        if(isWebAssmbly()) {
+        if(isWebAssembly) {
             figmaQML.restore();
         } else {
             restoreDialog.open();

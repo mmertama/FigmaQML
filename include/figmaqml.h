@@ -38,7 +38,7 @@ class FigmaQml : public QObject, public FigmaParserData {
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
     Q_PROPERTY(QString documentsLocation READ documentsLocation CONSTANT)
 public:
-    enum Flags {
+    enum Flags { // WARNING these map values are same with figmaparser flags
         PrerenderShapes     = 0x2,
         PrerenderGroups     = 0x4,
         PrerenderComponets  = 0x8,
@@ -49,7 +49,7 @@ public:
         Timed               = 0x100,
         AltFontMatch        = 0x200,
         KeepFigmaFontName   = 0x400,
-        QulMode             = 0x800,
+        QulMode             = 0x1000,
     };
     Q_ENUM(Flags)
 public:
@@ -117,6 +117,7 @@ signals:
     void error(const QString& errorString);
     void warning(const QString& warningString);
     void info(const QString& infoString);
+    void qulInfo(const QString& qulInfo);
     void canvasCountChanged();
     void elementCountChanged();
     void currentElementChanged();
