@@ -300,23 +300,49 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
         }
     });
 
+    QObject::connect(this, &FigmaQml::flagsChanged, this, &FigmaQml::updateDefaultImports);
+
     QObject::connect(this, &FigmaQml::fontFolderChanged, this, fontFolderChanged);
     fontFolderChanged();
 }
 
+void FigmaQml::updateDefaultImports() {
+    const auto di = defaultImports();
+    const QStringList to_check = {"Qt5Compat.GraphicalEffects"};
+    bool has_changes = false;
+    for(const auto& c : to_check) {
+        if(di.contains(c) && !m_imports.contains(c)) {
+            m_imports.insert(c, "");
+            has_changes = true;
+        }
+        else if(!di.contains(c) && m_imports.contains(c)) {
+            m_imports.remove(c);
+            has_changes = true;
+        }
+    }
+    if(has_changes) {
+        emit importsChanged();
+    }
+}
 
-QVariantMap FigmaQml::defaultImports() {
-    return {
+QVariantMap FigmaQml::defaultImports() const {
+    return
 #ifdef QT5
-        {"QtQuick", QString("2.15")},
+        {{"QtQuick", QString("2.15")},
         {"QtGraphicalEffects", QString("1.15")},
-        {"QtQuick.Shapes", QString("1.15")}
+         {"QtQuick.Shapes", QString("1.15")}};
 #else
-        {"QtQuick", QString("")},
-        {"Qt5Compat.GraphicalEffects", QString("")},
-        {"QtQuick.Shapes", QString("")}
+        (m_flags & QulMode) ?
+            QVariantMap{
+            {"QtQuick", QString("")},
+            {"QtQuick.Shapes", QString("")}
+        } : QVariantMap{
+            {"QtQuick", QString("")},
+            {"Qt5Compat.GraphicalEffects", QString("")},
+            {"QtQuick.Shapes", QString("")}
+         };
 #endif
-    };
+
 }
 
 bool FigmaQml::setBrokenPlaceholder(const QString &placeholder) {
@@ -1038,7 +1064,7 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 
 void FigmaQml::executeQul(const QVariantMap& parameters) {
 #ifdef HAS_QUL
-    executeQulApp(parameters,*this);
+    executeQulApp(parameters, *this);
 #else
     (void) parameters;
 #endif

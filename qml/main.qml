@@ -93,7 +93,11 @@ ApplicationWindow {
             tooManyRequestsNote.visible = false;
             container.create();
         }
-        function onQulInfo(qulInfo) {
+        function onQulInfo(qulInfo, level) {
+            if(!consolePopup.opened)
+                consolePopup.open()
+            consolePopup.level = level;
+            consolePopup.text += qulInfo;
             console.log(qulInfo);
         }
 
@@ -999,6 +1003,33 @@ ApplicationWindow {
     QtForMCUPopup {
         id: qtForMCUPopup
         anchors.centerIn: parent
+    }
+
+    Dialog {
+        id: consolePopup
+        property alias text: textArea.text
+        property int level: 0
+        anchors.centerIn: Overlay.overlay
+        height: 500
+        width: 700
+        onLevelChanged: {
+            switch(level) {
+            case 0: textArea.color = "red"; break;
+            case 1: textArea.color = "yellow"; break;
+            case 2: textArea.color = "green"; break;
+            case 3: textArea.color = "lightgray"; break;
+            default: textArea.color = "lightgray"; break;
+            }
+        }
+        ScrollView {
+            anchors.fill: parent
+            TextArea {
+                id: textArea
+                color: "lightgrey"
+                background: Rectangle { color: "black"; }
+            }
+        }
+        standardButtons: Dialog.Close
     }
 
     // this function may invoked from C++ side if upon 1st start

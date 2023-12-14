@@ -11,6 +11,10 @@
 #include <QRegularExpression>
 #include <QSerialPortInfo>
 #include <QSerialPort>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include "qmetaobject.h"
 #include "qulInfo.h"
 #include "figmaqml.h"
 
@@ -55,8 +59,21 @@ public:
     bool connect(const QSerialPortInfo& port_info) {
         m_port = std::make_unique<QSerialPort>(port_info);
         QObject::connect(m_port.get(), &QSerialPort::readyRead, &m_info, [this]() {
-            emit m_info.information(QString::fromLatin1(m_port->readAll()));
+            const auto out = QString::fromLatin1(m_port->readAll());
+            emit m_info.information(out, 3);
             });
+
+        QObject::connect(m_port.get(), &QSerialPort::errorOccurred, &m_info, [this](auto error) {
+            const auto metaEnum = QMetaEnum::fromType<QSerialPort::SerialPortError>();
+            qDebug() << "Serial error:" <<  metaEnum.valueToKey(error) << " " << m_port->errorString();
+        });
+
+        m_port->setBaudRate(QSerialPort::Baud115200);
+        m_port->setDataBits(QSerialPort::Data8);
+        m_port->setParity(QSerialPort::NoParity);
+        m_port->setStopBits(QSerialPort::OneStop);
+        m_port->setFlowControl(QSerialPort::NoFlowControl);
+
         return m_port->open(QSerialPort::ReadOnly);
     }
 private:
@@ -130,6 +147,73 @@ QSerialPortInfo getSerialPort(const QString& id) {
     return QSerialPortInfo{};
 }
 
+/*
+static
+bool updateJson(const QString& json, const QStringList& path, const QStringList& values) {
+    QFile in_file(json);
+    if(!in_file.open(QFile::ReadOnly))
+        return false;
+    auto doc = QJsonDocument::fromJson(in_file.readAll());
+    in_file.close();
+    Q_ASSERT(doc.isObject());
+    auto obj = doc.object();
+    QJsonValue arrayValue;
+    for(const auto& p : path) {
+        const auto val = obj[p];
+        if(val.isObject())
+            obj = val.toObject();
+        else {
+            if(val.isArray() && p == path.last())
+                arrayValue = val;
+            break;
+        }
+    }
+    if(!arrayValue.isArray())
+        return false;
+    auto arr = arrayValue.toArray();
+    for(const auto& v : values) {
+        arr.append(QJsonValue(v));
+    }
+    QFile out_file(json);
+    if(!out_file.open(QFile::WriteOnly))
+        return false;
+    out_file.write(doc.toJson());
+    out_file.close();
+    return true;
+}
+*/
+
+
+static
+bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement) {
+    QFile file(fname);
+    if(!file.open(QFile::ReadOnly)) {  // I have no idea (not looked very much) why readwrite wont work in mys system, hence read and then write
+        qDebug() << "cannot open" << fname << "due" << file.errorString();
+        return false;
+    }
+    QStringList lines;
+    QTextStream read(&file);
+    while(!read.atEnd()) {
+        auto line = read.readLine();
+        lines << line.replace(re, replacement);
+    }
+    file.close();
+    if(!file.remove())
+        return false;
+    if(!file.open(QFile::WriteOnly)) {
+        qDebug() << "cannot open" << fname << "due" << file.errorString();
+        return false;
+    }
+    QTextStream write(&file);
+    for(const auto& l : lines)
+        write << l << "\n";
+    return true;
+}
+
+static
+QString qq(const QString& str) {
+    return '"' + str + '"';
+}
 
 bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
 
@@ -142,20 +226,30 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
     if(!copy_resources(dir))
         return false;
 
-    QFile qml_out(dir.path() + '/' + "mcu_figma.qml");
-    VERIFY(qml_out.remove(), "Cannot overwrite QtQuick file");
+    QStringList qml_files;
+    const auto main_file_name = FigmaQml::validFileName(figmaQml.documentName()) + ".qml";
+    qml_files << qq(main_file_name);
+    QFile qml_out(dir.path() + '/' + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
     qml_out.write(figmaQml.sourceCode());
     qml_out.close();
 
     for(const auto& component_name : figmaQml.components()) {
-        const auto file_name = FigmaQml::validFileName(component_name);
+        const auto file_name = FigmaQml::validFileName(component_name) + ".qml";
+        qml_files << qq(file_name);
         QFile component_out(dir.path() + '/' + file_name);
         VERIFY(component_out.open(QFile::WriteOnly), "Cannot write component " + file_name);
         const auto component_src = figmaQml.componentSourceCode(component_name);
         component_out.write(component_src);
         component_out.close();
     }
+
+    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"mcu_figma.qml")(\s*\]))");
+    // note ','
+    VERIFY(replaceInFile(dir.path() + "/mcu_figma.qmlproject", re_project, R"(\1,)" + qml_files.join(",") + R"(\2)"), "Cannot update qmlproject");
+
+    static const QRegularExpression re_qml(R"((^\s*source:\s*")("))");
+    VERIFY(replaceInFile(dir.path() + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)"), "Cannot update qml file");
 
     QProcess build_process;
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -168,7 +262,15 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
     build_process.start("bash", {"build.sh"});
 
     QObject::connect(&build_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &build_process]() {
-        qulInfo->information(clean(build_process.readAllStandardError()));
+        const auto out = clean(build_process.readAllStandardError());
+        qDebug() << (build_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
+        emit qulInfo->information(out, build_process.exitCode() == 0 ? 1 : 0);
+    });
+
+    QObject::connect(&build_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &build_process]() {
+        const auto out = clean(build_process.readAllStandardOutput());
+        qDebug() << (build_process.exitCode() == 0 ? GREEN : RED) << out << NONE;
+        emit qulInfo->information(out, build_process.exitCode() == 0 ? 2 : 0);
     });
 
     build_process.waitForFinished();
@@ -192,6 +294,19 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
             QProcess flash_process;
             flash_process.setWorkingDirectory(dir.path());
             flash_process.start("bash", {"run_STM32.sh", programmer, flash_param, binary});
+
+            QObject::connect(&flash_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &flash_process]() {
+                const auto out = clean(flash_process.readAllStandardError());
+                qDebug() << (flash_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
+                emit qulInfo->information(out, flash_process.exitCode() == 0 ? 1 : 0);
+            });
+
+            QObject::connect(&flash_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &flash_process]() {
+                const auto out = clean(flash_process.readAllStandardOutput());
+                qDebug() << GREEN << out << NONE;
+                emit qulInfo->information(out, 2);
+            });
+
             flash_process.waitForFinished();
             debug_out(flash_process);
         } else {

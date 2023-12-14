@@ -20,6 +20,8 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
   )
 endif()
 
+message("Platform is ${MCU_PLATFORM}")
+
 target_sources(${PROJECT_NAME} PUBLIC
     ${PROJECT_NAME}.qmlproject
     ${PROJECT_NAME}.qml

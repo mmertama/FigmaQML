@@ -437,6 +437,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     QByteArray FigmaParser::makeEffects(const QJsonObject& obj, int intendents) {
         QByteArray out;
+
+        if(isQul())
+            return out; // Qul has no effects
+
         if(obj.contains("effects")) {
                 const auto effects = obj["effects"].toArray();
                 if(!effects.isEmpty()) {
