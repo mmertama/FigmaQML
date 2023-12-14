@@ -86,7 +86,7 @@ public:
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;
     Q_INVOKABLE QString componentData(const QString& name) const;
-    Q_INVOKABLE static QVariantMap defaultImports();
+    Q_INVOKABLE QVariantMap defaultImports() const;
     Q_INVOKABLE QByteArray prettyData(const QByteArray& data) const;
     Q_INVOKABLE void setFontMapping(const QString& key, const QString& value);
     Q_INVOKABLE void resetFontMappings();
@@ -117,7 +117,7 @@ signals:
     void error(const QString& errorString);
     void warning(const QString& warningString);
     void info(const QString& infoString);
-    void qulInfo(const QString& qulInfo);
+    void qulInfo(const QString& qulInfo, int level);
     void canvasCountChanged();
     void elementCountChanged();
     void currentElementChanged();
@@ -146,6 +146,7 @@ signals:
 #endif
 private slots:
     void doCancel();
+    void updateDefaultImports();
 private:
     void addImageFile(const QString& imageRef, bool isRendering);
     bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);

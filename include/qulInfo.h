@@ -15,7 +15,7 @@ public:
     bool connect(const QSerialPortInfo& info);
     ~QulInfo();
 signals:
-    void information(const QString& info);
+    void information(const QString& info, int level);
 private:
     QulInfo(QObject* parent = nullptr);
     class Private;

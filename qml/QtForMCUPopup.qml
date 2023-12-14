@@ -54,6 +54,7 @@ Dialog {
         }
         Button {
             id: button
+            Layout.alignment: Qt.AlignRight
             visible: row.buttonText.length > 0
             text: row.buttonText
             onClicked: row.clicked()
@@ -67,6 +68,7 @@ Dialog {
             id: qtDir
             text: "/opt/Qt"
             buttonText: "Select..."
+            Layout.preferredWidth: parent.width
             onClicked: {
                 folderDialog.title = "Select a Qt Dir"
                 folderDialog.target = this
@@ -93,6 +95,7 @@ Dialog {
             id: qtLicense
             text: "./qt-license.txt"
             buttonText: "Select..."
+            Layout.preferredWidth: parent.width
             onClicked: {
                 fileDialog.title = "Select a Qt License file"
                 fileDialog.target = this
@@ -105,6 +108,7 @@ Dialog {
             id: platformTools
             text: "         "
             buttonText: "Select..."
+            Layout.preferredWidth: parent.width
             onClicked: {
                 folderDialog.title = "Select platform tools folder"
                 folderDialog.target = this

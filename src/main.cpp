@@ -37,6 +37,9 @@ constexpr char IMPORTS[]{"imports"};
 constexpr char COMPANY_NAME[]{"Moonshine shade of haste productions"};
 constexpr char PRODUCT_NAME[]{"FigmaQML"};
 
+constexpr auto ORGANIZATION_NAME {"FigmaQML"};
+constexpr auto ORGANIZATION_DOMAIN {"figmaqml.com"};
+
 #ifdef _DEBUG
     #define print() qDebug()
 #else
@@ -87,6 +90,10 @@ int main(int argc, char *argv[]) {
 
     QCommandLineParser parser;
     const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
+
+    app.setOrganizationName(ORGANIZATION_NAME);
+    app.setOrganizationDomain(ORGANIZATION_DOMAIN);
+    app.setApplicationName(PRODUCT_NAME);
 
     parser.setApplicationDescription(QString("Figma to QML generator, version: %1, Markus Mertama 2020").arg(versionNumber));
     parser.addHelpOption();
@@ -449,7 +456,7 @@ int main(int argc, char *argv[]) {
          figmaGet->setProperty("userToken", settings.value(USER_TOKEN));
          figmaGet->setProperty("throttle", settings.value(THROTTLE, 300));
          figmaQml->setProperty("flags", settings.value(FLAGS, 0).toUInt());
-         figmaQml->setProperty("imports", settings.value(IMPORTS, FigmaQml::defaultImports()).toMap());
+         figmaQml->setProperty("imports", settings.value(IMPORTS, figmaQml->defaultImports()).toMap());
 
          figmaGet->setProperty("embedImages", settings.value(EMBED_IMAGES).toString());
          figmaQml->setProperty("imageDimensionMax", settings.value(IMAGEMAXSIZE, 1024).toInt());
