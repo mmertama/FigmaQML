@@ -282,7 +282,7 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
         emit qulInfo->information(out, build_process.exitCode() == 0 ? 2 : 0);
     });
 
-    build_process.waitForFinished();
+    build_process.waitForFinished(-1);
     debug_out(build_process);
     if(build_process.exitCode() == 0) {
         const auto tools_path = parameters["platformTools"].toString();
@@ -316,7 +316,7 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
                 emit qulInfo->information(out, 2);
             });
 
-            flash_process.waitForFinished();
+            flash_process.waitForFinished(-1);
             debug_out(flash_process);
         } else {
             showError("Don't know how to flash the binary!", "Only the STM32 supported, but the image shall be found in " + dir.path() + " as long as this note is open");

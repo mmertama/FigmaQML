@@ -224,6 +224,13 @@ ApplicationWindow {
                 onTriggered: Qt.exit(0);
             }
         }
+        // too much work
+        //TextField {
+        //    PlaceholderText: "Search"
+        //    onTextChanged: {
+        //        tabs.currentItem.
+        //    }
+        //}
     }
 
     header: Row {

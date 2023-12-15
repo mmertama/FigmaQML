@@ -2,6 +2,7 @@
 #include "figmadata.h"
 #include "functorslot.h"
 #include "downloads.h"
+#include "utils.h"
 #include <QQmlEngine>
 #include <QNetworkReply>
 #include <QJsonDocument>
@@ -13,7 +14,7 @@
 #include <QFileInfo>
 #include <QAbstractEventDispatcher>
 #include <memory>
-#include <array>
+
 
 #include <QThread>
 
@@ -36,15 +37,6 @@ const QLatin1String StreamId("FQ03");
 QString asTimeoutId(const QString& id) {
     return id + "_timeout";
 }
-
-class RAII_ {
-public:
-    using Deldelegate = std::function<void()>;
-    RAII_(const Deldelegate& d) : m_d(d) {}
-    ~RAII_() {m_d();}
-private:
-    Deldelegate m_d;
-};
 
 /*
 #define FOO  RAII_ r{[fn = __FUNCTION__](){qDebug() << "FOO Out - " << fn; }}; qDebug() << "FOO: In - " << __FUNCTION__

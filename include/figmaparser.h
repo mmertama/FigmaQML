@@ -209,7 +209,10 @@ private:
      EByteArray parseBooleanOperationIntersect(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId);
      EByteArray parseBooleanOperationExclude(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId);
 
+     QByteArray parseQtComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
+     QByteArray parseQulComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
 
+     ~FigmaParser() { Q_ASSERT(!m_parent.parent);}
 private:
 
     FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
@@ -220,7 +223,24 @@ private:
     const Components* m_components;
     const QString m_intendent = "    ";
     QSet<QString> m_componentIds;
-    const QJsonObject* m_parent;
+    struct Parent{
+        const QJsonObject* obj;
+        const Parent* parent;
+        template<typename T>
+        auto operator[](const T& k) const {return (*obj)[k];}
+        void push(const QJsonObject* obj_) {
+            parent = new Parent{obj, parent};
+            obj = obj_;
+        }
+        void pop() {
+            Q_ASSERT(parent);
+            obj = parent->obj;
+            auto p = parent;
+            parent = p->parent;
+            delete p;
+        }
+    };
+    Parent m_parent;
 
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);

@@ -20,6 +20,16 @@ QString toStr(const First& first, Rest&&... args) {
     return str + toStr(args...);
 }
 
+class RAII_ {
+public:
+    using Deldelegate = std::function<void()>;
+    RAII_(const Deldelegate& d) : m_d(d) {}
+    ~RAII_() {m_d();}
+private:
+    Deldelegate m_d;
+};
+
+
 #ifndef QT5
 inline QByteArray& operator+=(QByteArray& ba, const QString& qstr) {
     ba += qstr.toUtf8();
