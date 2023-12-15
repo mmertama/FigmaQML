@@ -405,17 +405,20 @@ QByteArray FigmaQml::prettyData(const QByteArray& data) const {
     return bytes;
 }
 
-bool FigmaQml::saveImages(const QString &folder) {
+// folder is more of prefix...
+std::optional<QStringList> FigmaQml::saveImages(const QString &folder) const {
     if(!ensureDirExists(folder))
-        return false;
+        return std::nullopt;
+    QStringList img_list;
     for(const auto& i : qAsConst(m_imageFiles)) {
         const QFileInfo file(i.first + i.second);
         if(!file.exists()) {
             qDebug() << "invalid filename:" << file.absoluteFilePath() << "not found";
             emit error(QString("Invalid filename: %1 (not found)").arg(file.absoluteFilePath()));
-            return false;
+            return std::nullopt;
         }
         const auto target = folder + file.fileName();
+        img_list.append(target);
         const QFile targetEntry(target);
         if(targetEntry.exists(target)) {
             if(targetEntry.size() == file.size()) {
@@ -424,15 +427,15 @@ bool FigmaQml::saveImages(const QString &folder) {
                 continue;
              } else {
                 emit error(QString("Cannot replace %1 to %2").arg(file.absoluteFilePath(), target));
-                return false;
+                return std::nullopt;
             }
         }
         if(!QFile::copy(file.absoluteFilePath(), target)) {
             emit error(QString("Cannot copy %1 to %2").arg(file.absoluteFilePath(), target));
-            return false;
+            return std::nullopt;
         }
     }
-    return true;
+    return std::make_optional(img_list);
 }
 
 void FigmaQml::addImageFile(const QString& imageRef, bool isRendering) {
@@ -479,7 +482,7 @@ bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes
     return true;
 }
 
-bool FigmaQml::ensureDirExists(const QString& e) {
+bool FigmaQml::ensureDirExists(const QString& e) const {
      QDir dir(e);
      if(!dir.mkpath(".")) {
          emit error(QString("Cannot use dir %1").arg(dir.absolutePath()));

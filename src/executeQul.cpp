@@ -251,6 +251,15 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
     static const QRegularExpression re_qml(R"((^\s*source:\s*")("))");
     VERIFY(replaceInFile(dir.path() + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)"), "Cannot update qml file");
 
+    const auto images = figmaQml.saveImages(dir.path() + "/images/");
+    VERIFY(images, "Cannot save images" )
+    QStringList local_images;
+    std::transform(images->begin(), images->end(), std::back_inserter(local_images), [](const auto& f){return qq("images/" + QFileInfo(f).fileName());});
+
+    static const QRegularExpression re_images (R"((^\s*files:\s*\[\s*"images/icon.png")(\s*\]))");
+    // note ','
+    VERIFY(replaceInFile(dir.path() + "/mcu_figma.qmlproject", re_images, R"(\1,)" + local_images.join(",") + R"(\2)"), "Cannot update qmlproject");
+
     QProcess build_process;
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     env.insert("QT_DIR", parameters["qtDir"].toString());

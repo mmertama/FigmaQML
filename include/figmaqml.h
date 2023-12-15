@@ -104,6 +104,7 @@ public:
     Q_INVOKABLE bool store(const QString& docName, const QString& tempName);
     Q_INVOKABLE void restore();
 #endif
+    std::optional<QStringList> saveImages(const QString &folder) const;
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
@@ -114,9 +115,9 @@ signals:
     void sourceCodeChanged();
     void elementChanged();
     void flagsChanged();
-    void error(const QString& errorString);
-    void warning(const QString& warningString);
-    void info(const QString& infoString);
+    void error(const QString& errorString) const;
+    void warning(const QString& warningString) const;
+    void info(const QString& infoString) const;
     void qulInfo(const QString& qulInfo, int level);
     void canvasCountChanged();
     void elementCountChanged();
@@ -150,8 +151,7 @@ private slots:
 private:
     void addImageFile(const QString& imageRef, bool isRendering);
     bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);
-    bool ensureDirExists(const QString& dirname);
-    bool saveImages(const QString &folder);
+    bool ensureDirExists(const QString& dirname) const;
     bool doCreateDocument(FigmaDocument& doc, const QJsonObject& json);
     template<class FigmaDocType>
     void createDocument(const QJsonObject& json);
