@@ -530,7 +530,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto intendent = tabs(intendents + 1);
         out += tabs(intendents) + "Image {\n";
         out += intendent + "anchors.fill: parent\n";
-        out += intendent + "mipmap: true\n";
+        if(!isQul())
+            out += intendent + "mipmap: true\n";
         out += intendent + "fillMode: Image.PreserveAspectCrop\n";
         APPENDERR(out, makeImageSource(image, false, intendents + 1));
         out += tabs(intendents) + "}\n";
@@ -719,6 +720,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     EByteArray FigmaParser::makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId) {
         QByteArray out;
+        if(isQul()) // OpacityMask is not supported
+            return out;
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
 
@@ -732,7 +735,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent1 + "layer.enabled: true\n";
         out += intendent1 + "fillMode: Image.PreserveAspectCrop\n";
         out += intendent1 + "visible: false\n";
-        out += intendent1 + "mipmap: true\n";
+        if(!isQul())
+            out += intendent1 + "mipmap: true\n";
         out += intendent1 + "anchors.fill:parent\n";
         APPENDERR(out, makeImageSource(imageRef, false, intendents + 1));
         out += intendent + "}\n";
@@ -766,7 +770,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
 
      QByteArray FigmaParser::makeAntialising(int intendents) const {
-         return !isQul() && (m_flags & AntializeShapes) ?
+         return !isQul() && (m_flags & AntializeShapes) ? // antialiazing is not supported
             (tabs(intendents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 
@@ -1193,7 +1197,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             {"CENTER", "Text.AlignVCenter"}
         };
         styles.insert("verticalAlignment", vAlign[obj["textAlignVertical"].toString()]);
-        styles.insert("font.letterSpacing", QString::number(obj["letterSpacing"].toDouble()));
+        if(!isQul())
+            styles.insert("font.letterSpacing", QString::number(obj["letterSpacing"].toDouble()));
         return styles;
     }
 
@@ -1236,7 +1241,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += makeItem("Text", obj, intendents);
         APPENDERR(out, makeVector(obj, intendents));
         const auto intendent = tabs(intendents);
-        out += intendent + "wrapMode: TextEdit.WordWrap\n";
+        if(!isQul()) // word wrap is not supported
+            out += intendent + "wrapMode: TextEdit.WordWrap\n";
         out += intendent + "text:\"" + obj["characters"].toString() + "\"\n";
         APPENDERR(out, parseStyle(obj["style"].toObject(), intendents));
         out += tabs(intendents - 1) + "}\n";
@@ -1608,7 +1614,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              const auto intendent1 = tabs(intendents + 1);
              out += intendent1 + "id: " + imageId + "\n";
              out += intendent1 + "anchors.centerIn: parent\n";
-             out += intendent1 + "mipmap: true\n";
+             if(!isQul())
+                out += intendent1 + "mipmap: true\n";
              out += intendent1 + "fillMode: Image.PreserveAspectFit\n";
 
              APPENDERR(out, makeImageSource(obj["id"].toString(), true, intendents + 1, PlaceHolder));

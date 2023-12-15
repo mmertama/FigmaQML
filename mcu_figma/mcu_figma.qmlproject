@@ -47,7 +47,7 @@ Project {
     ImageFiles {
         files: ["images/icon.png"]
         MCU.base: "images"
-        MCU.prefix: "assets"
+        MCU.prefix: "images"
 
         MCU.resourceCompression: false
         MCU.resourceImagePixelFormat: "Automatic"
