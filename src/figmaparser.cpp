@@ -82,7 +82,7 @@ std::optional<FigmaParser::ItemType> FigmaParser::type(const QJsonObject& obj) {
 
 
 std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject& project, FigmaParserData& data) {
-        Components map;
+        Components map; 
         auto componentObjects = getObjectsByType(project["document"].toObject(), "COMPONENT");
         const auto components = project["components"].toObject();
         for (const auto& key : components.keys()) {
@@ -203,7 +203,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return name;
     }
 
-    FigmaParser::FigmaParser(unsigned flags, FigmaParserData& data, const Components* components) : m_flags(flags), m_data(data), m_components(components) {}
+    FigmaParser::FigmaParser(unsigned flags, FigmaParserData& data, const Components* components) : m_flags(flags), m_data(data), m_components(components), m_parent{nullptr, nullptr} {}
 
 
     QHash<QString, QJsonObject> FigmaParser::getObjectsByType(const QJsonObject& obj, const QString& type) {
@@ -260,7 +260,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
     std::optional<FigmaParser::Element> FigmaParser::getElement(const QJsonObject& obj) {
-        m_parent = &obj;
+        m_parent.push(&obj);
+        RAII_([this](){m_parent.pop();});
         auto bytes = parse(obj, 1);
         if(!bytes)
             return std::nullopt;
@@ -378,14 +379,21 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         }
         if(obj.contains("relativeTransform")) { //even figma may contain always this, the deltainstance may not
             const auto p = position(obj);
-            const auto tx = static_cast<int>(p.x() + extents.x());
-            const auto ty = static_cast<int>(p.y() + extents.y());
+            const bool top_level = m_parent.parent == nullptr;
+            const auto tx = static_cast<int>(!top_level ? p.x() + extents.x() : extents.x());
+            const auto ty = static_cast<int>(!top_level ? p.y() + extents.y() : extents.y());
+
+            Q_ASSERT(tx >= -1080);
+            Q_ASSERT(tx < 2060);
+            Q_ASSERT(ty >= -1080);
+            Q_ASSERT(ty < 2060);
+
 
             if(horizontal == "LEFT" || horizontal == "SCALE" || horizontal == "LEFT_RIGHT" || horizontal == "RIGHT") {
-                 out += intendent + QString("x:%1\n").arg(tx);
+                out += intendent + QString("x:%1\n").arg(tx);
             } else if(horizontal == "CENTER") {
-                const auto parentWidth = (*m_parent)["size"].toObject()["x"].toDouble();
-                const auto id = QString(qmlId((*m_parent)["id"].toString()));
+                const auto parentWidth = m_parent["size"].toObject()["x"].toDouble();
+                const auto id = QString(qmlId(m_parent["id"].toString()));
                 const auto width = getValue(obj, "size").toObject()["x"].toDouble();
                 const auto staticWidth = (parentWidth - width) / 2. - tx;
                 if(eq(staticWidth, 0))
@@ -397,8 +405,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             if(vertical == "TOP" || vertical == "SCALE" || vertical == "TOP_BOTTOM" || vertical == "BOTTOM") {
                out += intendent + QString("y:%1\n").arg(ty);
             } else  if(vertical == "CENTER") {
-                const auto parentHeight = (*m_parent)["size"].toObject()["y"].toDouble();
-                const auto id = QString(qmlId((*m_parent)["id"].toString()));
+                const auto parentHeight = m_parent["size"].toObject()["y"].toDouble();
+                const auto id = QString(qmlId(m_parent["id"].toString()));
                 const auto height = getValue(obj, "size").toObject()["y"].toDouble();
                 const auto staticHeight = (parentHeight - height) / 2. - ty;
                 if(eq(staticHeight, 0))
@@ -1275,9 +1283,78 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      }
 
 
+     QByteArray FigmaParser::parseQtComponent(const OrderedMap<QString, QByteArray>& children, int intendents) {
+       QByteArray out;
+       const auto intendent = tabs(intendents);
+       const auto keys = children.keys();
+        for(const auto& key : keys) {
+            const auto id = delegateName(key);
+            const auto sname = QString(id[0]).toUpper() + id.mid(1);
+            out += intendent + QString("property Component %1: ").arg(id).toLatin1() + children[key];
+            out += intendent + QString("property Item i_%1\n").arg(id);
+            out += intendent + QString("property matrix4x4 %1_transform: Qt.matrix4x4(%2)\n").arg(id).arg(QString("Nan ").repeated(16).split(' ').join(",")).toLatin1();
+            out += intendent + QString("on%1_transformChanged: {if(i_%2 && i_%2.transform != %2_transform) i_%2.transform = %2_transform;}\n").arg(sname, id).toLatin1();
+            const QStringList properties = {"x", "y", "width", "height"};
+            for(const auto& p : properties) {
+                out += intendent + QString("property real %1_%2: NaN\n").arg(id, p).toLatin1();
+                out += intendent + QString("on%1_%3Changed: {if(i_%2 && i_%2.%3 != %2_%3) i_%2.%3 = %2_%3;}\n").arg(sname, id, p).toLatin1();
+            }
+        }
+
+        const auto intendent1 = tabs(intendents + 1);
+        out += intendent + "Component.onCompleted: {\n";
+        for(const auto& key : keys) {
+            const auto dname = delegateName(key);
+            out += intendent1 + "const o_" + dname + " = {}\n";
+            out += intendent1 + QString("if(!isNaN(%1_transform.m11)) o_%1['transform'] = %1_transform;\n").arg(dname);
+            const QStringList properties = {"x", "y", "width", "height"};
+            for(const auto& p : properties) {
+                out += intendent1 + QString("if(!isNaN(%1_%2)) o_%1['%2'] = %1_%2;\n").arg(dname, p);
+            }
+            out += intendent1 + QString("i_%1 = %1.createObject(this, o_%1)\n").arg(dname).toLatin1();
+            for(const auto& p : properties) {
+                out += intendent1 + QString("%1_%2 = Qt.binding(()=>i_%1.%2)\n").arg(dname, p);
+            }
+        }
+        out += intendent + "}\n";
+        return out;
+    }
+
+     QString componentName(const QString& id) {
+         auto did = id;
+         did.replace(':', QLatin1String("_"));
+         return ("Component_" + did).toLatin1();
+     }
+
+
+    // Qul does not support Qt component creation, but along Qt5.15 there come new syntax
+    // if this get working well have this as a common method?
+    // But I really get my concept of creating Components like this ... they anyway jas unique intances,
+    // and therefore can be just children, what is going on here?
+    // ... It creates a component of that name, as it says and then a Item to plug a delegate and that is wrapped
+    // in component... is that then some one else to access the component? Kind of chain?
+     QByteArray FigmaParser::parseQulComponent(const OrderedMap<QString, QByteArray>& children, int intendents) {
+         QByteArray out;
+         const auto intendent = tabs(intendents);
+         const auto keys = children.keys();
+         for(const auto& key : keys) {
+             const auto id = componentName(key);
+             const auto sname = QString(id[0]).toUpper() + id.mid(1);
+             out += intendent + QString("component %1 : ").arg(id).toLatin1() + children[key];
+             out += intendent + QString("property Item %1\n").arg(delegateName(key));
+         }
+
+         for(const auto& key : keys) {
+            const auto dname = componentName(key);
+            out += intendent + dname + " {}\n";
+         }
+         return out;
+     }
+
+
      EByteArray FigmaParser::parseComponent(const QJsonObject& obj, int intendents) {
          if(!(m_flags & Flags::ParseComponent)) {
-             return parseInstance(obj, intendents);
+             return  parseInstance(obj, intendents);
         } else {
              QByteArray out = makeItem("Rectangle", obj, intendents);
              APPENDERR(out, makeVector(obj, intendents));
@@ -1290,37 +1367,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              const auto children = parseChildrenItems(obj, intendents);
              if(!children)
                  return std::nullopt;
-             const auto keys = children->keys();
-             for(const auto& key : keys) {
-                 const auto id = delegateName(key);
-                 const auto sname = QString(id[0]).toUpper() + id.mid(1);
-                 out += intendent + QString("property Component %1: ").arg(id).toLatin1() + (*children)[key];
-                 out += intendent + QString("property Item i_%1\n").arg(id);
-                 out += intendent + QString("property matrix4x4 %1_transform: Qt.matrix4x4(%2)\n").arg(id).arg(QString("Nan ").repeated(16).split(' ').join(",")).toLatin1();
-                 out += intendent + QString("on%1_transformChanged: {if(i_%2 && i_%2.transform != %2_transform) i_%2.transform = %2_transform;}\n").arg(sname, id).toLatin1();
-                 const QStringList properties = {"x", "y", "width", "height"};
-                 for(const auto& p : properties) {
-                     out += intendent + QString("property real %1_%2: NaN\n").arg(id, p).toLatin1();
-                     out += intendent + QString("on%1_%3Changed: {if(i_%2 && i_%2.%3 != %2_%3) i_%2.%3 = %2_%3;}\n").arg(sname, id, p).toLatin1();
-                 }
-             }
-
-             const auto intendent1 = tabs(intendents + 1);
-             out += intendent + "Component.onCompleted: {\n";
-             for(const auto& key : keys) {
-                 const auto dname = delegateName(key);
-                out += intendent1 + "const o_" + dname + " = {}\n";
-                out += intendent1 + QString("if(!isNaN(%1_transform.m11)) o_%1['transform'] = %1_transform;\n").arg(dname);
-                const QStringList properties = {"x", "y", "width", "height"};
-                for(const auto& p : properties) {
-                    out += intendent1 + QString("if(!isNaN(%1_%2)) o_%1['%2'] = %1_%2;\n").arg(dname, p);
-                }
-                out += intendent1 + QString("i_%1 = %1.createObject(this, o_%1)\n").arg(dname).toLatin1();
-                for(const auto& p : properties) {
-                    out += intendent1 + QString("%1_%2 = Qt.binding(()=>i_%1.%2)\n").arg(dname, p);
-                }
-             }
-             out += intendent + "}\n";
+             if(isQul())
+                out += parseQulComponent(*children, intendents);
+             else
+               out += parseQtComponent(*children, intendents);
              out += tabs(intendents - 1) + "}\n";
              return out;
          }
@@ -1587,8 +1637,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          QByteArray out;
          out += makeComponentInstance("Item", obj, intendents);
          const auto intendent = tabs(intendents );
-         Q_ASSERT(m_parent->contains("absoluteBoundingBox"));
-         const auto prect = (*m_parent)["absoluteBoundingBox"].toObject();
+         Q_ASSERT(m_parent.obj->contains("absoluteBoundingBox"));
+         const auto prect = m_parent["absoluteBoundingBox"].toObject();
          const auto px = prect["x"].toDouble();
          const auto py = prect["y"].toDouble();
 
@@ -1750,13 +1800,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     std::optional<OrderedMap<QString, QByteArray>> FigmaParser::parseChildrenItems(const QJsonObject& obj, int intendents) {
         OrderedMap<QString, QByteArray> childrenItems;
-        const auto parent = m_parent;
+        m_parent.push(&obj);
         if(obj.contains("children")) {
             bool hasMask = false;
             QByteArray out;
             auto children = obj["children"].toArray();
             for(const auto& c : children) {
-                m_parent = & obj;
+                //m_parent = {&obj, m_parent};
                 auto child = c.toObject();
                 const bool isMask = child.contains("isMask") && child["isMask"].toBool(); //mask may not be the first, but it masks the rest
                 if(isMask) {
@@ -1798,7 +1848,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 childrenItems.insert("maskedItem", out);
             }
         }
-        m_parent = parent;
+        //m_parent = parent;
+        m_parent.pop();
         return childrenItems;
     }
 

@@ -161,6 +161,8 @@ private:
     void suspend();
     bool writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header);
     bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
+    QString qmlTargetDir() const;
+    //QString srcTargetDir() const;
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;
@@ -178,7 +180,6 @@ private:
     QString m_fontFolder;
     std::atomic_bool m_doCancel = false;    
     std::atomic_bool m_ok = true;
-    QString m_targetDir = {};
     bool m_embedImages = false;
     enum class State {Constructing, Failed, Suspend};
     State m_state = State::Constructing;
