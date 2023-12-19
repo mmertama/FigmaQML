@@ -98,7 +98,7 @@ ApplicationWindow {
                 consolePopup.open()
             consolePopup.level = level;
             consolePopup.text += qulInfo;
-            console.log(qulInfo);
+            //console.log(qulInfo);
         }
 
         function onTakeSnap(pngFile, canvasIndex, elementIndex) {
@@ -195,7 +195,7 @@ ApplicationWindow {
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid && (figmaQml.flags & FigmaQml.QulMode)
                 visible: has_qul
-                text: "Verify Qt for MCU..."
+                text: "Export Qt for MCU..."
                 onTriggered: qtForMCUPopup.open();
             }
             MenuItem {
@@ -333,6 +333,16 @@ ApplicationWindow {
                                     figmaQml.flags |= FigmaQml.QulMode
                                 else
                                     figmaQml.flags &= ~FigmaQml.QulMode
+                            }
+                        }
+                        QtCheckBox {
+                            text: "Cyan background"
+                            checked: false
+                            onCheckedChanged: {
+                                if(checked)
+                                    container.color = "cyan"
+                                else
+                                    container.color = "white"
                             }
                         }
                         Repeater {
@@ -544,7 +554,7 @@ ApplicationWindow {
             clip: true
             anchors.fill: parent
             visible: qmlButton.checked
-            Item {
+            Rectangle {
                 id: container
                 anchors.fill: parent
                 width: parent.width
@@ -956,24 +966,45 @@ ApplicationWindow {
                         figmaQml.validFileName(canvasName)))
                 errorNote.text = "QML save failed";
         } else {
-            fileAllDialog.open();
+            fileSaveDialog.saveAll();
         }
     }
 
+    function saveCurrentQML() {
+        if(isWebAssembly) {
+            //if(!figmaQml.saveCurrentQMLZipped(
+            //            figmaQml.validFileName(documentName),
+            //            figmaQml.validFileName(canvasName)))
+            errorNote.text = "QML save failed";
+        } else {
+            fileSaveDialog.saveCurrent();
+        }
+    }
+
+
     FolderDialog {
-        id: fileAllDialog
-        title: "Save All QMLs into"
-        //currentFolder: "file:///" + encodeURIComponent(documentName)
+        id: fileSaveDialog
+        title: isSaveAll ? qsTr("Save All QMLs into") : qsTr("Save Current QML into")
         currentFolder: figmaQml.documentsLocation
         acceptLabel: "Save All"
+        property bool isSaveAll: false
         onAccepted: {
-            let path = fileAllDialog.currentFolder.toString();
+            let path = currentFolder.toString();
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
-            if(!figmaQml.saveAllQML(path)) {
+            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(qtForMCUPopup.params, path, qtForMCUPopup.saveAsApp);
+            if(!save_ok) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
+        }
+        function saveAll() {
+            isSaveAll = true
+            open();
+        }
+        function saveCurrent() {
+            isSaveAll = false
+            open();
         }
     }
 
@@ -1010,6 +1041,10 @@ ApplicationWindow {
     QtForMCUPopup {
         id: qtForMCUPopup
         anchors.centerIn: parent
+        onSaveRequest: saveCurrentQML()
+        onAccepted: figmaQml.executeQul(params);
+
+
     }
 
     Dialog {

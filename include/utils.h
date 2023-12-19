@@ -4,6 +4,9 @@
 #include <QString>
 #include <QTextStream>
 
+#define STRINGIFY0(x) #x
+#define STRINGIFY(x) STRINGIFY0(x)
+
 template <typename Last>
 QString toStr(const Last& last) {
     QString str;

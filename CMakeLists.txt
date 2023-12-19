@@ -93,7 +93,8 @@ set(VERSION_NUMBER "3.0.0")
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
 #add_executable(FigmaQML
-qt_add_executable(FigmaQML ${SOURCES})
+qt_add_executable(FigmaQML ${SOURCES}
+    todo.txt)
 
 if(WIN32)
   #  Windows does not support dual mode, we pick cmd mode

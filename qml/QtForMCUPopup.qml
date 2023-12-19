@@ -7,15 +7,23 @@ import QtCore
 Dialog {
     id: dialog
     title: "Qt For MCU Settings"
-    standardButtons: Dialog.Ok | Dialog.Cancel
+
     background: Rectangle {
             color: "lightgray"
     }
     property color textBg: "white"
     property color textBgBorder: "gray"
 
-    Component.onCompleted: {
-        standardButton(Dialog.Ok).text = qsTr("Proceed...");
+    property alias saveAsApp : saveAsApp.checked
+
+    signal saveRequest;
+
+    readonly property var params: {
+        'qtDir': qtDir.text,
+        'qulVer': qulVer.text,
+        'qulPlatform': qulPlatform.text,
+        'qtLicense': qtLicense.text,
+        'platformTools': platformTools.text
     }
 
     Settings {
@@ -117,15 +125,33 @@ Dialog {
         }
     }
 
-    onAccepted: figmaQml.executeQul(
-                    {
-                        'qtDir': qtDir.text,
-                        'qulVer': qulVer.text,
-                        'qulPlatform': qulPlatform.text,
-                        'qtLicense': qtLicense.text,
-                        'platformTools': platformTools.text
-                    }
-                    );
+    footer: Row {
+        DialogButtonBox {
+            Button {
+                text: qsTr("Proceed...")
+                DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+            }
+
+            Button {
+                text: qsTr("Cancel")
+                DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
+            }
+
+            Button {
+                text: qsTr("Save...")
+                onClicked: dialog.saveRequest();
+            }
+
+
+            onAccepted: dialog.done(Dialog.Accepted)
+            onRejected: dialog.done(Dialog.Rejected)
+
+            }
+        CheckBox {
+            id: saveAsApp
+            text: "Save as app"
+        }
+    }
 
     FileDialog {
         id: fileDialog
