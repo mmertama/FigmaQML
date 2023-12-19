@@ -82,6 +82,7 @@ public:
     void restore(int flags, const QVariantMap& imports);
     QString documentsLocation() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
+    Q_INVOKABLE bool saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;

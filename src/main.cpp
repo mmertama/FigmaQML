@@ -3,7 +3,7 @@
 #include "clipboard.h"
 #include "downloads.h"
 #include "functorslot.h"
-#include "figmadata.h"
+#include "utils.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -22,8 +22,7 @@
 QT_REQUIRE_CONFIG(ssl);
 #endif
 
-#define STRINGIFY0(x) #x
-#define STRINGIFY(x) STRINGIFY0(x)
+
 
 constexpr char PROJECT_TOKEN[]{"project_token"};
 constexpr char USER_TOKEN[]{"user_token"};

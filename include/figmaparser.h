@@ -211,8 +211,9 @@ private:
 
      QByteArray parseQtComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
      QByteArray parseQulComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
+     EByteArray makeChildMask(const QJsonObject& child, int intendents);
 
-     ~FigmaParser() { Q_ASSERT(!m_parent.parent);}
+     ~FigmaParser();
 private:
 
     FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
@@ -241,7 +242,7 @@ private:
         }
     };
     Parent m_parent;
-
+    int m_componentLevel = 0;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);
 };
