@@ -149,7 +149,7 @@ private:
 
     std::optional<QString> imageFill(const QJsonObject& obj) const;
 
-     EByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId);
+     EByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents);
      QByteArray makeShapeFillData(const QJsonObject& obj, int shapeIntendents);
      QByteArray makeAntialising(int intendents) const;
 
@@ -212,6 +212,8 @@ private:
      QByteArray parseQtComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
      QByteArray parseQulComponent(const OrderedMap<QString, QByteArray>& children, int intendents);
      EByteArray makeChildMask(const QJsonObject& child, int intendents);
+     EByteArray makeImageMaskDataQul(const QString& imageRef, const QJsonObject& obj, int intendents);
+     EByteArray makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int intendents);
 
      ~FigmaParser();
 private:

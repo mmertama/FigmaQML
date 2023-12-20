@@ -128,7 +128,7 @@ Dialog {
     footer: Row {
         DialogButtonBox {
             Button {
-                text: qsTr("Proceed...")
+                text: qsTr("Execute...")
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             }
 

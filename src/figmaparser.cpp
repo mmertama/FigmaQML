@@ -737,17 +737,21 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return std::nullopt;
     }
 
-    EByteArray FigmaParser::makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId) {
-        Q_ASSERT(!isQul());
+    EByteArray FigmaParser::makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int intendents) {
         QByteArray out;
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
+
+        const auto sourceId =  "source_" + qmlId(obj["id"].toString());
+        const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
+
 
         out += intendent + "OpacityMask {\n";
         out += intendent1 + "anchors.fill:parent\n";
         out += intendent1 + "source: " + sourceId +  "\n";
         out += intendent1 + "maskSource: " + maskSourceId + "\n";
         out += intendent + "}\n";
+
         out += intendent + "Image {\n";
         out += intendent1 + "id: " + sourceId + "\n";
         out += intendent1 + "layer.enabled: true\n";
@@ -757,6 +761,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent1 + "anchors.fill:parent\n";
         APPENDERR(out, makeImageSource(imageRef, false, intendents + 1));
         out += intendent + "}\n";
+
+
         out += intendent + "Shape {\n";
         out += intendent1 + "id: " + maskSourceId + "\n";
         out += intendent1 + "anchors.fill: parent\n";
@@ -770,7 +776,29 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
         out += intendent1 + "}\n";
         out += intendent + "}\n";
+
         return out;
+    }
+
+
+
+    EByteArray FigmaParser::makeImageMaskDataQul(const QString& imageRef, const QJsonObject& obj, int intendents) {
+        QByteArray out;
+        const auto intendent = tabs(intendents);
+        const auto intendent1 = tabs(intendents + 1);
+        const auto sourceId =  "source_" + qmlId(obj["id"].toString());
+        out += intendent + "Image {\n";
+        out += intendent1 + "id: " + sourceId + "\n";
+        out += intendent1 + "fillMode: Image.PreserveAspectCrop\n";
+        out += intendent1 + "visible: true\n";
+        out += intendent1 + "anchors.fill:parent\n";
+        APPENDERR(out, makeImageSource(imageRef, false, intendents + 1));
+        out += intendent + "}\n";
+        return out;
+    }
+
+    EByteArray FigmaParser::makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents) {
+        return isQul() ? makeImageMaskDataQul(imageRef, obj, intendents) : makeImageMaskDataQt(imageRef, obj, intendents);
     }
 
      QByteArray FigmaParser::makeShapeFillData(const QJsonObject& obj, int shapeIntendents) {
@@ -820,11 +848,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += makeItem("Item", obj, intendents);
          out += makeExtents(obj, intendents);
 
-         const auto sourceId =  "source_" + qmlId(obj["id"].toString());
-         const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
-
-         if(!isQul())
-            APPENDERR(out, makeImageMaskData(image, obj, intendents, sourceId, maskSourceId));
+        APPENDERR(out, makeImageMaskData(image, obj, intendents));
 
          out += intendent + "Shape {\n";
          out += intendent1 + "anchors.fill: parent\n";
@@ -915,17 +939,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto intendent1 = tabs(intendents + 1);
         const auto intendent2 = tabs(intendents + 2);
 
-        const auto sourceId = "source_" + qmlId(obj["id"].toString());
-        const auto maskSourceId = "maskSource_" + qmlId(obj["id"].toString());
-
         out += intendent + "Item {\n";
         out += intendent1 + "id:" + borderSourceId + "\n";
         out += intendent1 + "anchors.fill: parent\n";
         out += makeAntialising(intendents + 1);
         out += intendent1 + "visible: false\n";
 
-        if(!isQul())
-            APPENDERR(out, makeImageMaskData(image, obj, intendents + 1, sourceId, maskSourceId));
+        APPENDERR(out, makeImageMaskData(image, obj, intendents + 1));
 
         out += intendent1 + "Shape {\n";
         out += intendent2 + "anchors.fill: parent\n";
@@ -1080,16 +1100,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto intendent2 = tabs(intendents + 2);
         const auto intendent3 = tabs(intendents + 3);
 
-        const auto sourceId =  "source_" + qmlId(obj["id"].toString());
-        const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
-
         out += intendent + "Item {\n";
         out += intendent1 + "x: " + QString::number(borderWidth) + "\n";
         out += intendent1 + "y: " + QString::number(borderWidth) + "\n";
         out += makeSize(obj, intendents + 1);
         out += makeAntialising(intendents + 1);
-        if(!isQul())
-            APPENDERR(out, makeImageMaskData(image, obj, intendents + 1, sourceId, maskSourceId));
+
+        APPENDERR(out, makeImageMaskData(image, obj, intendents + 1));
 
         out += intendent1 + "Shape {\n";
         out += intendent2 + "anchors.fill: parent\n";
