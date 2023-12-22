@@ -22,6 +22,8 @@ class FigmaGet : public FigmaProvider {
     Q_PROPERTY(int throttle MEMBER m_throttle NOTIFY throttleChanged)
     using NetworkFunction = std::function <QNetworkReply* ()>;
 public:
+    enum class IdType {IMAGE, RENDERING, NODE};
+    Q_ENUM(IdType);
     explicit FigmaGet(QObject *parent = nullptr);
     ~FigmaGet();
     Q_INVOKABLE void update();
@@ -62,7 +64,6 @@ signals:
     void restored(unsigned flags, const QVariantMap& imports);
     void replyComplete(const std::shared_ptr<QByteArray>& bytes);
 private:
-    enum class IdType {IMAGE, RENDERING, NODE};
     struct Id {
         bool isEmpty() const {return id.isEmpty();}
         const QString id; const IdType type;

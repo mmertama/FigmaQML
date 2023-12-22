@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QTextStream>
+#include <QMetaEnum>
 
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
@@ -21,6 +22,12 @@ QString toStr(const First& first, Rest&&... args) {
     QTextStream stream(&str);
     stream << first << " ";
     return str + toStr(args...);
+}
+
+template<typename E>
+QString enumToString (const E value) {
+    const auto metaEnum = QMetaEnum::fromType<E>();
+    return metaEnum.valueToKey(static_cast<int>(value));
 }
 
 class RAII_ {

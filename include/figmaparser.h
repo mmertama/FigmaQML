@@ -13,14 +13,29 @@
 #include <QStack>
 #include <QFont>
 #include <QColor>
-#include <stack>
 #include <optional>
-#include <cmath>
 
 constexpr auto FIGMA_SUFFIX{"_figma"};
 
+/**
+ * This class cries TODO!
+ *
+ * I knew at 1st write that writing parser like this is going to grow problems.
+ * That is rather a generator Figmal --> QML source. That makes it very tricky to
+ * have a state during the the parsing that would be beneficial later on.
+ *
+ * This should be rewritten to to tree (or other syntax independent container)
+ * that can do quiries while parsing and then separate phase for code generation.
+ *
+ * Maitaining this is terrible as it requires terrible hacks and tricks whenever
+ * changes are needed, state information accessed or maintainded :-/
+ *
+ */
+
 
 class FigmaParser {
+private:
+    using ImageContexts =  QSet<QString>;
 public:
     class Canvas {
     public:
@@ -39,8 +54,8 @@ public:
     };
     class Element  {
     public:
-        explicit Element(const QString& name, const QString& id, const QString& type, QByteArray&& data,  QStringList&& componentIds) :
-            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds) {}
+        Element(const QString& name, const QString& id, const QString& type, QByteArray&& data,  QStringList&& componentIds, QStringList&& contexts) :
+            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds), m_imageContexts{contexts} {}
         Element() {}
         Element(const Element& other) = default;
         Element& operator=(const Element& other) = default;
@@ -48,16 +63,18 @@ public:
         QString name() const {return m_name;}
         QByteArray data() const {return m_data;}
         QStringList components() const {return m_componentIds;}
+        QStringList imageContexts() const {return m_imageContexts;}
     private:
         QString m_name;
         QString m_id;
         QString m_type;
         QByteArray m_data;
         QStringList m_componentIds;
+        QStringList m_imageContexts;
     };
     class Component {
     public:
-        explicit Component(const QString& name,
+        Component(const QString& name,
                            const QString& id,
                            const QString& key,
                            const QString& description,
@@ -90,6 +107,7 @@ public:
         PrerenderComponents = 0x8,
         PrerenderFrames     = 0x10,
         PrerenderInstances  = 0x20,
+        NoGradients         = 0x40,
         ParseComponent  = 0x200,
         BreakBooleans   = 0x400,
         AntializeShapes = 0x800,
@@ -214,7 +232,9 @@ private:
      EByteArray makeChildMask(const QJsonObject& child, int intendents);
      EByteArray makeImageMaskDataQul(const QString& imageRef, const QJsonObject& obj, int intendents);
      EByteArray makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int intendents);
-
+     EByteArray makeGradientFill(const QJsonObject& obj, int intendents);
+     EByteArray makeRendered(const QJsonObject& obj, int intendents);
+     QByteArray makeGradientToFlat(const QJsonObject& obj, int intendents);
      ~FigmaParser();
 private:
 
@@ -244,6 +264,7 @@ private:
         }
     };
     Parent m_parent;
+    ImageContexts m_imageContext;
     int m_componentLevel = 0;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);

@@ -389,6 +389,9 @@ QNetworkReply* FigmaGet::doRetrieveImage(const Id& id, FigmaData *target, const 
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
     const QUrl uri = target->url(id.id);
+
+    qDebug() << "doRetrieveImage" << enumToString(id.type) << id.id << id.isEmpty() << uri;
+
     if(!uri.isValid()) {
         setError(id, "%1 %2" + QString("Url not valid \"%1\"").arg(uri.toString()));
         return nullptr;
@@ -481,7 +484,10 @@ QNetworkReply* FigmaGet::populateImages() {
             return;
         }
         const auto obj = doc.object();
-        if(obj["error"].toBool()) {
+        if(obj.contains("err")) {
+            Q_ASSERT(0); // todo
+        }
+        else if(obj["error"].toBool()) {
             emit error(QString("Error on populate %1").arg(obj["status"].toString()));
         } else {
             const auto meta = obj["meta"].toObject();
@@ -558,6 +564,7 @@ QNetworkReply* FigmaGet::doRequestRendering(const Id& id) {
 
     request.setUrl(QUrl("https://api.figma.com/v1/images/" + m_projectToken + "?" + params.join('&')));
     request.setRawHeader("X-Figma-Token", m_userToken.toLatin1());
+    request.setHeader(QNetworkRequest::ContentLengthHeader, 0);
 
     auto reply = m_accessManager->get(request);
     std::shared_ptr<QByteArray> bytes(new QByteArray);
@@ -567,6 +574,11 @@ QNetworkReply* FigmaGet::doRequestRendering(const Id& id) {
            if(!m_rendringQueue.isEmpty()) {
                requestRendering({QString(), IdType::RENDERING}); // type has no meaning
            }
+    });
+
+
+    QObject::connect(reply, &QNetworkReply::errorOccurred, this, [id](const auto err) {
+        qDebug() << "doRequestRendering" << id.id << enumToString(id.type)  << " error" << err;
     });
 
     const auto finished =  [this, bytes, id]() {
@@ -712,8 +724,7 @@ void FigmaGet::replyReader() {
     }
 }
 
-void FigmaGet::onReplyError(QNetworkReply::NetworkError err)
-{
+void FigmaGet::onReplyError(QNetworkReply::NetworkError err) {
     const auto keys = m_replies.keys();
     const auto it = std::find_if(keys.begin(), keys.end(), [err](const auto r) {
         return r->error() == err;
@@ -721,22 +732,27 @@ void FigmaGet::onReplyError(QNetworkReply::NetworkError err)
     if(it == keys.end())
         return;
     const auto reply = *it;
-    m_replies.remove(reply);
-    if(err == QNetworkReply::UnknownContentError) { //Too Many Requests
+    if(err == QNetworkReply::UnknownContentError || err == QNetworkReply::ProtocolInvalidOperationError) { //Too Many Requests
         const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
         const auto code = statusCode.isValid() ? statusCode.toInt() : -1;
-        if(code == 429) {
+        if(code == 429 || code == 400) {
             emit m_downloads->tooManyRequests();
-            const auto faildedCall = m_downloads->monitored(reply);
-            QTimer::singleShot(ImageRetry, this, [this, faildedCall]() { //figma doc says about one minute
-                queueCall(faildedCall);
+            const auto failedCall = m_downloads->monitored(reply);
+            QTimer::singleShot(ImageRetry, this, [this, failedCall]() { //figma doc says about one minute
+                queueCall(failedCall);
             });
         }  else {
             emit error("HTTP error: " + reply->errorString());
         }
     } else {
+        const auto statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute);
         emit error("Network error: " + QString::number(err) + ", "  + reply->errorString());
+        qDebug() << "Network error: " <<  QString::number(err) <<  reply->errorString()
+                << reply->request().url()
+                << reply->request().rawHeaderList()
+                 << statusCode;
     }
+    m_replies.remove(reply);
 }
 
 void FigmaGet::monitorReply(QNetworkReply* reply,
