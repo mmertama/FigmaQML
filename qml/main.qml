@@ -345,6 +345,17 @@ ApplicationWindow {
                                     container.color = "white"
                             }
                         }
+                        QtCheckBox {
+                            text: "No Gradients"
+                            visible: has_qul
+                            checked: figmaQml.flags & FigmaQml.NoGradients
+                            onCheckedChanged: {
+                                if(checked)
+                                    figmaQml.flags |= FigmaQml.NoGradients
+                                else
+                                    figmaQml.flags &= ~FigmaQml.NoGradients
+                            }
+                        }
                         Repeater {
                             model:  [
                                /* {"Shapes":  FigmaQml.PrerenderShapes},

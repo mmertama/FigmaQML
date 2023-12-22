@@ -263,18 +263,42 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
     std::optional<FigmaParser::Element> FigmaParser::getElement(const QJsonObject& obj) {
-        //m_parent.push(&obj);
-        //RAII_ raii {[this](){m_parent.pop();}};
+        m_parent.push(&obj);
+        RAII_ raii {[this](){m_parent.pop();}};
         auto bytes = parse(obj, 1);
         if(!bytes)
             return std::nullopt;
         QStringList ids(m_componentIds.begin(), m_componentIds.end());
+
+        // Yet another face slap due poor parser desing
+        // let's dig out the images used in this element
+        QStringList image_contexts;
+        for(const auto& k : m_imageContext) {
+           // if(!m_parent.parent)                // top level has all underneath
+                image_contexts.append(k);
+            /*else {
+                bool found = false;
+                auto p = &m_parent;
+                while(p && !found) {                        // go thru all levels
+                    Q_ASSERT(p->obj);
+                    const auto& o = *p->obj;
+                    found = o["id"] == obj["id"];      // until 'this' level
+                    for(const auto& context : qAsConst(v)) {          // see if context has
+                        if(context ==  o["id"])        // this or underneath images
+                            image_contexts.append(k);
+                    }
+                }
+            }*/
+        }
+
+
         return Element(
                 validFileName(obj["name"].toString(), false),
                 obj["id"].toString(),
                 obj["type"].toString(),
                 std::move(bytes.value()),
-                std::move(ids));
+                std::move(ids),
+                std::move(image_contexts));
     }
 
     QString FigmaParser::tabs(int intendents) const {
@@ -386,7 +410,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         }
         if(obj.contains("relativeTransform")) { //even figma may contain always this, the deltainstance may not
             const auto p = position(obj);
-            const bool top_level = m_parent.parent == nullptr;
+            Q_ASSERT(m_parent.parent);
+            const bool top_level = m_parent.parent->parent == nullptr;
             const auto tx = static_cast<int>(!top_level ? p.x() + extents.x() : extents.x());
             const auto ty = static_cast<int>(!top_level ? p.y() + extents.y() : extents.y());
 
@@ -446,6 +471,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     QByteArray FigmaParser::makeColor(const QJsonObject& obj, int intendents, double opacity) {
         QByteArray out;
         const auto intendent = tabs(intendents);
+        Q_ASSERT(obj["r"].isDouble() && obj["g"].isDouble() && obj["b"].isDouble() && obj["a"].isDouble());
         out += intendent + "color:" + toColor(obj["r"].toDouble(), obj["g"].toDouble(), obj["b"].toDouble(), obj["a"].toDouble() * opacity) + "\n";
         return out;
     }
@@ -518,6 +544,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     EByteArray FigmaParser::makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder) {
         QByteArray out;
+        m_imageContext.insert(image);
         auto imageData = m_data.imageData(image, isRendering);
         if(imageData.isEmpty()) {
             if(placeHolder.isEmpty()) {
@@ -553,6 +580,100 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return out;
     }
 
+    // if graddients are not supported flat them to a single color - kind of weighted avg
+    QByteArray FigmaParser::makeGradientToFlat(const QJsonObject& obj, int intendents) {
+        double a0 = 0;
+        double r0 = 0;
+        double g0 = 0;
+        double b0 = 0;
+
+        double a = 0;
+        double r = 0;
+        double g = 0;
+        double b = 0;
+
+        auto current_pos = 0;
+        const auto gradients_stops = obj["gradientStops"].toArray();
+        for(const auto& s : gradients_stops) {
+            const auto stop = s.toObject();
+            const auto pos =  stop["position"].toDouble();
+
+            if(current_pos < pos) {
+                const auto f = pos - current_pos;
+                a0 += a * f;
+                r0 += r * f;
+                g0 += g * f;
+                b0 += b * f;
+            }
+
+            current_pos = pos;
+
+            const auto col = stop["color"].toObject();
+            r = col["r"].toDouble();
+            g = col["g"].toDouble();
+            b = col["b"].toDouble();
+            a = col["a"].toDouble();
+        }
+
+        if(current_pos < 1) {
+            const auto f = 1 - current_pos;
+            a0 += a * f;
+            r0 += r * f;
+            g0 += g * f;
+            b0 += b * f;
+        }
+
+        auto intendent = tabs(intendents);
+        QByteArray o;
+        o += intendent + "color: " + FigmaParser::toColor(r0, g0, b0, a0) + "\n";
+        return o;
+    }
+
+    EByteArray FigmaParser::makeGradientFill(const QJsonObject& obj, int intendents) {
+        QByteArray out;
+        out  += tabs(intendents) + "gradient: \n";
+        const auto idt1 = tabs(intendents + 1);
+        const auto idt2 = tabs(intendents + 2);
+        const auto idt3 = tabs(intendents + 3);
+
+        unsigned handle_pos = 0;
+        const auto handle_positions = obj["gradientHandlePositions"].toArray();
+        const auto gradients_stops = obj["gradientStops"].toArray();
+
+        /*const auto iterateStops = [&](){
+            if(handle_pos < handle_positions.size())
+                return std::make_optional<QPair<QJsonValue>>(QPair{});
+        };
+        */
+        if(obj["type"].toString() == "GRADIENT_LINEAR" ) {
+            out += idt1 + "LinearGradient {\n";
+            out += idt2 + "x1:" + QString::number(handle_positions[0].toObject()["x"].toDouble()) + "\n";
+            out += idt2 + "y1:" + QString::number(handle_positions[0].toObject()["y"].toDouble()) + "\n";
+
+            out += idt2 + "x2:" + QString::number(handle_positions[1].toObject()["x"].toDouble()) + "\n";
+            out += idt2 + "y2:" + QString::number(handle_positions[1].toObject()["y"].toDouble()) + "\n";
+
+            for(const auto& stop : gradients_stops) {
+                out += idt2 + "GradientStop {\n";
+                out += idt3 + "position: " + QString::number(stop.toObject()["position"].toDouble()) + "\n";
+                out += makeColor(stop.toObject()["color"].toObject(), intendents + 3);
+                out += idt2 + "}\n";
+            }
+
+             out += idt1 + "}\n";
+
+        } else if(obj.contains("type") && obj["type"].toString() == "GRADIENT_RADIAL" ) {
+            qDebug() << "todo"; return std::nullopt;
+        } else if(obj.contains("type") && obj["type"].toString() == "GRADIENT_ANGULAR" ) {
+            qDebug() << "todo"; return std::nullopt;
+        } else if(obj.contains("type") && obj["type"].toString() == "GRADIENT_DIAMOND" ) {
+            qDebug() << "todo"; return std::nullopt;
+        } else {
+            return std::nullopt;
+        }
+        return out;
+    }
+
     EByteArray FigmaParser::makeFill(const QJsonObject& obj, int intendents) {
         QByteArray out;
         const auto invisible = obj.contains("visible") && !obj["visible"].toBool();
@@ -562,6 +683,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 out += makeColor(color, intendents, obj["opacity"].toDouble());
             } else {
                 out += makeColor(color, intendents, invisible ? 0.0 : 1.0);
+            }
+        } else if(obj.contains("type")) {
+            if(m_flags & FigmaParser::NoGradients) {
+                out += makeGradientToFlat(obj, intendents);
+            } else {
+                const auto f = makeGradientFill(obj, intendents);
+                if(f)
+                    out += f.value();
+                else
+                    out += makeGradientToFlat(obj, intendents);
             }
         } else {
             out  += tabs(intendents) + "color: \"transparent\"\n";
@@ -579,7 +710,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(fills.size() > 0) {
            APPENDERR(out, makeFill(fills[0].toObject(), intendents));
         } else if(!obj["fills"].isString()) {
-            out += tabs(intendents) + "color: \"transparent\"\n";
+            out += tabs(intendents) + "color: \"transparent\"\n"; // by default vector shape background is transparent
         }
         return out;
     }
@@ -1269,17 +1400,17 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      bool FigmaParser::isRendering(const QJsonObject& obj) const {
         if(obj["isRendering"].toBool())
             return true;
-        if(type(obj) == ItemType::Vector && (m_flags & PrerenderShapes || isGradient(obj)))
+        if(type(obj) == ItemType::Vector && (m_flags & PrerenderShapes || isGradient(obj))) // || /*(m_flags & PrerenderGradients &&*/ isGradient(obj)))
             return true;
-        if(type(obj) == ItemType::Text && isGradient((obj)))
+        if(type(obj) == ItemType::Text && /*(m_flags & PrerenderGradients &&*/ isGradient((obj)))
             return true;
         if(type(obj) == ItemType::Frame && (obj["type"].toString() != "GROUP") && (m_flags & Flags::PrerenderFrames))
             return true;
         if(obj["type"].toString() == "GROUP" && (m_flags & Flags::PrerenderGroups))
             return true;
-        if(type(obj) == ItemType::Component && (m_flags & Flags::PrerenderComponents))
+        if(type(obj) == ItemType::Component && (m_flags & Flags::PrerenderComponents /*|| (m_flags & PrerenderGradients && isGradient(obj)) */)) // prerender here makes figma respond with errors
             return true;
-        if(type(obj) == ItemType::Instance && (m_flags & Flags::PrerenderInstances))
+        if(type(obj) == ItemType::Instance && (m_flags & Flags::PrerenderInstances /*|| (m_flags & PrerenderGradients && isGradient(obj)) */))
             return true;
         return false;
     }
@@ -1413,9 +1544,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          if(!(m_flags & Flags::ParseComponent)) {
              return  parseInstance(obj, intendents);
         } else {
+             const auto intendent = tabs(intendents);
              QByteArray out = makeItem("Rectangle", obj, intendents);
              APPENDERR(out, makeVector(obj, intendents));
-             const auto intendent = tabs(intendents);
              if(obj.contains("cornerRadius")) {
                  out += intendent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
              }
@@ -1694,6 +1825,23 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              return sz;
      }
 
+     EByteArray FigmaParser::makeRendered(const QJsonObject& obj, int intendents) {
+         const auto imageId =  "i_" + qmlId(obj["id"].toString());
+         QByteArray out;
+         const auto intendent = tabs(intendents );
+         out += intendent + "Image {\n";
+         const auto intendent1 = tabs(intendents + 1);
+         out += intendent1 + "id: " + imageId + "\n";
+         out += intendent1 + "anchors.centerIn: parent\n";
+         if(!isQul())
+             out += intendent1 + "mipmap: true\n";
+         out += intendent1 + "fillMode: Image.PreserveAspectFit\n";
+
+         APPENDERR(out, makeImageSource(obj["id"].toString(), true, intendents + 1, PlaceHolder));
+         out += intendent + "}\n";
+         return out;
+     }
+
 
      EByteArray FigmaParser::parseRendered(const QJsonObject& obj, int intendents) {
          QByteArray out;
@@ -1712,7 +1860,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto width = rsect.width();
          const auto height =  rsect.height();
 
-         const auto imageId =  "i_" + qmlId(obj["id"].toString());
+
 
          out += intendent + QString("x: %1\n").arg(x - px);
          out += intendent + QString("y: %1\n").arg(y - py);
@@ -1722,16 +1870,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
          const auto invisible = obj.contains("visible") && !obj["visible"].toBool();
          if(!invisible) {  //Prerendering is not available for invisible elements
-             out += intendent + "Image {\n";
-             const auto intendent1 = tabs(intendents + 1);
-             out += intendent1 + "id: " + imageId + "\n";
-             out += intendent1 + "anchors.centerIn: parent\n";
-             if(!isQul())
-                out += intendent1 + "mipmap: true\n";
-             out += intendent1 + "fillMode: Image.PreserveAspectFit\n";
-
-             APPENDERR(out, makeImageSource(obj["id"].toString(), true, intendents + 1, PlaceHolder));
-             out += intendent + "}\n";
+             APPENDERR(out, makeRendered(obj, intendents + 1));
          }
          out += tabs(intendents - 1) + "}\n";
          return out;

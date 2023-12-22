@@ -17,6 +17,7 @@
 #include "qmetaobject.h"
 #include "qulInfo.h"
 #include "figmaqml.h"
+#include "utils.h"
 
 #define VERIFY(x, t) if(!x) {showError(t); return false;}
 
@@ -64,8 +65,8 @@ public:
             });
 
         QObject::connect(m_port.get(), &QSerialPort::errorOccurred, &m_info, [this](auto error) {
-            const auto metaEnum = QMetaEnum::fromType<QSerialPort::SerialPortError>();
-            qDebug() << "Serial error:" <<  metaEnum.valueToKey(error) << " " << m_port->errorString();
+            //const auto metaEnum = QMetaEnum::fromType<QSerialPort::SerialPortError>();
+            qDebug() << "Serial error:" <<  enumToString(error) << " " << m_port->errorString();
         });
 
         m_port->setBaudRate(QSerialPort::Baud115200);
@@ -227,9 +228,10 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     if(writeAsApp && !copy_resources(path))
         return false;
 
+    QSet<QString> save_image_filter {{figmaQml.elementName()}};
 
     QStringList qml_files;
-    const auto main_file_name = FigmaQml::validFileName(figmaQml.documentName()) + ".qml";
+    const auto main_file_name = FigmaQml::validFileName(figmaQml.elementName()) + ".qml";
     qml_files << qq(main_file_name);
     QFile qml_out(path + '/' + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
@@ -237,6 +239,7 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     qml_out.close();
 
     for(const auto& component_name : figmaQml.components()) {
+        save_image_filter.insert(component_name);
         const auto file_name = FigmaQml::validFileName(component_name) + ".qml";
         qml_files << qq(file_name);
         const auto target_path = path + '/' + file_name;
@@ -249,7 +252,7 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
         component_out.close();
     }
 
-    const auto images = figmaQml.saveImages(path + "/images/");
+    const auto images = figmaQml.saveImages(path + "/images/", save_image_filter);
 
     if(writeAsApp) {
         static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"mcu_figma.qml")(\s*\]))");

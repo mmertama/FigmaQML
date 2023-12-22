@@ -43,13 +43,15 @@ public:
         PrerenderGroups     = 0x4,
         PrerenderComponets  = 0x8,
         PrerenderFrames     = 0x10,
-        BreakBooleans       = 0x20,
-        AntializeShapes     = 0x40,
-        EmbedImages         = 0x80,
-        Timed               = 0x100,
-        AltFontMatch        = 0x200,
-        KeepFigmaFontName   = 0x400,
+        PrerenderInstances  = 0x20,
+        NoGradients         = 0x40,
+        BreakBooleans       = 0x400,
+        AntializeShapes     = 0x800,
         QulMode             = 0x1000,
+        EmbedImages         = 0x10000,
+        Timed               = 0x20000,
+        AltFontMatch        = 0x40000,
+        KeepFigmaFontName   = 0x80000,
     };
     Q_ENUM(Flags)
 public:
@@ -105,7 +107,7 @@ public:
     Q_INVOKABLE bool store(const QString& docName, const QString& tempName);
     Q_INVOKABLE void restore();
 #endif
-    std::optional<QStringList> saveImages(const QString &folder) const;
+    std::optional<QStringList> saveImages(const QString &folder, const QSet<QString>& filter = {}) const;
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
@@ -151,7 +153,7 @@ private slots:
     void updateDefaultImports();
 private:
     void addImageFile(const QString& imageRef, bool isRendering);
-    bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool isRendering);
+    bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime);
     bool ensureDirExists(const QString& dirname) const;
     bool doCreateDocument(FigmaDocument& doc, const QJsonObject& json);
     template<class FigmaDocType>
@@ -185,6 +187,7 @@ private:
     enum class State {Constructing, Failed, Suspend};
     State m_state = State::Constructing;
     std::function<void (bool)> mRestore = nullptr;
+    QHash<QString, QSet<QString>> m_imageContexts;
 };
 
 

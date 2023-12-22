@@ -108,6 +108,7 @@ QString FigmaQml::elementName() const {
     return (m_uiDoc && !m_uiDoc->empty()) ? m_uiDoc->current().name(currentElement()) : QString();
 }
 
+
 QString FigmaQml::documentsLocation() const {
     return QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 }
@@ -406,11 +407,22 @@ QByteArray FigmaQml::prettyData(const QByteArray& data) const {
 }
 
 // folder is more of prefix...
-std::optional<QStringList> FigmaQml::saveImages(const QString &folder) const {
+std::optional<QStringList> FigmaQml::saveImages(const QString &folder, const QSet<QString>& filter) const {
     if(!ensureDirExists(folder))
         return std::nullopt;
     QStringList img_list;
-    for(const auto& i : qAsConst(m_imageFiles)) {
+    for(const auto& [k, i] : m_imageFiles.asKeyValueRange()) {
+        if(!filter.empty()) {
+            if(m_imageContexts.contains(k)) {
+                const auto awhat = m_imageContexts[k];
+                bool found = false;
+                for(const auto& f : filter)
+                    if(awhat.contains(f))
+                        found = true;
+                if(!found)
+                     continue; // filter out
+            }
+        }
         const QFileInfo file(i.first + i.second);
         if(!file.exists()) {
             qDebug() << "invalid filename:" << file.absoluteFilePath() << "not found";
@@ -442,17 +454,17 @@ void FigmaQml::addImageFile(const QString& imageRef, bool isRendering) {
     if(isRendering){
         mProvider.getRendering(imageRef);
         QObject::connect(&mProvider, &FigmaProvider::imageReady, this, [this](const QString& imageRef, const QByteArray& bytes, int format) {
-            addImageFileData(imageRef, bytes, format, true);
+            addImageFileData(imageRef, bytes, format);
     });
     } else {
         mProvider.getImage(imageRef, QSize(m_imageDimensionMax, m_imageDimensionMax));
         QObject::connect(&mProvider, &FigmaProvider::imageReady, this, [this](const QString& imageRef, const QByteArray& bytes, int format) {
-            addImageFileData(imageRef, bytes, format, false);
+            addImageFileData(imageRef, bytes, format);
     });
     }
 }
 
-bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime, bool /*isRendering*/) {
+bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime) {
     //qDebug() << "FOO: addImageFileData" << imageRef;
     if(bytes.isEmpty())
         return false;
@@ -740,7 +752,7 @@ QByteArray FigmaQml::imageData(const QString& imageRef, bool isRendering) {
                     return{};
                 }
                 const auto& [bytes, mime] = imageData.value();
-                if(!addImageFileData(imageRef, bytes, mime, isRendering))
+                if(!addImageFileData(imageRef, bytes, mime))
                     return {};
             }
             return (Images.mid(1) +  m_imageFiles[imageRef].second).toLatin1();
@@ -782,6 +794,13 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
       if(component.data().isEmpty()) {
           emit error(toStr("Invalid component", component.name()));
           return false;
+      }
+
+      const auto images = component.imageContexts();
+      for(const auto& im : images) {
+          if(!m_imageContexts.contains(im))
+              m_imageContexts.insert(im, {});
+          m_imageContexts[im].insert(components[component.id()]->name());
       }
 
       doc.addComponent(components[component.id()]->name(),
@@ -923,6 +942,13 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
             if(!element_opt)
                 return false;
             const auto& element = element_opt.value();
+
+            const auto images = element.imageContexts();
+            for(const auto& im : images) {
+                if(!m_imageContexts.contains(im))
+                    m_imageContexts.insert(im, {});
+                m_imageContexts[im].insert(element.name());
+            }
 #else
         auto elements = c.elements();
         Future<FigmaParser::Element> elementData =
