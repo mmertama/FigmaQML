@@ -38,7 +38,7 @@ class FigmaQml : public QObject, public FigmaParserData {
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
     Q_PROPERTY(QString documentsLocation READ documentsLocation CONSTANT)
 public:
-    enum Flags { // WARNING these map values are same with figmaparser flags
+    enum Flags { // WARNING these map values are (partly) same with figmaparser flags
         PrerenderShapes     = 0x2,
         PrerenderGroups     = 0x4,
         PrerenderComponets  = 0x8,
@@ -48,6 +48,7 @@ public:
         BreakBooleans       = 0x400,
         AntializeShapes     = 0x800,
         QulMode             = 0x1000,
+        GenerateAccess      = 0x2000,
         EmbedImages         = 0x10000,
         Timed               = 0x20000,
         AltFontMatch        = 0x40000,

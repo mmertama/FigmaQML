@@ -20,6 +20,7 @@
     #define M_PI 3.14159265358979323846
 #endif
 
+const auto QML_TAG = "qml?";
 
 static QString last_parse_error;
 
@@ -117,6 +118,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             }
 
             qDebug() << "uniqueComponentName" << uniqueComponentName << " " << foo;*/
+
 
             map.insert(key, std::shared_ptr<Component>(new Component(
                                 uniqueComponentName,
@@ -291,6 +293,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             }*/
         }
 
+        QVector<QString> aliases;
+        for(const auto& alias : m_aliases)
+            aliases.append(alias.id);
 
         return Element(
                 validFileName(obj["name"].toString(), false),
@@ -298,7 +303,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 obj["type"].toString(),
                 std::move(bytes.value()),
                 std::move(ids),
-                std::move(image_contexts));
+                std::move(image_contexts),
+                std::move(aliases)
+            );
     }
 
     QString FigmaParser::tabs(int intendents) const {
@@ -353,10 +360,27 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 .arg(static_cast<unsigned>(std::round(b * 255.)), 2, 16, QLatin1Char('0')).toLatin1();
     }
 
-     QByteArray FigmaParser::qmlId(const QString& id)  {
-        QString cid = id;
+     QByteArray FigmaParser::makeId(const QJsonObject& obj)  {
+        QString cid = obj["id"].toString();
         static const QRegularExpression re(R"([^a-zA-Z0-9])");
-        return "figma_" + cid.replace(re, "_").toLower().toLatin1();
+        const auto qml_id = "figma_" + cid.replace(re, "_").toLower().toLatin1();
+        if(qml_id == "figma_711_1213") {
+            qDebug() << "what is here?";
+        }
+        /*
+        TODO: Really not working - why there are unable to find_id errors
+        if(m_parent.parent->parent)  // presumably this prevents toplevel alias?*/
+            m_parent.ids.insert(QString(qml_id));
+        return qml_id;
+    }
+
+
+    QByteArray FigmaParser::makeId(const QString& prefix, const QJsonObject& obj)  {
+        QString cid = obj["id"].toString();
+        static const QRegularExpression re(R"([^a-zA-Z0-9])");
+        const auto qml_id = prefix.toLatin1() + "figma_" + cid.replace(re, "_").toLower().toLatin1();
+        m_parent.ids.insert(QString(qml_id));
+        return qml_id;
     }
 
      QByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents) {
@@ -367,8 +391,12 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          Q_ASSERT(obj.contains("type") && obj.contains("id"));
 
          out += intendent + "// component level: " + QString::number(m_componentLevel)  + " \n";
-         if(m_componentLevel == 0)
-            out += intendent1 + "id: " + qmlId(obj["id"].toString()) + "\n";
+         if(m_componentLevel == 0) {
+            const auto id_string = makeId(obj);
+            out += intendent1 + "id: " + id_string + "\n";
+            if(obj["name"].toString().startsWith(QML_TAG))
+                m_aliases.append({id_string, obj});
+         }
 
          out += intendent1 + "// # \"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
          if(!isQul()) // what was the role of objectName? To document, however not applicable for Qt for MCU
@@ -425,26 +453,26 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 out += intendent + QString("x:%1\n").arg(tx);
             } else if(horizontal == "CENTER") {
                 const auto parentWidth = m_parent["size"].toObject()["x"].toDouble();
-                const auto id = QString(qmlId(m_parent["id"].toString()));
+                const auto extent_id = QString(makeId(*m_parent.obj));
                 const auto width = getValue(obj, "size").toObject()["x"].toDouble();
                 const auto staticWidth = (parentWidth - width) / 2. - tx;
                 if(eq(staticWidth, 0))
-                    out += intendent + QString("x: (%1.width - width) / 2\n").arg(id);
+                    out += intendent + QString("x: (%1.width - width) / 2\n").arg(extent_id);
                 else
-                    out += intendent + QString("x: (%1.width - width) / 2 %2 %3\n").arg(id).arg(staticWidth < 0 ? "+" : "-").arg(std::abs(staticWidth));
+                    out += intendent + QString("x: (%1.width - width) / 2 %2 %3\n").arg(extent_id).arg(staticWidth < 0 ? "+" : "-").arg(std::abs(staticWidth));
             }
 
             if(vertical == "TOP" || vertical == "SCALE" || vertical == "TOP_BOTTOM" || vertical == "BOTTOM") {
                out += intendent + QString("y:%1\n").arg(ty);
             } else  if(vertical == "CENTER") {
                 const auto parentHeight = m_parent["size"].toObject()["y"].toDouble();
-                const auto id = QString(qmlId(m_parent["id"].toString()));
+                const auto extent_id = QString(makeId(*m_parent.obj));
                 const auto height = getValue(obj, "size").toObject()["y"].toDouble();
                 const auto staticHeight = (parentHeight - height) / 2. - ty;
                 if(eq(staticHeight, 0))
-                    out += intendent + QString("y: (%1.height - height) / 2\n").arg(id);
+                    out += intendent + QString("y: (%1.height - height) / 2\n").arg(extent_id);
                 else
-                    out += intendent + QString("y: (%1.height - height) / 2 %2 %3\n").arg(id).arg(staticHeight < 0 ? "+" : "-").arg(std::abs(staticHeight));
+                    out += intendent + QString("y: (%1.height - height) / 2 %2 %3\n").arg(extent_id).arg(staticHeight < 0 ? "+" : "-").arg(std::abs(staticHeight));
             }
         }
         if(obj.contains("size")) {
@@ -783,7 +811,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
         out += intendent + "// component level: " + QString::number(m_componentLevel)  + " \n";
         if(m_componentLevel == 0)
-            out += intendent + "id: svgpath_" + qmlId(obj["id"].toString()) + "\n";
+            out += intendent + "id: " + makeId("svgpath_" , obj) + "\n";
 
         return out;
     }
@@ -873,8 +901,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
 
-        const auto sourceId =  "source_" + qmlId(obj["id"].toString());
-        const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
+        const auto sourceId =  makeId("source_", obj);
+        const auto maskSourceId = makeId( "maskSource_", obj);
 
 
         out += intendent + "OpacityMask {\n";
@@ -917,7 +945,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         QByteArray out;
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
-        const auto sourceId =  "source_" + qmlId(obj["id"].toString());
+        const auto sourceId = makeId("source_", obj);
         out += intendent + "Image {\n";
         out += intendent1 + "id: " + sourceId + "\n";
         out += intendent1 + "fillMode: Image.PreserveAspectCrop\n";
@@ -1005,7 +1033,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
         out += makeItem("Item", obj, intendents);
         out += makeExtents(obj, intendents);
-        const auto borderSourceId =  "borderSource_" + qmlId(obj["id"].toString());
+        const auto borderSourceId = makeId("borderSource_", obj);
 
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
@@ -1025,7 +1053,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent1 + "}\n";
 
 
-        const auto borderMaskId =  "borderMask_" + qmlId(obj["id"].toString());
+        const auto borderMaskId = makeId("borderMask_", obj);
         out += intendent1 + "Shape {\n";
         out += intendent1 + "id: " + borderMaskId + "\n";
         out += intendent1 + "anchors.fill:parent\n";
@@ -1064,7 +1092,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += makeItem("Item", obj, intendents);
         out += makeExtents(obj, intendents);
 
-        const auto borderSourceId =  "borderSource_" + qmlId(obj["id"].toString());
+        const auto borderSourceId = makeId("borderSource_", obj);
 
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
@@ -1090,7 +1118,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent1 + "}\n";
         out += intendent + "}\n";
 
-        const auto borderMaskId =  "borderMask_" + qmlId(obj["id"].toString());
+        const auto borderMaskId =  makeId("borderMask_", obj);
         out += intendent + "Shape {\n";
         out += intendent1 + "id: " + borderMaskId + "\n";
         out += intendent1 + "anchors.fill:parent\n";
@@ -1135,7 +1163,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += makeItem("Item", obj, intendents);
         out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
-        const auto borderSourceId =  "borderSource_" + qmlId(obj["id"].toString());
+        const auto borderSourceId = makeId( "borderSource_", obj);
 
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
@@ -1180,7 +1208,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent + "}\n"; //Item
 
 
-        const auto borderMaskId =  "borderMask_" + qmlId(obj["id"].toString());
+        const auto borderMaskId = makeId("borderMask_", obj);
         out += intendent + "Item {\n";
         out += intendent1 + "id: " + borderMaskId + "\n";
         out += intendent1 + "anchors.fill:parent\n";
@@ -1224,7 +1252,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += makeItem("Item", obj, intendents);
         out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
-        const auto borderSourceId =  "borderSource_" + qmlId(obj["id"].toString());
+        const auto borderSourceId = makeId("borderSource_", obj);
 
         const auto intendent = tabs(intendents);
         const auto intendent1 = tabs(intendents + 1);
@@ -1272,7 +1300,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += intendent1 + "}\n"; //shape
         out += intendent + "}\n"; //Item
 
-        const auto borderMaskId =  "borderMask_" + qmlId(obj["id"].toString());
+        const auto borderMaskId = makeId("borderMask_", obj);
         out += intendent + "Item {\n";
         out += intendent1 + "id: " + borderMaskId + "\n";
         out += intendent1 + "anchors.fill:parent\n";
@@ -1539,7 +1567,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          return out;
      }
 
-
      EByteArray FigmaParser::parseComponent(const QJsonObject& obj, int intendents) {
          if(!(m_flags & Flags::ParseComponent)) {
              return  parseInstance(obj, intendents);
@@ -1793,8 +1820,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += makeExtents(obj, intendents);
          //const auto intendent = tabs(intendents);
          //const auto intendent1 = tabs(intendents + 1);
-         const auto sourceId =  "source_" + qmlId(obj["id"].toString());
-         const auto maskSourceId =  "maskSource_" + qmlId(obj["id"].toString());
+         const auto sourceId = makeId("source_", obj);
+         const auto maskSourceId = makeId("maskSource_", obj);
          if(operation == "UNION") {
             APPENDERR(out, parseBooleanOperationUnion(obj, intendents, sourceId, maskSourceId));
          } else if(operation == "SUBTRACT") {
@@ -1826,7 +1853,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      }
 
      EByteArray FigmaParser::makeRendered(const QJsonObject& obj, int intendents) {
-         const auto imageId =  "i_" + qmlId(obj["id"].toString());
+         const auto imageId = makeId("i_", obj);
          QByteArray out;
          const auto intendent = tabs(intendents );
          out += intendent + "Image {\n";
@@ -2000,6 +2027,52 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
               return std::nullopt;
           for(const auto& [k, bytes] : *items)
               out += bytes;
+
+          // add alias set signal
+
+          if(!m_parent.parent->parent && (m_flags & GenerateAccess) && !m_aliases.isEmpty()) {
+              const auto intend = tabs(intendents);
+              const auto intend2 = tabs(intendents + 1);
+              const auto intend3 = tabs(intendents + 2);
+              if(m_flags & QulMode) {
+
+                  out += intend + "FigmaQmlSingleton.onSetValue: {\n";
+
+                  out += intend3 + "console.log(element, value);\n";
+
+                  out += intend2 + "switch(element) {\n";
+
+                  for(const auto& alias : m_aliases) {
+                      const auto obj_name = alias.obj["name"].toString();
+                      const auto begin = obj_name.indexOf('?');
+                      const auto end = obj_name.lastIndexOf('.');
+                      const auto name = obj_name.mid(begin + 1, end - begin - 1);
+                      const auto var = obj_name.mid(end);
+                      out += intend3 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
+                  }
+                  out +=  intend2 + "}\n";
+                  out += intend + "}\n";
+              } else {
+                  out += intend + "Connections {\n";
+                  out += intend2 + "target: FigmaQmlSingleton\n";
+                  out += intend2 + "function setValue(element, value) {\n";
+                  out += intend3 + "switch(element) {\n";
+
+                  for(const auto& alias : m_aliases) {
+                      const auto obj_name = alias.obj["name"].toString();
+                      const auto begin = obj_name.indexOf('?');
+                      const auto end = obj_name.lastIndexOf('.');
+                      const auto name = obj_name.mid(begin + 1, end - begin - 1);
+                      const auto var = obj_name.mid(end);
+                      const auto intend4 = tabs(intendents + 3);
+                      out += intend4 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
+                  }
+
+                  out +=  intend3 + "}\n";
+                  out +=  intend2 + "}\n";
+                  out += intend + "}\n";
+              }
+          }
           return out;
       }
 
@@ -2007,8 +2080,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
           QByteArray out;
           const auto intendent = tabs(intendents);
           const auto intendent1 = tabs(intendents + 1);
-          const auto maskSourceId =  "mask_" + qmlId(child["id"].toString());
-          const auto sourceId =  "source_" + qmlId(child["id"].toString());
+          const auto maskSourceId = makeId("mask_", child);
+          const auto sourceId = makeId("source_", child);
           out += tabs(intendents) + "Item {\n";
           out += intendent + "anchors.fill:parent\n";
           if(!isQul()) {
