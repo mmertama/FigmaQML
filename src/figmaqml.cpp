@@ -208,17 +208,19 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
 }
 
 QUrl FigmaQml::element() const {
-      return (m_uiDoc && !m_uiDoc->empty()) ?  QUrl::fromLocalFile(QString(m_uiDoc->current().current())) : QUrl();
+    return (m_uiDoc && !m_uiDoc->empty()) ?  QUrl::fromLocalFile(QString(m_uiDoc->current().current())) : QUrl();
 }
 
 QByteArray FigmaQml::sourceCode() const {
-      return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
+     return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
 }
 
 FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject *parent) : QObject(parent),
     m_qmlDir(qmlDir), mProvider(provider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
+        Q_ASSERT(m_uiDoc);
+        Q_ASSERT(m_sourceDoc);
         m_sourceDoc->getCurrent()->setCurrent(m_uiDoc->getCurrent()->currentIndex());
     });
     QObject::connect(this, &FigmaQml::currentCanvasChanged, this, [this]() {
@@ -782,6 +784,19 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
     return value;
 }
 
+bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header) const {
+    Q_ASSERT(component_name.endsWith(FIGMA_SUFFIX));
+
+    QSaveFile componentFile(qmlTargetDir() + component_name + ".qml");
+    if(!componentFile.open(QIODevice::WriteOnly)) {
+        emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
+        return false;
+    }
+    componentFile.write(header + element_data);
+    componentFile.commit();
+    return true;
+}
+
 #ifdef NO_CONCURRENT
 
 bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header) {
@@ -810,6 +825,7 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
       doc.addComponent(components[component.id()]->name(),
               components[component.id()]->object(), header + component.data());
 
+
       QStringList componentNames;
       for(const auto& id : component.components()) {
           Q_ASSERT(components.contains(id)); //just check here
@@ -817,21 +833,22 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
           componentNames.append(compname);
       }
 
-      Q_ASSERT(c->name().endsWith(FIGMA_SUFFIX));
+      const auto subs = component.subComponents();
+      for(const auto& [sub_name, sub_data] : subs.asKeyValueRange()) {
+          const auto data = header + std::get<QByteArray>(sub_data);
+          doc.addComponent(sub_name, std::get<QJsonObject>(sub_data), data);
+          if(!writeQmlFile(sub_name, data, header)) {
+              emit error(toStr("Cannot write sub component", sub_name, " for ", component.name()));
+              return false;
+          }
 
-      QSaveFile componentFile(qmlTargetDir() + c->name() + ".qml");
-      /*
-       if(QFile(componentFile.fileName()).exists()) {
-          emit error(toStr("File already exists", componentFile.fileName(), QString("\"%1\" \"%2\"").arg(c->name(), c->description())));
+      }
+
+      if(!writeQmlFile(c->name(), component.data(), header)) {
+          emit error(toStr("Cannot write component", component.name()));
           return false;
       }
-      */
-      if(!componentFile.open(QIODevice::WriteOnly)) {
-          emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
-          return false;
-      }
-      componentFile.write(header + component.data());
-      componentFile.commit();
+
     }
     return true;
 }

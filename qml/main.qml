@@ -616,6 +616,16 @@ ApplicationWindow {
                                  + "/qml\"\n\n"
                                  + figmaQml.element; */
                     let comp = null;
+
+                    if(!figmaQml.element || figmaQml.element.length === 0) {
+                        errorNote.text = "No element to create!";
+                        console.log(figmaQml.isValid);
+                        console.log(figmaQml.canvasCount);
+                        console.log(figmaQml.elementCount);
+                        console.log(figmaQml.sourceCode);
+                        return;
+                    }
+
                     try {
                         comp = Qt.createComponent(figmaQml.element);
                         if(comp) {
@@ -626,6 +636,7 @@ ApplicationWindow {
                                    return true;
                                 }
                                 if (comp.status === Component.Error) {
+                                    console.log(comp.errorString())
                                     throw(comp.errorString());
                                 }
                                 return false;
@@ -633,6 +644,14 @@ ApplicationWindow {
                             if(!ctor())
                                 comp.statusChanged.connect(ctor);
                         } else {
+                            if(!figmaQml.element || figmaQml.element.length === 0) {
+                                errorNote.text = "No element to create!";
+                                console.log(figmaQml.isValid);
+                                console.log(figmaQml.canvasCount);
+                                console.log(figmaQml.elementCount);
+                                console.log(figmaQml.sourceCode);
+                                return;
+                            }
                             errorNote.text = "Cannot create component \"" + figmaQml.element + "\"";
                         }
                     } catch (error) {

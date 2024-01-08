@@ -36,6 +36,7 @@ constexpr auto FIGMA_SUFFIX{"_figma"};
 class FigmaParser {
 private:
     using ImageContexts =  QSet<QString>;
+    using ComponentStreams = QHash<QByteArray, std::tuple<QJsonObject, QByteArray>>;
 public:
     /**
      * @brief The Canvas class is a Figma Page, represents all elements in there
@@ -66,8 +67,9 @@ public:
                 QByteArray&& data,
                 QStringList&& componentIds,
                 QStringList&& contexts,
-                QVector<QString>&& aliases) :
-            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds), m_imageContexts{contexts}, m_aliases(aliases) {}
+                QVector<QString>&& aliases,
+                const ComponentStreams& componentStreams) :
+            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds), m_imageContexts{contexts}, m_aliases(aliases), m_componentStreams(componentStreams) {}
         Element() {}
         Element(const Element& other) = default;
         Element& operator=(const Element& other) = delete;
@@ -77,6 +79,7 @@ public:
         const QStringList& components() const {return m_componentIds;}
         const QStringList& imageContexts() const {return m_imageContexts;}
         const QVector<QString>& aliases() const {return m_aliases;}
+        const ComponentStreams& subComponents() const {return m_componentStreams;}
     private:
         const QString m_name;
         const QString m_id;
@@ -85,6 +88,7 @@ public:
         const QStringList m_componentIds;
         const QStringList m_imageContexts;
         const QVector<QString> m_aliases;
+        const ComponentStreams m_componentStreams;
     };
     /**
      * @brief The Component class, Figma component, an element can compose and/or override parts with components.
@@ -255,6 +259,7 @@ private:
      EByteArray makeGradientFill(const QJsonObject& obj, int intendents);
      EByteArray makeRendered(const QJsonObject& obj, int intendents);
      QByteArray makeGradientToFlat(const QJsonObject& obj, int intendents);
+     QByteArray addComponentStream(const QJsonObject& obj,  const QByteArray& child_item);
      ~FigmaParser();
 private:
      struct Parent{
@@ -293,8 +298,10 @@ private:
     ImageContexts m_imageContext;
     QVector<Alias> m_aliases;
     int m_componentLevel = 0;
+    ComponentStreams m_componetStreams;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);
+    int m_counter = 0;
 };
 
 #endif // FIGMAPARSER_H

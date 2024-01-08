@@ -14,6 +14,7 @@
 #include <optional>
 #include <cmath>
 
+#include <QFile>
 #include <QTimer>
 
 #ifndef M_PI
@@ -23,6 +24,8 @@
 const auto QML_TAG = "qml?";
 
 static QString last_parse_error;
+
+#define QUL_LOADER_WORKAROUND
 
 using EByteArray = FigmaParser::EByteArray;
 
@@ -297,15 +300,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         for(const auto& alias : m_aliases)
             aliases.append(alias.id);
 
-        return Element(
+        return Element{
                 validFileName(obj["name"].toString(), false),
                 obj["id"].toString(),
                 obj["type"].toString(),
                 std::move(bytes.value()),
                 std::move(ids),
                 std::move(image_contexts),
-                std::move(aliases)
-            );
+                std::move(aliases),
+                m_componetStreams // can this be moved?
+        };
     }
 
     QString FigmaParser::tabs(int intendents) const {
@@ -390,7 +394,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += intendent + type + " {\n";
          Q_ASSERT(obj.contains("type") && obj.contains("id"));
 
-         out += intendent + "// component level: " + QString::number(m_componentLevel)  + " \n";
+         out += intendent + "// component (Instance) level: " + QString::number(m_componentLevel)  + " \n";
          if(m_componentLevel == 0) {
             const auto id_string = makeId(obj);
             out += intendent1 + "id: " + id_string + "\n";
@@ -809,7 +813,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         } else
             out += intendent + "strokeColor: \"transparent\"\n";
 
-        out += intendent + "// component level: " + QString::number(m_componentLevel)  + " \n";
+        out += intendent + "// component (shapeFill) level: " + QString::number(m_componentLevel)  + " \n";
         if(m_componentLevel == 0)
             out += intendent + "id: " + makeId("svgpath_" , obj) + "\n";
 
@@ -1544,7 +1548,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              out += intendent2 + QString("id: comp_%1\n").arg(id);
              out += intendent2 + children[key];
              out += intendent + QString("}\n");
-             out += intendent + QString("property alias %1: loader_%2.sourceComponent\n").arg(delegateName(key), id);
+#ifdef QUL_LOADER_WORKAROUND
+            out += intendent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
+#else
+            out += intendent + QString("property alias %1: loader_%2.sourceComponent\n").arg(delegateName(key), id);
+#endif
          }
 
          /**
@@ -1903,6 +1911,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          return out;
      }
 
+
+
      EByteArray FigmaParser::makeInstanceChildren(const QJsonObject& obj, const QJsonObject& comp, int intendents) {
         QByteArray out;
         // m_componentLevel should propably apply for Qul only
@@ -1935,8 +1945,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             const auto index = std::distance(keys.begin(), keyit);
             //here we have it
             const auto objChild = objChildren[index].toObject();
-            //Then we compare to to find delta, we ignore absoluteBoundingBox as
-            //size and transformations are aliases
+            //Then we compare to to find delta, we ignore absoluteBoundingBox as size and transformations are aliases
             const auto deltaObject = delta(objChild, cchild, {"absoluteBoundingBox", "name", "id"}, {{"children", [objChild, this](const auto& o, const auto& c) {
                                                                                                           return (type(objChild) == ItemType::Boolean && !(m_flags & BreakBooleans)) || o == c ? QJsonValue() : c;
                                                                                                       }}});
@@ -1969,7 +1978,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 continue;
             }
             const auto child_item = (*children)[*keyit];
-            out += intendent + delegateName(id) + ":" + child_item;
+#ifdef QUL_LOADER_WORKAROUND
+            const auto sub_component =  addComponentStream(cchild, child_item);
+            Q_ASSERT(!sub_component.isEmpty());
+            out += intendent + delegateName(id) + ": \"" + sub_component + "\"\n";
+#else
+            out += intendent + delegateName(id) + ": " + child_item;
+#endif
         }
         return out;
     }
@@ -2141,4 +2156,17 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     QString FigmaParser::lastError() {
         return last_parse_error;
+    }
+
+
+    QByteArray FigmaParser::addComponentStream(const QJsonObject& obj,  const QByteArray& child_item) {
+        QByteArray filename;
+        do {
+            const auto name = obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_counter) + FIGMA_SUFFIX;
+            Q_ASSERT(!name.isEmpty());
+            filename = makeFileName("component_" + name).toLatin1();
+            ++m_counter;
+        } while(!filename.contains(filename));         // this should replace test if file exits in the target folder (not done until known if confits as the folder info has to be passed! - or such)
+        m_componetStreams.insert(filename, std::make_tuple(obj, child_item)); // what to do for std::move ?
+        return filename + ".qml";
     }
