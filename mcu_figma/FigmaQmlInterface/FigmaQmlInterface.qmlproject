@@ -1,0 +1,36 @@
+import QmlProject 1.3
+
+Project {
+    MCU.Module {
+        //uri: "FigmaQmlInterface"
+        generateQmltypes: true
+    }
+    
+    QmlFiles {
+        files: []
+    }
+
+    InterfaceFiles {
+        files: ["FigmaQmlInterface.hpp"]
+        MCU.qmlImports: ["QtQuick"]
+    }
+
+    ImageFiles {
+        //MCU.base: ""    // FigmaQML: set base!
+        //MCU.base: "FigmaQmlInterface"
+
+        files: []
+
+        MCU.resourceCompression: false
+        MCU.resourceImagePixelFormat: "Automatic"
+        MCU.resourceOptimizeForRotation: false
+        MCU.resourceOptimizeForScale: false
+    }
+
+    ModuleFiles {
+        MCU.qulModules: ["Qul::Controls",
+            "Qul::ControlsTemplates",
+            "Qul::Shapes"]
+    }
+}
+

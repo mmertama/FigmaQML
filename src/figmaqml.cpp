@@ -796,6 +796,10 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
           return false;
       }
 
+      if(!component.aliases().isEmpty()) {
+          qDebug() << "component has aliases!";
+      }
+
       const auto images = component.imageContexts();
       for(const auto& im : images) {
           if(!m_imageContexts.contains(im))
@@ -943,6 +947,10 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
                 return false;
             const auto& element = element_opt.value();
 
+            if(!element.aliases().isEmpty()) {
+                qDebug() << "element has aliases!";
+            }
+
             const auto images = element.imageContexts();
             for(const auto& im : images) {
                 if(!m_imageContexts.contains(im))
@@ -1040,6 +1048,14 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
 #endif
     }
 
+/*    if(m_flags & GenerateAccess) {
+#ifdef QT5
+        header += QString("import FigmaQmlInterface 1.0\n");
+#else
+        header += QString("import FigmaQmlInterface\n");
+#endif
+    }
+*/
     const auto components = FigmaParser::components(json, *this);
 
     if(!components) {

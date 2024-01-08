@@ -72,6 +72,7 @@ set(SOURCES
     include/utils.h
     include/functorslot.h
     include/figmaprovider.h
+    include/qmlSingleton.h
 )
 
 if(HAS_QUL)

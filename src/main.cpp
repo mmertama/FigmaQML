@@ -4,6 +4,7 @@
 #include "downloads.h"
 #include "functorslot.h"
 #include "utils.h"
+#include "qmlSingleton.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -113,6 +114,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption fontMapParameter("font-map", "Provide a ';' separated list of <figma font>':'<system font> pairs.", "fontMap");
     const QCommandLineOption throttleParameter("throttle", "Milliseconds between server requests. Too frequent request may have issues, especially with big desings - default 300", "throttle");
     const QCommandLineOption qulmodeParameter("qul-mode", "QtQuick for Qt for MCU");
+    const QCommandLineOption generateAccessParameter("generate-access-mode", "Generate setters");
 
     parser.addPositionalArgument("argument 1", "Optional: .figmaqml file or user token. GUI opened if empty.", "<FIGMAQML_FILE>|<USER_TOKEN>");
     parser.addPositionalArgument("argument 2", "Optional: Output directory name (or .figmaqml file name if '--store' is given), assuming the first parameter was the restored file. If empty, GUI is opened. Project token is expected if the first parameter was an user token.", "<OUTPUT if FIGMAQML_FILE>| PROJECT_TOKEN if USER_TOKEN");
@@ -135,6 +137,7 @@ int main(int argc, char *argv[]) {
                           fontMapParameter,
                           throttleParameter,
                           figmaFontParameter,
+                          generateAccessParameter,
 #ifdef HAS_QUL
                           qulmodeParameter,
 #endif
@@ -235,7 +238,12 @@ int main(int argc, char *argv[]) {
     auto figmaGet = std::make_unique<FigmaGet>();
     auto figmaQml = std::make_unique<FigmaQml>(dir.path(), fontFolder, *figmaGet);
 
+    // create and register ~ dummy qml class to implement callbacks (upon need)
+    FigmaQmlSingleton figmaAccess;
     QQmlApplicationEngine engine;
+    [[maybe_unused]] const auto register_ok = qmlRegisterSingletonInstance("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", &figmaAccess);
+    Q_ASSERT(register_ok);
+
     Clipboard clipboard;
    // figmaQml->setFilter({{1,{2}}});
 
@@ -264,7 +272,8 @@ int main(int argc, char *argv[]) {
                 qmlFlags |= FigmaQml::KeepFigmaFontName;
             if(parser.isSet(qulmodeParameter))
                 qmlFlags |= FigmaQml::QulMode;
-
+            if(parser.isSet(generateAccessParameter))
+                qmlFlags |= FigmaQml::GenerateAccess;
             if(parser.isSet(importsParameter)) {
                 QMap<QString, QVariant> imports;
                 const auto p = parser.value(importsParameter).split(';');
@@ -491,6 +500,8 @@ int main(int argc, char *argv[]) {
          }
      }
 
+
+
      if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {
                       figmaQml->createDocumentView(figmaGet->data(), true);
@@ -570,6 +581,7 @@ int main(int argc, char *argv[]) {
      if(!restore.isEmpty()) {
          figmaGet->restore(restore);
      }
+
     //qDebug()  << "FOO: start app" << dir.path();
     const auto return_value = app.exec();
     //qDebug()  << "FOO: exit app" << dir.path();

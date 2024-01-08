@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import FigmaQml
 import FigmaGet
 import QtQuick.Dialogs
+import FigmaQmlInterface
 
 
 ApplicationWindow {
@@ -212,6 +213,11 @@ ApplicationWindow {
                 onTriggered: storeFile();
             }
             MenuItem {
+                enabled: figmaQml && figmaQml.isValid
+                text: "SendValue..."
+                onTriggered: send_set_value.open()
+            }
+            MenuItem {
                 text: "Restore..."
                 onTriggered: restoreFile();
             }
@@ -333,6 +339,16 @@ ApplicationWindow {
                                     figmaQml.flags |= FigmaQml.QulMode
                                 else
                                     figmaQml.flags &= ~FigmaQml.QulMode
+                            }
+                        }
+                        QtCheckBox {
+                            text: "Generate access"
+                            checked: figmaQml.flags & FigmaQml.GenerateAccess
+                            onCheckedChanged: {
+                                if(checked)
+                                    figmaQml.flags |= FigmaQml.GenerateAccess
+                                else
+                                    figmaQml.flags &= ~FigmaQml.GenerateAccess
                             }
                         }
                         QtCheckBox {
@@ -1089,4 +1105,50 @@ ApplicationWindow {
     function openTokens() {
         tokens.open();
     }
+
+    Dialog {
+        id: send_set_value
+        modal: Qt.NonModal
+        title: "Send SetValue"
+        contentItem: Rectangle {
+            color: "white"
+            implicitWidth: 400
+            implicitHeight: 100
+            ColumnLayout {
+                TextField {
+                   id: send_element
+                   Layout.fillWidth: true
+                   placeholderText: "element"
+                }
+                TextField {
+                   id: send_value
+                   Layout.fillWidth: true
+                   placeholderText: "element"
+                }
+            }
+        }
+        footer: Row {
+            DialogButtonBox {
+                Button {
+                    text: qsTr("Ok")
+                    DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
+                }
+                Button {
+                    text: qsTr("Cancel")
+                    DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
+                }
+                onAccepted: {
+                    FigmaQmlSingleton.requestValue(send_element.text, send_value.text)
+                    send_set_value.done(Dialog.Accepted)
+                }
+                onRejected: send_set_value.done(Dialog.Rejected)
+
+                }
+        }
+    }
+/*
+    FigmaQmlSingleton.onSetValue: {
+        console.log("element:", element, "value:", value)
+    }
+*/
 }

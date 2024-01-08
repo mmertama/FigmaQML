@@ -37,12 +37,15 @@ class FigmaParser {
 private:
     using ImageContexts =  QSet<QString>;
 public:
+    /**
+     * @brief The Canvas class is a Figma Page, represents all elements in there
+     */
     class Canvas {
     public:
         using ElementVector = std::vector<QJsonObject>;
         QString color() const {return m_color;}
-        QString id() const {return m_id;}
-        QString name() const {return m_name;}
+        const QString& id() const {return m_id;}
+        const QString& name() const {return m_name;}
         const ElementVector& elements() const {return m_elements;}
         Canvas(const QString& name, const QString& id, const QByteArray color, ElementVector&& frames) :
             m_name(name), m_id(id), m_color(color), m_elements(frames) {}
@@ -52,26 +55,41 @@ public:
         const QByteArray m_color;
         const ElementVector m_elements;
     };
+    /**
+     * @brief The Element class, an element on page - converted to QML file
+     */
     class Element  {
     public:
-        Element(const QString& name, const QString& id, const QString& type, QByteArray&& data,  QStringList&& componentIds, QStringList&& contexts) :
-            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds), m_imageContexts{contexts} {}
+        Element(const QString& name,
+                const QString& id,
+                const QString& type,
+                QByteArray&& data,
+                QStringList&& componentIds,
+                QStringList&& contexts,
+                QVector<QString>&& aliases) :
+            m_name(name), m_id(id), m_type(type), m_data(data), m_componentIds(componentIds), m_imageContexts{contexts}, m_aliases(aliases) {}
         Element() {}
         Element(const Element& other) = default;
-        Element& operator=(const Element& other) = default;
-        QString id() const {return m_id;}
-        QString name() const {return m_name;}
-        QByteArray data() const {return m_data;}
-        QStringList components() const {return m_componentIds;}
-        QStringList imageContexts() const {return m_imageContexts;}
+        Element& operator=(const Element& other) = delete;
+        const QString& id() const {return m_id;}
+        const QString& name() const {return m_name;}
+        const QByteArray& data() const {return m_data;}
+        const QStringList& components() const {return m_componentIds;}
+        const QStringList& imageContexts() const {return m_imageContexts;}
+        const QVector<QString>& aliases() const {return m_aliases;}
     private:
-        QString m_name;
-        QString m_id;
-        QString m_type;
-        QByteArray m_data;
-        QStringList m_componentIds;
-        QStringList m_imageContexts;
+        const QString m_name;
+        const QString m_id;
+        const QString m_type;
+        const QByteArray m_data;
+        const QStringList m_componentIds;
+        const QStringList m_imageContexts;
+        const QVector<QString> m_aliases;
     };
+    /**
+     * @brief The Component class, Figma component, an element can compose and/or override parts with components.
+     * Converted to QML file, but not exact match to QML components.
+     */
     class Component {
     public:
         Component(const QString& name,
@@ -85,10 +103,10 @@ public:
             Q_ASSERT(m_name.endsWith(FIGMA_SUFFIX) || validFileName(m_name, false) == m_name);
             return m_name;
         }
-        QString description() const {return m_description;}
-        QString id() const {return m_id;}
-        QString key() const {return m_key;}
-        QJsonObject object() const {return m_object;}
+        const QString& description() const {return m_description;}
+        const QString& id() const {return m_id;}
+        const QString& key() const {return m_key;}
+        const QJsonObject& object() const {return m_object;}
     private:
         const QString m_name;
         const QString m_id;
@@ -111,7 +129,8 @@ public:
         ParseComponent  = 0x200,
         BreakBooleans   = 0x400,
         AntializeShapes = 0x800,
-        QulMode = 0x1000
+        QulMode         = 0x1000,
+        GenerateAccess  = 0x2000
 
     };
     using EByteArray = std::optional<QByteArray>;
@@ -140,7 +159,8 @@ private:
     QRectF boundingRect(const QString& svgPath, const QSizeF& size) const;
 #endif
     static QByteArray toColor(double r, double g, double b, double a = 1.0);
-    static QByteArray qmlId(const QString& id);
+    QByteArray makeId(const QJsonObject& obj);
+    QByteArray makeId(const QString& prefix,  const QJsonObject& obj);
     QByteArray makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents);
     QByteArray makeItem(const QString& type, const QJsonObject& obj, int intendents);
 
@@ -237,34 +257,41 @@ private:
      QByteArray makeGradientToFlat(const QJsonObject& obj, int intendents);
      ~FigmaParser();
 private:
-
+     struct Parent{
+         const QJsonObject* obj;
+         const Parent* parent;
+         QSet<QString> ids;
+         template<typename T>
+         auto operator[](const T& k) const {return (*obj)[k];}
+         void push(const QJsonObject* obj_) {
+             parent = new Parent{obj, parent, {}};
+             obj = obj_;
+         }
+         void pop() {
+             Q_ASSERT(parent);
+             obj = parent->obj;
+             auto p = parent;
+             parent = p->parent;
+             ids += p->ids;
+             delete p;
+         }
+     };
+     struct Alias {
+         QString id;
+         QJsonObject obj;
+     };
+ private:
     FigmaParser(unsigned flags, FigmaParserData& data, const Components* components);
     bool isQul() const {return m_flags & QulMode;}
-
+private:
     const unsigned m_flags;
     FigmaParserData& m_data;
     const Components* m_components;
     const QString m_intendent = "    ";
     QSet<QString> m_componentIds;
-    struct Parent{
-        const QJsonObject* obj;
-        const Parent* parent;
-        template<typename T>
-        auto operator[](const T& k) const {return (*obj)[k];}
-        void push(const QJsonObject* obj_) {
-            parent = new Parent{obj, parent};
-            obj = obj_;
-        }
-        void pop() {
-            Q_ASSERT(parent);
-            obj = parent->obj;
-            auto p = parent;
-            parent = p->parent;
-            delete p;
-        }
-    };
     Parent m_parent;
     ImageContexts m_imageContext;
+    QVector<Alias> m_aliases;
     int m_componentLevel = 0;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);

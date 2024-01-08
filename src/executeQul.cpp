@@ -20,6 +20,10 @@
 #include "utils.h"
 
 #define VERIFY(x, t) if(!x) {showError(t); return false;}
+constexpr auto FOLDER = "FigmaQmlInterface/";
+constexpr auto QML_PREFIX = "qml/";
+constexpr auto IMAGE_PREFIX =  "images/";
+constexpr auto QML_EXT = ".qml";
 
 void showError(const QString& errorNote, const QString& infoNote = "") {
     QMessageBox msgBox;
@@ -123,11 +127,12 @@ QString findFile(const QString& path, const QRegularExpression& regexp) {
 }
 
 static
-bool copy_resources(const QString& path) {
+    bool copy_resources(const QString& path, const QStringList& folders_only = {}) {
     QDirIterator it(":", QDirIterator::Subdirectories);
     while (it.hasNext()) {
         QFileInfo info(it.next());
-        if(info.isFile() && info.filePath().mid(1, 5) == "/mcu/") {
+        if(info.isFile() && info.filePath().mid(1, 5) == "/mcu/" &&
+            (folders_only.isEmpty() || std::any_of(folders_only.begin(), folders_only.end(), [&](const auto& f){return info.path().split('/').contains(f);}))) {
             const auto target_path = path + info.filePath().mid(5);
             const auto abs_path = QFileInfo(target_path).absolutePath();
             VERIFY(QDir().mkpath(abs_path), "Cannot create folder " + abs_path)
@@ -152,56 +157,75 @@ QSerialPortInfo getSerialPort(const QString& id) {
     return QSerialPortInfo{};
 }
 
-/*
 static
-bool updateJson(const QString& json, const QStringList& path, const QStringList& values) {
-    QFile in_file(json);
-    if(!in_file.open(QFile::ReadOnly))
-        return false;
-    auto doc = QJsonDocument::fromJson(in_file.readAll());
-    in_file.close();
-    Q_ASSERT(doc.isObject());
-    auto obj = doc.object();
-    QJsonValue arrayValue;
-    for(const auto& p : path) {
-        const auto val = obj[p];
-        if(val.isObject())
-            obj = val.toObject();
-        else {
-            if(val.isArray() && p == path.last())
-                arrayValue = val;
-            break;
-        }
-    }
-    if(!arrayValue.isArray())
-        return false;
-    auto arr = arrayValue.toArray();
-    for(const auto& v : values) {
-        arr.append(QJsonValue(v));
-    }
-    QFile out_file(json);
-    if(!out_file.open(QFile::WriteOnly))
-        return false;
-    out_file.write(doc.toJson());
-    out_file.close();
-    return true;
-}
-*/
-
-
-static
-bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement) {
+    bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement, const QStringList context) {
     QFile file(fname);
-    if(!file.open(QFile::ReadOnly)) {  // I have no idea (not looked very much) why readwrite wont work in mys system, hence read and then write
+    if(!file.open(QFile::ReadOnly)) {  // I have no idea (not looked very much) why readwrite wont work in my system, hence read and then write
         qDebug() << "cannot open" << fname << "due" << file.errorString();
         return false;
     }
+
+    bool wait_context = false;
+    bool in_context = false;
+    bool next_context = false;
+    bool skip = false;
+    QStack<QString> current_context;
+
     QStringList lines;
     QTextStream read(&file);
     while(!read.atEnd()) {
         auto line = read.readLine();
-        lines << line.replace(re, replacement);
+
+        if(current_context.isEmpty()) {
+            static const QRegularExpression import_re(R"(^\s*import\s+)");
+            const auto m = import_re.match(line);
+            if(m.hasMatch()) skip = true;
+        }
+
+        if(!skip) {
+            static const QRegularExpression token_re(R"(^\s*([A-Za-z._]+)\s*(\{|:)?)");
+            const auto token_match = token_re.match(line);
+            if(token_match.hasMatch()) {
+                if(token_match.captured(2).isEmpty()) {
+                    current_context.push(token_match.captured(1));
+                    wait_context = true;
+                } else if (token_match.captured(2) == "{") { // 'property :' is not a context
+                     current_context.push(token_match.captured(1));
+                     next_context = true;
+                }
+            }
+
+
+            if(wait_context) {
+                static const QRegularExpression open_re(R"(^\s*\{)");
+                const auto m = open_re.match(line);
+                if(m.hasMatch()) {
+                    next_context = true;
+                    wait_context = false;
+                }
+            }
+
+            if(next_context) {
+                next_context = false;
+                in_context = current_context.size() == context.size();
+                for(auto i = 0; in_context && i < context.size(); ++i)
+                    in_context &= current_context[i] == context[i];
+
+            }
+
+
+            static const QRegularExpression open_re(R"(^\s*\})");
+            const auto m = open_re.match(line);
+            if(m.hasMatch()) {
+                current_context.pop();
+            }
+        }
+        skip = false;
+        lines << (in_context ? line.replace(re, replacement) : line);
     }
+
+    VERIFY(current_context.isEmpty() && !wait_context, "Invalid file: " + fname);
+
     file.close();
     if(!file.remove())
         return false;
@@ -223,26 +247,27 @@ QString qq(const QString& str) {
 bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp) {
 
     const auto abs_path = QFileInfo(path).absolutePath();
-    VERIFY(QDir().mkpath(path), "Cannot create folder " + abs_path)
+    VERIFY(QDir().mkpath(path + '/' + FOLDER + QML_PREFIX), "Cannot create folder " + abs_path + FOLDER + QML_PREFIX)
 
-    if(writeAsApp && !copy_resources(path))
+    if(!copy_resources(path, writeAsApp ? QStringList{} : QStringList{"FigmaQmlInterface"}))
         return false;
 
     QSet<QString> save_image_filter {{figmaQml.elementName()}};
 
     QStringList qml_files;
-    const auto main_file_name = FigmaQml::validFileName(figmaQml.elementName()) + ".qml";
+    const auto main_file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
     qml_files << qq(main_file_name);
-    QFile qml_out(path + '/' + main_file_name);
+    QFile qml_out(path + '/' + FOLDER + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
     qml_out.write(figmaQml.sourceCode());
     qml_out.close();
 
     for(const auto& component_name : figmaQml.components()) {
         save_image_filter.insert(component_name);
-        const auto file_name = FigmaQml::validFileName(component_name) + ".qml";
+        const auto file_name = QML_PREFIX + FigmaQml::validFileName(component_name) + QML_EXT;
         qml_files << qq(file_name);
-        const auto target_path = path + '/' + file_name;
+
+        const auto target_path = path + '/' + FOLDER + file_name;
         QFile component_out(target_path);
         if(QFile::exists(target_path))
             QFile::remove(target_path);
@@ -252,24 +277,25 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
         component_out.close();
     }
 
-    const auto images = figmaQml.saveImages(path + "/images/", save_image_filter);
+    const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
+
+    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*)(\s*\]))");
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_project, R"(\1)" + qml_files.join(",") + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
+
+    VERIFY(images, "Cannot save images" )
+    QStringList local_images;
+    std::transform(images->begin(), images->end(), std::back_inserter(local_images), [](const auto& f){return qq("images/" + QFileInfo(f).fileName());});
+
+    static const QRegularExpression re_images (R"((^\s*files:\s*\[\s*)(\s*\]))");
+
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_images, R"(\1)" + local_images.join(",") + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
     if(writeAsApp) {
-        static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"mcu_figma.qml")(\s*\]))");
-        // note ','
-        VERIFY(replaceInFile(path + "/mcu_figma.qmlproject", re_project, R"(\1,)" + qml_files.join(",") + R"(\2)"), "Cannot update qmlproject");
-
         static const QRegularExpression re_qml(R"((^\s*source:\s*")("))");
-        VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)"), "Cannot update qml file");
-
-        VERIFY(images, "Cannot save images" )
-        QStringList local_images;
-        std::transform(images->begin(), images->end(), std::back_inserter(local_images), [](const auto& f){return qq("images/" + QFileInfo(f).fileName());});
-
-        static const QRegularExpression re_images (R"((^\s*files:\s*\[\s*"images/icon.png")(\s*\]))");
-        // note ','
-        VERIFY(replaceInFile(path + "/mcu_figma.qmlproject", re_images, R"(\1,)" + local_images.join(",") + R"(\2)"), "Cannot update qmlproject");
+        VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)", {"Rectangle", "Loader"}), "Cannot update qml file");
     }
+
+
     return true;
 }
 

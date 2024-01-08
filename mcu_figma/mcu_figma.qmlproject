@@ -3,6 +3,7 @@ import QmlProject 1.3
 Project {
     qtForMCUs: true // Required by QDS to enable/disable features Supported/Unsupported by QtMCUs projects. Currently ignored by qmlprojectexporter.
     mainFile: "mcu_figma.qml" // The application's entrypoint
+    importPaths: ["FigmaQmlInterface"]
 
     MCU.Config {
         controlsStyle: "QtQuick.Controls.StyleDefault"

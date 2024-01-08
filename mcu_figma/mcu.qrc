@@ -8,6 +8,9 @@
         <file>fonts/LICENSE</file>
         <file>images/icon.png</file>
         <file>run_STM32.sh</file>
+        <file>FigmaQmlInterface/CMakeLists.txt</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.hpp</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.qml</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.qmlproject</file>
     </qresource>
-    <qresource prefix="/"/>
 </RCC>

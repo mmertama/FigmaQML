@@ -13,7 +13,7 @@ Button {
                                              'visible': false,
                                              'focus': true
                                          });
-        instance.onVisibleChanged.connect(function() {if(!instance.visible) closed(delegate);})
+        instance.onVisibleChanged.connect(function() {if(instance && !instance.visible) closed(delegate);})
         instance.onActiveFocusChanged.connect(function() {
             if(!instance.activeFocus
                     && !main.activeFocus

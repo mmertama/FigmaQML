@@ -1,6 +1,10 @@
 import QtQuick
+import FigmaQmlInterface
 Rectangle {
     // Loads the component after completed
+
+    Exit_icon_figma {}
+
     Loader {
         id: loader
         anchors.fill: parent
