@@ -1,4 +1,6 @@
 import QtQuick
 
-Item {}
+Loader {
+    source: ""
+}
 

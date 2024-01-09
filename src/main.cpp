@@ -4,7 +4,7 @@
 #include "downloads.h"
 #include "functorslot.h"
 #include "utils.h"
-#include "qmlSingleton.h"
+//#include "qmlSingleton.h"
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -239,10 +239,9 @@ int main(int argc, char *argv[]) {
     auto figmaQml = std::make_unique<FigmaQml>(dir.path(), fontFolder, *figmaGet);
 
     // create and register ~ dummy qml class to implement callbacks (upon need)
-    FigmaQmlSingleton figmaAccess;
-    QQmlApplicationEngine engine;
-    [[maybe_unused]] const auto register_ok = qmlRegisterSingletonInstance("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", &figmaAccess);
-    Q_ASSERT(register_ok);
+    //FigmaQmlSingleton figmaAccess;
+    //[[maybe_unused]] const auto register_ok = qmlRegisterSingletonInstance("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", &figmaAccess);
+    //Q_ASSERT(register_ok);
 
     Clipboard clipboard;
    // figmaQml->setFilter({{1,{2}}});
@@ -501,6 +500,12 @@ int main(int argc, char *argv[]) {
      }
 
 
+    /*FigmaQmlSingleton figmaAccess;
+    qmlRegisterSingletonType<FigmaQmlSingleton>("FigmaQmlInterface", 1, 0, "FigmaQmlInterface", [](auto, auto) {
+        qDebug() << "create singleton";
+        return new FigmaQmlSingleton{};
+    });*/
+    QQmlApplicationEngine engine;
 
      if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {
@@ -529,6 +534,11 @@ int main(int argc, char *argv[]) {
                 });
         }
 
+        qmlRegisterSingletonType(QUrl("qrc:///FigmaQmlSingleton.qml"), "FigmaQmlInterface", 1, 0, "FigmaQmlSingleton");
+
+
+
+         //engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaAccess);
          engine.rootContext()->setContextProperty("clipboard", &clipboard);
          engine.rootContext()->setContextProperty("figmaGet", figmaGet.get());
          engine.rootContext()->setContextProperty("figmaQml", figmaQml.get());

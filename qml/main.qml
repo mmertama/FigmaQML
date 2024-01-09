@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import FigmaQml
 import FigmaGet
 import QtQuick.Dialogs
-import FigmaQmlInterface
+import FigmaQmlInterface 1.0
 
 
 ApplicationWindow {
@@ -1165,9 +1165,22 @@ ApplicationWindow {
                 }
         }
     }
-/*
-    FigmaQmlSingleton.onSetValue: {
-        console.log("element:", element, "value:", value)
+
+    Connections {
+        target: FigmaQmlSingleton
+        function onSetValue(element, value) {
+            console.log("setValue:", element, value);
+        }
     }
-*/
+  //  FigmaQmlSingleton.fig: 12;
+
+  //  FigmaQmlSingleton.onSetValue: function(e, v) {
+  //      console.log("aviathan")
+  //  }
+
+    Component.onCompleted: {
+      //  FigmaQmlSingleton.fig = 12;
+     //  FigmaQmlSingleton.onSetValue = _whatever;
+      // FigmaQmlSingleton.onSetValue("reggae", "ok");
+     }
 }

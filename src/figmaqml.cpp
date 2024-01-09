@@ -786,7 +786,8 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
 
 bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header) const {
     Q_ASSERT(component_name.endsWith(FIGMA_SUFFIX));
-
+    Q_ASSERT(!element_data.isEmpty());
+    Q_ASSERT(!header.isEmpty());
     QSaveFile componentFile(qmlTargetDir() + component_name + ".qml");
     if(!componentFile.open(QIODevice::WriteOnly)) {
         emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
@@ -796,6 +797,7 @@ bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& ele
     componentFile.commit();
     return true;
 }
+
 
 #ifdef NO_CONCURRENT
 
@@ -841,7 +843,6 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
               emit error(toStr("Cannot write sub component", sub_name, " for ", component.name()));
               return false;
           }
-
       }
 
       if(!writeQmlFile(c->name(), component.data(), header)) {
@@ -1025,6 +1026,15 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
             for(const auto& id : element.components()) {
                 componentNames.append(components[id]->name());
             }
+
+            // this is bit confusing, the component owned sub componets are written before this function is called,
+            // but as element owned has to be called elsewhere it happens here. Whole this when is written and parsed
+            // what is confusing
+            for(const auto& [sub_name, sub_data] : element.subComponents().asKeyValueRange()) {
+                componentNames.append(sub_name);
+                if(!writeQmlFile(sub_name, std::get<QByteArray>(sub_data), header))
+                    return false;
+            }
             doc.setComponents(element.name(), std::move(componentNames));
         }
     }
@@ -1073,6 +1083,9 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
 #endif
     }
 */
+    if((m_flags & GenerateAccess) && !(m_flags & QulMode))
+        header += QString("import FigmaQmlInterface\n");
+
     const auto components = FigmaParser::components(json, *this);
 
     if(!components) {

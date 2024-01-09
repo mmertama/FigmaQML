@@ -2049,7 +2049,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
               const auto intend = tabs(intendents);
               const auto intend2 = tabs(intendents + 1);
               const auto intend3 = tabs(intendents + 2);
-              if(m_flags & QulMode) {
+              /*if(m_flags & QulMode) {
 
                   out += intend + "FigmaQmlSingleton.onSetValue: {\n";
 
@@ -2067,7 +2067,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                   }
                   out +=  intend2 + "}\n";
                   out += intend + "}\n";
-              } else {
+
+              } else*/ {
                   out += intend + "Connections {\n";
                   out += intend2 + "target: FigmaQmlSingleton\n";
                   out += intend2 + "function setValue(element, value) {\n";
@@ -2161,12 +2162,20 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     QByteArray FigmaParser::addComponentStream(const QJsonObject& obj,  const QByteArray& child_item) {
         QByteArray filename;
-        do {
+        for(;;) {
             const auto name = obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_counter) + FIGMA_SUFFIX;
             Q_ASSERT(!name.isEmpty());
             filename = makeFileName("component_" + name).toLatin1();
+            const auto it = m_componetStreams.find(filename);
+            if(it == m_componetStreams.end())
+                break;  // not found
+            const auto& current_data = std::get<QByteArray>(*it);
+            const auto& current_obj = std::get<QJsonObject>(*it);
+            if(current_data.length() == child_item.length() && obj == current_obj && qChecksum(child_item) == qChecksum(current_data)) {
+                break; // equal
+            }
             ++m_counter;
-        } while(!filename.contains(filename));         // this should replace test if file exits in the target folder (not done until known if confits as the folder info has to be passed! - or such)
+        };
         m_componetStreams.insert(filename, std::make_tuple(obj, child_item)); // what to do for std::move ?
         return filename + ".qml";
     }
