@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-option(HAS_QUL "Build Qt for MCU support" FALSE)
+option(HAS_QUL "Build Qt for MCU support" TRUE)
 
 if(NOT LINUX)
     set(HAS_QUL FALSE)
@@ -20,6 +20,7 @@ endif()
 
 
 if(LET_QT5)
+    message(FATAL_ERROR "Qt5 is not supported anymore, doable, but beyond my testing effort")
     find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
     if(Qt5_FOUND)
         message("Project is Qt5")
@@ -72,8 +73,9 @@ set(SOURCES
     include/utils.h
     include/functorslot.h
     include/figmaprovider.h
-    include/qmlSingleton.h
+ #   include/qmlSingleton.h
 )
+
 
 if(HAS_QUL)
     set(SOURCES
@@ -85,7 +87,7 @@ if(HAS_QUL)
 endif()
 
 if(EMSCRIPTEN)
-    SET(SOURCES ${SOURCES} src/wasmdialogs.cpp)
+    set(SOURCES ${SOURCES} src/wasmdialogs.cpp)
 endif()
 
 
@@ -96,6 +98,12 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 #add_executable(FigmaQML
 qt_add_executable(FigmaQML ${SOURCES}
     todo.txt)
+
+#qt_add_qml_module(FigmaQML
+#    URI FigmaQmlInterface
+#    VERSION 1.0
+#    SOURCES include/qmlSingleton.h
+#)
 
 if(WIN32)
   #  Windows does not support dual mode, we pick cmd mode

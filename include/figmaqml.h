@@ -167,7 +167,6 @@ private:
     bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
     QString qmlTargetDir() const;
     bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header) const;
-    //QString srcTargetDir() const;
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;
