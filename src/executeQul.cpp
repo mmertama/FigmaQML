@@ -14,7 +14,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include "qmetaobject.h"
 #include "qulInfo.h"
 #include "figmaqml.h"
 #include "utils.h"
@@ -283,7 +282,7 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
 
     Q_ASSERT(!qml_files.isEmpty());
-    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"FigmaQmlInterface.qml")(\s*\]))");
+    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"FigmaQmlUi.qml")(\s*\]))");
     // note a colon
     VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_project, R"(\1,)" + qml_files.join(",") + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
 
@@ -296,15 +295,7 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_images, R"(\1)" + local_images.join(",") + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
     static const QRegularExpression re_qml(R"(//component)");
-    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Item"}), "Cannot update qml file");
-
-    /*
-    if(writeAsApp) {
-        //static const QRegularExpression re_qml(R"((^\s*source:\s*")("))");
-        //VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)", {"Loader"}), "Cannot update qml file");
-        static const QRegularExpression re_qml(R"(//component)");
-        VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Rectangle"}), "Cannot update qml file");
-    }*/
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlUi.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Item"}), "Cannot update qml file");
 
     return true;
 }

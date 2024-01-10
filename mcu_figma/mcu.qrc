@@ -10,7 +10,7 @@
         <file>run_STM32.sh</file>
         <file>FigmaQmlInterface/CMakeLists.txt</file>
         <file>FigmaQmlInterface/FigmaQmlInterface.hpp</file>
-        <file>FigmaQmlInterface/FigmaQmlInterface.qml</file>
+        <file>FigmaQmlInterface/FigmaQmlUi.qml</file>
         <file>FigmaQmlInterface/FigmaQmlInterface.qmlproject</file>
     </qresource>
 </RCC>

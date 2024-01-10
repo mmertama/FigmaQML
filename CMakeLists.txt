@@ -99,11 +99,6 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 qt_add_executable(FigmaQML ${SOURCES}
     todo.txt)
 
-#qt_add_qml_module(FigmaQML
-#    URI FigmaQmlInterface
-#    VERSION 1.0
-#    SOURCES include/qmlSingleton.h
-#)
 
 if(WIN32)
   #  Windows does not support dual mode, we pick cmd mode
