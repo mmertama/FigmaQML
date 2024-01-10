@@ -244,6 +244,9 @@ public:
     void addComponent(const QString& name, const QJsonObject& obj, const QByteArray& data) override {
         Q_ASSERT(!name.isEmpty());
         Q_ASSERT(!data.isEmpty());
+        if(m_components.contains(name)) {
+            qDebug() << "warn:" << name << "already added";
+        }
         m_components.insert(name, {data, QJsonDocument(obj).toJson()});
     }
 
