@@ -45,7 +45,7 @@ else()
             SerialPort
         )
     endif()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Concurrent Core5Compat ${EXTRA_PACKAGES})
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ${EXTRA_PACKAGES})
     if(Qt6_FOUND)
         message("Project is Qt6")
     else()
@@ -198,5 +198,5 @@ else()
     endif()
 
     target_link_libraries(FigmaQML
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Concurrent Qt6::Core5Compat ${EXTRA})
+      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 endif()

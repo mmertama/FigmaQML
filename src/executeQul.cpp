@@ -159,6 +159,7 @@ QSerialPortInfo getSerialPort(const QString& id) {
 
 static
     bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement, const QStringList context) {
+    Q_ASSERT_X(re.isValid(), "regexp", re.errorString().toLocal8Bit().constData());
     QFile file(fname);
     if(!file.open(QFile::ReadOnly)) {  // I have no idea (not looked very much) why readwrite wont work in my system, hence read and then write
         qDebug() << "cannot open" << fname << "due" << file.errorString();
@@ -255,7 +256,8 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     QSet<QString> save_image_filter {{figmaQml.elementName()}};
 
     QStringList qml_files;
-    const auto main_file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
+    const auto main_elemement_name = FigmaQml::validFileName(figmaQml.elementName());
+    const auto main_file_name =  QML_PREFIX + main_elemement_name + QML_EXT;
     qml_files << qq(main_file_name);
     QFile qml_out(path + '/' + FOLDER + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
@@ -280,13 +282,10 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
 
     const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
 
-    ///TODO - use calls
-    //static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*" FigmaQmlInterface.qml")(\s*\]))");
-    //VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_project, R"(\1)," + qml_files.join(",") + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
-
     Q_ASSERT(!qml_files.isEmpty());
-    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*)(\s*\]))");
-    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_project, R"(\1)" + qml_files.join(",") + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
+    static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"FigmaQmlInterface.qml")(\s*\]))");
+    // note a colon
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_project, R"(\1,)" + qml_files.join(",") + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
 
     VERIFY(images, "Cannot save images" )
     QStringList local_images;
@@ -296,12 +295,16 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
 
     VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_images, R"(\1)" + local_images.join(",") + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
+    static const QRegularExpression re_qml(R"(//component)");
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Item"}), "Cannot update qml file");
+
+    /*
     if(writeAsApp) {
         //static const QRegularExpression re_qml(R"((^\s*source:\s*")("))");
         //VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, R"(\1)" + main_file_name + R"(\2)", {"Loader"}), "Cannot update qml file");
-        static const QRegularExpression re_qml(R"(..component))");
-        VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, main_file_name + R"({anchors.fill: parent;})", {"Rectangle"}), "Cannot update qml file");
-    }
+        static const QRegularExpression re_qml(R"(//component)");
+        VERIFY(replaceInFile(path + "/mcu_figma.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Rectangle"}), "Cannot update qml file");
+    }*/
 
     return true;
 }

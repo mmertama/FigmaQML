@@ -1,6 +1,6 @@
 import QtQuick
-
-Loader {
-    source: ""
+// This file is generated
+Item {
+    //component
 }
 
