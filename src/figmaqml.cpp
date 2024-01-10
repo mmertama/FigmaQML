@@ -554,9 +554,6 @@ QString FigmaQml::qmlTargetDir() const {
     return m_qmlDir + qmlViewPath;
 }
 
-//QString FigmaQml::srcTargetDir() const {
-//    return m_qmlDir + sourceViewPath;
-//}
 
 void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
 
@@ -936,7 +933,6 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
     // erase 1st
     QDir dir(qmlTargetDir());
     const auto entries = dir.entryList();
-    //dir.removeRecursively(); // tempdir should be always empty at begging
     if(!ensureDirExists(qmlTargetDir()))
        return false;
 

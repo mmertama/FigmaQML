@@ -3,3 +3,7 @@
  * Any component Figma code is not shown
  * Rewrite parser, add new features / fixes is a pain (AST)
  * Code cleaning (multithreaded (always NO_CONCURRENT) flag may need to be cleaned off as I just cannot maintain all flag combos)
+ * MCU generation logging should be async
+ * Tons of warnings that means either file exits, it conflicst or futile work is done
+ * Why it is so slow, how to speed up?
+

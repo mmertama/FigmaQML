@@ -1,7 +1,7 @@
 import QtQuick
 import FigmaQmlInterface
 Rectangle {
-    FigmaQmlInterface{
+    FigmaQmlUi{
         anchors.fill: parent
     }
 }

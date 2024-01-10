@@ -7,8 +7,8 @@ find_package(Qul)
 qul_add_target(${PROJECT_NAME}
    STATIC_LIBRARY
    QML_PROJECT "${PROJECT_NAME}.qmlproject"
-   ${PROJECT_NAME}.hpp
-   ${PROJECT_NAME}.qml # is this dummy file needed to avoid a build system error?
+   FigmaQmlInterface.hpp
+   FigmaQmlUi.qml
 )
 
 if(BUG_199)
