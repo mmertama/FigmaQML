@@ -73,7 +73,10 @@ set(SOURCES
     include/utils.h
     include/functorslot.h
     include/figmaprovider.h
- #   include/qmlSingleton.h
+    include/figmaQmlSingleton.h
+    src/fontinfo.cpp
+    include/fontinfo.h
+    src/fontinfo.cpp
 )
 
 

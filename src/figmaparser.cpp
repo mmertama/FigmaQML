@@ -2071,7 +2071,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
               } else*/ {
                   out += intend + "Connections {\n";
                   out += intend2 + "target: FigmaQmlSingleton\n";
-                  out += intend2 + "function setValue(element, value) {\n";
+                  /*
+                   * The standard Qt Quick offers a new QML syntax to define signal handlers as a function within a Connections type. Qt Quick Ultralite does not support this feature yet, and it does not warn if you use it.
+                   * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
+                   */
+                  out += intend2 + "onSetValue: {\n";
+                  //out += intend2 + "function onSetValue(element, value) {\n";
+                  out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
                   out += intend3 + "switch(element) {\n";
 
                   for(const auto& alias : m_aliases) {

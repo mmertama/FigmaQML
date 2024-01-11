@@ -14,6 +14,7 @@
 class FigmaFileDocument;
 class FigmaDataDocument;
 class FontCache;
+class FontInfo;
 
 
 class FigmaQml : public QObject, public FigmaParserData {
@@ -98,6 +99,8 @@ public:
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
     Q_INVOKABLE void executeQul(const QVariantMap& parameters);
+    Q_INVOKABLE bool hasFontPathInfo() const;
+    Q_INVOKABLE void findFontPath(const QString& fontFamilyName) const;
 #ifdef USE_NATIVE_FONT_DIALOG
     // sigh font native dialog wont work on WASM and QML dialog is buggy
     Q_INVOKABLE void showFontDialog(const QString& currentFont);
@@ -142,6 +145,8 @@ signals:
     void fontsChanged();
     void fontFolderChanged();
     void fontLoaded(const QFont& font);
+    void fontPathFound(const QString& fontPath);
+    void fontPathError(const QString& error);
 #ifdef USE_NATIVE_FONT_DIALOG
     void fontAdded(const QString& fontFamilyName);
 #endif
@@ -189,6 +194,7 @@ private:
     State m_state = State::Constructing;
     std::function<void (bool)> mRestore = nullptr;
     QHash<QString, QSet<QString>> m_imageContexts;
+    FontInfo* m_fontInfo;
 };
 
 

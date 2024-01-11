@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import FigmaQml
 import FigmaGet
 import QtQuick.Dialogs
-import FigmaQmlInterface 1.0
+//import FigmaQmlInterface
 
 
 ApplicationWindow {
@@ -627,7 +627,7 @@ ApplicationWindow {
                     }
 
                     try {
-                        comp = Qt.createComponent(figmaQml.element);
+                        comp = Qt.createComponent(figmaQml.element, this);
                         if(comp) {
                             const ctor = function() {
                                 if (comp.status === Component.Ready) {
@@ -1168,7 +1168,12 @@ ApplicationWindow {
 
     Connections {
         target: FigmaQmlSingleton
-        function onSetValue(element, value) {
+        /*
+        * The standard Qt Quick offers a new QML syntax to define signal handlers as a function within a Connections type. Qt Quick Ultralite does not support this feature yet, and it does not warn if you use it.
+        * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
+        */
+        //function onSetValue(element, value) {
+        onSetValue: {
             console.log("setValue:", element, value);
         }
     }

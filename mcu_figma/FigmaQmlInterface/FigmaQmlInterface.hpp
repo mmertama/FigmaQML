@@ -3,6 +3,8 @@
 #include <qul/singleton.h>
 #include <qul/signal.h>
 
+#define BUG_199 // There is some issue (bug?) in Qt for MCU and cmake definitions are not always working!
+
 /// https://bugreports.qt.io/browse/QTMCU-199, until fixed
 #ifdef BUG_199
 #include "qul/private/unicodestring.h"

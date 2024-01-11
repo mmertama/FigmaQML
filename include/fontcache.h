@@ -43,4 +43,5 @@ private:
      mutable QMutex m_mutex;
 };
 
+
 #endif // FONTCACHE_H

@@ -8,6 +8,7 @@
 #define STRINGIFY0(x) #x
 #define STRINGIFY(x) STRINGIFY0(x)
 
+
 template <typename Last>
 QString toStr(const Last& last) {
     QString str;
@@ -38,7 +39,6 @@ public:
 private:
     Deldelegate m_d;
 };
-
 
 #ifndef QT5
 inline QByteArray& operator+=(QByteArray& ba, const QString& qstr) {

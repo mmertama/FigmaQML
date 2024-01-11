@@ -2,6 +2,7 @@
 #include "figmaparser.h"
 #include "figmaqml.h"
 #include "fontcache.h"
+#include "fontinfo.h"
 #include "utils.h"
 #include <QVersionNumber>
 #include <QTimer>
@@ -209,7 +210,8 @@ QByteArray FigmaQml::sourceCode() const {
 }
 
 FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject *parent) : QObject(parent),
-    m_qmlDir(qmlDir), mProvider(provider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder) {
+    m_qmlDir(qmlDir), mProvider(provider), m_imports(defaultImports()), m_fontCache(std::make_unique<FontCache>()), m_fontFolder(fontFolder),
+    m_fontInfo{ new FontInfo{this} } {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
         Q_ASSERT(m_uiDoc);
@@ -231,6 +233,11 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
         }
     });
 
+
+#ifdef Q_OS_LINUX
+    QObject::connect(m_fontInfo, &FontInfo::fontPath, this, &FigmaQml::fontPathFound);
+    QObject::connect(m_fontInfo, &FontInfo::pathError, this, &FigmaQml::fontPathError);
+#endif
     const auto fontFolderChanged = [this]() {
         const QDir fontFolder(m_fontFolder);
         if(!fontFolder.exists())
@@ -1040,3 +1047,17 @@ bool FigmaQml::saveCurrentQML(const QVariantMap& parameters, const QString& fold
     return true;
 #endif
 }
+
+bool FigmaQml::hasFontPathInfo() const {
+#ifdef Q_OS_LINUX
+    return true;
+#else
+    return false;
+#endif
+}
+
+void FigmaQml::findFontPath(const QString& fontFamilyName) const {
+    const QFont font(fontFamilyName);
+    m_fontInfo->getFontFilePath(font);
+}
+
