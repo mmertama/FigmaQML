@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Window
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 
 Popup {
@@ -25,6 +26,27 @@ Popup {
         switcher = true
         main.fonts = Object.keys(main.model)
         switcher = false
+    }
+
+    property string _currentfontName
+    Connections {
+        target: figmaQml
+        function onFontPathFound(fontPath) {
+            fontPathInfo.informativeText = _currentfontName + "\nis at:\n" + fontPath;
+            fontPathInfo.open();
+        }
+        function onFontPathError(error) {
+            fontPathInfo.informativeText = _currentfontName + "\nquery error:\n" + error;
+            fontPathInfo.open();
+        }
+    }
+
+    MessageDialog {
+        id: fontPathInfo
+        text: "FontPath info"
+        informativeText: "Do you want to save your changes?"
+        buttons: MessageDialog.Ok
+        onAccepted: document.save()
     }
 
     contentItem: ColumnLayout {
@@ -69,6 +91,14 @@ Popup {
                     Layout.preferredHeight: 18
                     Layout.preferredWidth:  list.width / 2 - 30
                     clip: true
+                }
+                Button {
+                    text: "Find path"
+                    visible: figmaQml.hasFontPathInfo();
+                    onClicked: {
+                        _currentfontName =  main.model[modelData];
+                        figmaQml.findFontPath(main.model[modelData]);
+                    }
                 }
                 Rectangle {
                     color: "lightgrey"

@@ -16,6 +16,7 @@
 #include <QTextStream>
 #include <QRegularExpression>
 #include <QFont>
+#include "figmaQmlSingleton.h"
 
 
 #ifndef NO_SSL
@@ -495,6 +496,8 @@ int main(int argc, char *argv[]) {
 
 
     QQmlApplicationEngine engine;
+    FigmaQmlSingleton figmaQmlSingleton;
+    engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaQmlSingleton); // emulates Qt for MCU kind singletons signals
 
      if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {

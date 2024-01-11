@@ -6,4 +6,6 @@
  * MCU generation logging should be async
  * Tons of warnings that means either file exits, it conflicst or futile work is done
  * Why it is so slow, how to speed up?
+ * Qt for MCU font support (see https://doc.qt.io/QtForMCUs-2.5/qtul-fonts.html#fontmaps)
+
 
