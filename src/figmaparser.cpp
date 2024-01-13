@@ -23,6 +23,8 @@
 
 const auto QML_TAG = "qml?";
 
+const auto ON_MOUSE_CLICK = ".onMouseClick";
+
 static QString last_parse_error;
 
 #define QUL_LOADER_WORKAROUND
@@ -2077,7 +2079,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                    */
                   out += intend2 + "onSetValue: {\n";
                   //out += intend2 + "function onSetValue(element, value) {\n";
-                  out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
+                  //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
                   out += intend3 + "switch(element) {\n";
 
                   for(const auto& alias : m_aliases) {
@@ -2086,8 +2088,12 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                       const auto end = obj_name.lastIndexOf('.');
                       const auto name = obj_name.mid(begin + 1, end - begin - 1);
                       const auto var = obj_name.mid(end);
-                      const auto intend4 = tabs(intendents + 3);
-                      out += intend4 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
+                      if(var != ON_MOUSE_CLICK) {
+                        const auto intend4 = tabs(intendents + 3);
+                         out += intend4 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
+                      } else {
+                          qDebug() << "TODO " << ON_MOUSE_CLICK;
+                      }
                   }
 
                   out +=  intend3 + "}\n";
