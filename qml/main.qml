@@ -70,6 +70,8 @@ ApplicationWindow {
         }
         function onUpdateCompleted(isUpdated) {
             updater.updating = false;
+            if(isUpdated)
+                updater.stop(); // stop updating as its slow and annoyingly interferces app using, fix that if online-mode is a good idea
         }
     }
 
@@ -574,7 +576,7 @@ ApplicationWindow {
             id: figmaSource
             anchors.fill: parent
          //   visible: jsonButton.checked
-            text: jsonChooser.text == documentName ? figmaQml.prettyData(figmaGet.data) : figmaQml.prettyData(figmaQml.componentData(jsonChooser.text));
+            text: jsonChooser.text == documentName ? figmaQml.prettyData(figmaGet.data) : figmaQml.prettyData(figmaQml.componentObject(jsonChooser.text));
             wrapMode: TextEdit.WordWrap
         }
         Item {
@@ -604,6 +606,8 @@ ApplicationWindow {
 
                 onFigmaviewChanged: {
                     centrify()
+                    console.assert(figmaview);
+                    console.assert(zoomSlider);
                     figmaview.scale = Qt.binding(()=>zoomSlider.value);
                 }
 
@@ -701,6 +705,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 drag.target: container.figmaview
                 drag.axis: Drag.XAndYAxis
+                propagateComposedEvents: true
             }
         }
     }

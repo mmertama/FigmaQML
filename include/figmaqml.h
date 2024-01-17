@@ -90,7 +90,7 @@ public:
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;
-    Q_INVOKABLE QString componentData(const QString& name) const;
+    Q_INVOKABLE QString componentObject(const QString& name) const;
     Q_INVOKABLE QVariantMap defaultImports() const;
     Q_INVOKABLE QByteArray prettyData(const QByteArray& data) const;
     Q_INVOKABLE void setFontMapping(const QString& key, const QString& value);
@@ -170,8 +170,8 @@ private:
     void suspend();
     bool writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header);
     bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
-    QString qmlTargetDir() const;
-    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header) const;
+    QString qmlTargetDir() const override;
+    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {}) const;
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;
