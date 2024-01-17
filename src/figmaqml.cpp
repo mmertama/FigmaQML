@@ -214,7 +214,10 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
     m_fontInfo{ new FontInfo{this} } {
     qmlRegisterUncreatableType<FigmaQml>("FigmaQml", 1, 0, "FigmaQml", "");
     QObject::connect(this, &FigmaQml::currentElementChanged, this, [this]() {
-        Q_ASSERT(m_uiDoc);
+        if(!m_uiDoc) {
+            emit error("Invalid element!");
+            return;
+        }
         Q_ASSERT(m_sourceDoc);
         m_sourceDoc->getCurrent()->setCurrent(m_uiDoc->getCurrent()->currentIndex());
     });
@@ -361,11 +364,15 @@ QStringList FigmaQml::components() const {
         const auto key = m_sourceDoc->current().name(currentElement);
         const auto component_list = m_sourceDoc->components(key);
         for(const auto& c : component_list) {
-            const auto name = qmlTargetDir() + c + ".qml";
-            //qDebug() << "Curr" << currentElement << name;
-            Q_ASSERT(QFileInfo::exists(name));
+            const auto name_s = qmlTargetDir() + '/' + c + ".qml";
+#if 0            // look for this solution, have element subcomponents in their own folders...
+            const auto name_l = qmlTargetDir() + '/' + c + ".qml";
+            Q_ASSERT(QFileInfo::exists(name_l) || QFileInfo::exists(name_s));
+#else
+            Q_ASSERT(QFileInfo::exists(name_s));
+#endif
             Q_ASSERT(!m_sourceDoc->component(c).isEmpty());
-            Q_ASSERT(!m_sourceDoc->componentData(c).isEmpty());
+            Q_ASSERT(!m_sourceDoc->componentObject(c).isEmpty());
         }
         return component_list;
     } else {
@@ -377,8 +384,8 @@ QByteArray FigmaQml::componentSourceCode(const QString &name) const {
     return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->component(name) : QByteArray();
 }
 
-QString FigmaQml::componentData(const QString &name) const {
-    return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->componentData(name) : QString();
+QString FigmaQml::componentObject(const QString &name) const {
+    return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->componentObject(name) : QString();
 }
 
 void FigmaQml::cancel() {
@@ -782,13 +789,20 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
     return value;
 }
 
-bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header) const {
+bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder) const {
+    Q_ASSERT(subFolder.isEmpty()); // this is for future thinking, it is very bad that components get overwritten!
     Q_ASSERT(component_name.endsWith(FIGMA_SUFFIX));
     Q_ASSERT(!element_data.isEmpty());
     Q_ASSERT(!header.isEmpty());
-    QSaveFile componentFile(qmlTargetDir() + component_name + ".qml");
+    const QString filename = qmlTargetDir() + (!subFolder.isEmpty() ? subFolder + '/' : QString{}) + component_name + ".qml";
+    if(QFile::exists(filename)) {
+        //return true
+        //TODO qDebug() << "already there!" << filename;
+    }
+    QDir().mkpath((QFileInfo(filename).path()));
+    QSaveFile componentFile(filename);
     if(!componentFile.open(QIODevice::WriteOnly)) {
-        emit error(toStr("Cannot write", componentFile.fileName(), componentFile.errorString()));
+        emit error(toStr("Cannot write", filename, componentFile.errorString()));
         return false;
     }
     componentFile.write(header + element_data);
@@ -798,8 +812,9 @@ bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& ele
 
 
 bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header) {
-
+    qDebug() << "write componets!";
     for(const auto& c : components) {
+
       const auto component_opt = FigmaParser::component(c->object(), m_flags, *this, components);
       if(!m_ok || m_doCancel || !component_opt)
           return false;
@@ -807,10 +822,6 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
       if(component.data().isEmpty()) {
           emit error(toStr("Invalid component", component.name()));
           return false;
-      }
-
-      if(!component.aliases().isEmpty()) {
-          qDebug() << "component has aliases!";
       }
 
       const auto images = component.imageContexts();
@@ -835,11 +846,14 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
       for(const auto& [sub_name, sub_data] : subs.asKeyValueRange()) {
           const auto data = header + std::get<QByteArray>(sub_data);
           doc.addComponent(sub_name, std::get<QJsonObject>(sub_data), data);
-          if(!writeQmlFile(sub_name, data, header)) {
-              emit error(toStr("Cannot write sub component", sub_name, " for ", component.name()));
-              return false;
-          }
+          //if(std::get<QString>(sub_data).isEmpty()) {
+              if(!writeQmlFile(sub_name, data, header/*, c->name()*/)) {
+                  emit error(toStr("Cannot write sub component", sub_name, " for ", component.name()));
+                  return false;
+              }
+          //}
       }
+
 
       if(!writeQmlFile(c->name(), component.data(), header)) {
           emit error(toStr("Cannot write component", component.name()));
@@ -865,6 +879,9 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
         auto canvas = doc.addCanvas(c.name());
 
         const auto elements = c.elements();
+
+        qDebug() << "write elements";
+
         for(const auto& f : elements) {
             if(m_state == State::Suspend)
                 return false;
@@ -882,10 +899,6 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
             if(!element_opt)
                 return false;
             const auto& element = element_opt.value();
-
-            if(!element.aliases().isEmpty()) {
-                qDebug() << "element has aliases!";
-            }
 
             const auto images = element.imageContexts();
             for(const auto& im : images) {
@@ -917,8 +930,10 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
                 componentNames.append(sub_name);
                 const auto data = header + std::get<QByteArray>(sub_data);
                 doc.addComponent(sub_name, std::get<QJsonObject>(sub_data), data);
-                if(!writeQmlFile(sub_name, data, header))
-                    return false;
+                //if(std::get<QString>(sub_data).isEmpty()) {
+                    if(!writeQmlFile(sub_name, data, header/*, element.name()*/))
+                        return false;
+                //}
             }
             doc.setComponents(element.name(), std::move(componentNames));
         }
@@ -1060,4 +1075,3 @@ void FigmaQml::findFontPath(const QString& fontFamilyName) const {
     const QFont font(fontFamilyName);
     m_fontInfo->getFontFilePath(font);
 }
-

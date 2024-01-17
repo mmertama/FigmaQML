@@ -36,7 +36,7 @@ constexpr auto FIGMA_SUFFIX{"_figma"};
 class FigmaParser {
 private:
     using ImageContexts =  QSet<QString>;
-    using ComponentStreams = QHash<QByteArray, std::tuple<QJsonObject, QByteArray>>;
+    using ComponentStreams = QHash<QByteArray, std::tuple<QJsonObject, QByteArray, QString>>;
 public:
     /**
      * @brief The Canvas class is a Figma Page, represents all elements in there
@@ -165,8 +165,8 @@ private:
     static QByteArray toColor(double r, double g, double b, double a = 1.0);
     QByteArray makeId(const QJsonObject& obj);
     QByteArray makeId(const QString& prefix,  const QJsonObject& obj);
-    QByteArray makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents);
-    QByteArray makeItem(const QString& type, const QJsonObject& obj, int intendents);
+    EByteArray makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents);
+    EByteArray makeItem(const QString& type, const QJsonObject& obj, int intendents);
 
     QPointF position(const QJsonObject& obj) const;
 
@@ -200,13 +200,13 @@ private:
       * to if-else hell and wrote open to keep normal/inside/outside and image/fill
       * cases managed
     */
-     QByteArray makeVectorNormalFill(const QJsonObject& obj, int intendents);
+     EByteArray makeVectorNormalFill(const QJsonObject& obj, int intendents);
      EByteArray makeVectorNormalFill(const QString& image, const QJsonObject& obj, int intendents);
      EByteArray makeVectorNormal(const QJsonObject& obj, int intendents);
-     QByteArray makeVectorInsideFill(const QJsonObject& obj, int intendents);
+     EByteArray makeVectorInsideFill(const QJsonObject& obj, int intendents);
      EByteArray makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents);
      EByteArray makeVectorInside(const QJsonObject& obj, int intendentsBase);
-     QByteArray makeVectorOutsideFill(const QJsonObject& obj, int intendents);
+     EByteArray makeVectorOutsideFill(const QJsonObject& obj, int intendents);
      EByteArray makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents);
      EByteArray makeVectorOutside(const QJsonObject& obj, int intendentsBase);
 
@@ -260,6 +260,9 @@ private:
      EByteArray makeRendered(const QJsonObject& obj, int intendents);
      QByteArray makeGradientToFlat(const QJsonObject& obj, int intendents);
      QByteArray addComponentStream(const QJsonObject& obj,  const QByteArray& child_item);
+     QByteArray makePropertyChangeHandler(const QJsonObject& obj, int intendents);
+     EByteArray makeComponentPropertyChangeHandler(const QJsonObject& obj, int intendents);
+     QString makeFileName(const QJsonObject& obj, const QString& prefix) const;
      ~FigmaParser();
 private:
      struct Parent{
@@ -298,7 +301,7 @@ private:
     ImageContexts m_imageContext;
     QVector<Alias> m_aliases;
     int m_componentLevel = 0;
-    ComponentStreams m_componetStreams;
+    ComponentStreams m_componentStreams;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);
     int m_counter = 0;

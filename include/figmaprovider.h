@@ -32,6 +32,7 @@ public:
     virtual QByteArray imageData(const QString&, bool isRendering) = 0;
     virtual QByteArray nodeData(const QString&) = 0;
     virtual QString fontInfo(const QString&) = 0;
+    virtual QString qmlTargetDir() const = 0;
 };
 
 

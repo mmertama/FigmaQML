@@ -22,8 +22,9 @@
 #endif
 
 const auto QML_TAG = "qml?";
-
-const auto ON_MOUSE_CLICK = ".onMouseClick";
+const auto COMP_PARAM = "comp";
+const auto ON_CLICK = "onClick";
+const auto ID_PREFIX = "figma_";
 
 static QString last_parse_error;
 
@@ -36,6 +37,46 @@ using EByteArray = FigmaParser::EByteArray;
 static inline bool eq(double a, double b) {return std::fabs(a - b) < std::numeric_limits<double>::epsilon();}
 
 #define APPENDERR(val, fn) {const auto ob_ = fn; if(!ob_) return std::nullopt; val += ob_.value();}
+
+
+struct Properties {
+    QString obj_name;
+    QString name;
+    QStringList var;
+    bool is_comp;
+};
+
+static std::optional<Properties> getProperties(const QJsonObject& obj) {
+    const auto nit = obj.find("name");
+    if(nit == obj.end())
+        return std::nullopt;
+    const auto obj_name = nit->toString();
+    const auto param_begin = obj_name.indexOf('?');
+    const auto param_end = obj_name.lastIndexOf('?');
+    const auto end = obj_name.indexOf('.');
+    if(param_begin < 0 || end < 0)
+        return std::nullopt;
+    QStringList params;
+    if(param_begin != param_end) {
+        params = obj_name.mid(param_begin + 1, param_end - param_begin - 1).split('?');
+    }
+    const auto name = obj_name.mid(param_end + 1, end - param_end - 1);  // signal identifier
+    const auto var = obj_name.mid(end + 1);                      // property type
+    return Properties{obj_name, name, var.split('.'), params.contains(COMP_PARAM)};
+}
+
+
+QString toCamel(const QString& str) {
+    return str;
+}
+
+template<typename ...ARG>
+QString toCamel(const QString& str, ARG... strs) {
+    auto _str = str;
+    _str[0] = str[0].toCaseFolded();
+    return _str + toCamel(strs...);
+}
+
 
 QByteArray FigmaParser::fontWeight(double v) {
    const auto scaled = ((v - 100) / 900) * 90; // figma scale is 100-900, where Qt is enums
@@ -57,6 +98,7 @@ QByteArray FigmaParser::fontWeight(double v) {
    }
    return weights.back().first;
 }
+
 
 std::optional<FigmaParser::ItemType> FigmaParser::type(const QJsonObject& obj) {
    const QHash<QString, ItemType> types { //this to make sure we have a case for all types
@@ -310,7 +352,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 std::move(ids),
                 std::move(image_contexts),
                 std::move(aliases),
-                m_componetStreams // can this be moved?
+                m_componentStreams
         };
     }
 
@@ -369,10 +411,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      QByteArray FigmaParser::makeId(const QJsonObject& obj)  {
         QString cid = obj["id"].toString();
         static const QRegularExpression re(R"([^a-zA-Z0-9])");
-        const auto qml_id = "figma_" + cid.replace(re, "_").toLower().toLatin1();
-        if(qml_id == "figma_711_1213") {
-            qDebug() << "what is here?";
-        }
+        const auto qml_id = ID_PREFIX + cid.replace(re, "_").toLower().toLatin1();
+        //if(qml_id == "figma_711_1213") {
+        //    qDebug() << "what is here?";
+        //}
         /*
         TODO: Really not working - why there are unable to find_id errors
         if(m_parent.parent->parent)  // presumably this prevents toplevel alias?*/
@@ -380,40 +422,135 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return qml_id;
     }
 
+     /*
+      * The standard Qt Quick offers a new QML syntax to define signal handlers as a function within a Connections type. Qt Quick Ultralite does not support this feature yet, and it does not warn if you use it.
+      * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
+      */
+
+     QByteArray FigmaParser::makePropertyChangeHandler(const QJsonObject& obj, int intendents) {
+         QByteArray out;
+         if(!m_aliases.isEmpty()) {
+             const auto intend = tabs(intendents);
+             const auto intend2 = tabs(intendents + 1);
+             const auto intend3 = tabs(intendents + 2);
+             out += intend + "Connections {\n";
+             out += intend2 + "target: FigmaQmlSingleton\n";
+
+             out += intend2 + "onSetValue: {\n";
+             //out += intend2 + "function onSetValue(element, value) {\n";
+             //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
+             out += intend3 + "switch(element) {\n";
+
+             for(const auto& alias : m_aliases) {
+                 const auto properties = getProperties(alias.obj);
+                 if(properties) {
+                     const auto& [obj_name, name, vars, is_comp] = properties.value();
+                     for(const auto& var : vars) {
+                         if(var != ON_CLICK && !is_comp) {
+                             const auto intend4 = tabs(intendents + 3);
+                             out += intend4 + "case '" + name + "': " + alias.id + '.' + var + " = value; break;\n";
+                         }
+                     }
+                 }
+
+             }
+             out +=  intend3 + "}\n";
+             out +=  intend2 + "}\n";
+             out += intend + "}\n";
+         }
+         return out;
+     }
+
+
+     EByteArray FigmaParser::makeComponentPropertyChangeHandler(const QJsonObject& obj, int intendents) {
+         QByteArray out;
+
+        const auto properties = getProperties(obj);
+        if(properties) {
+            const auto intend = tabs(intendents);
+            const auto intend2 = tabs(intendents + 1);
+            const auto intend3 = tabs(intendents + 2);
+
+
+            out += intend + "Connections {\n";
+            out += intend2 + "target: FigmaQmlSingleton\n";
+
+            out += intend2 + "onSetValue: {\n";
+            //out += intend2 + "function onSetValue(element, value) {\n";
+            //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
+            out += intend3 + "switch(element) {\n";
+
+            const auto id_string = makeId(obj);
+            const auto& [obj_name, name, vars, is_comp] = properties.value();
+            for(const auto& var : vars) {
+                if(var != ON_CLICK) {
+                    if(!is_comp) {
+                        ERR("Expected comp parameter in name (Figma name as 'qml?comp?')");
+                    }
+                    const auto intend4 = tabs(intendents + 3);
+                    out += intend4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
+                    }
+                }
+
+            out +=  intend3 + "}\n";
+            out +=  intend2 + "}\n";
+            out += intend + "}\n";
+        }
+         return out;
+     }
+
 
     QByteArray FigmaParser::makeId(const QString& prefix, const QJsonObject& obj)  {
         QString cid = obj["id"].toString();
         static const QRegularExpression re(R"([^a-zA-Z0-9])");
-        const auto qml_id = prefix.toLatin1() + "figma_" + cid.replace(re, "_").toLower().toLatin1();
+        const auto qml_id = prefix.toLatin1() + ID_PREFIX + cid.replace(re, "_").toLower().toLatin1();
         m_parent.ids.insert(QString(qml_id));
         return qml_id;
     }
 
-     QByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents) {
          QByteArray out;
          const auto intendent = tabs(intendents - 1);
          const auto intendent1 = tabs(intendents);
          out += intendent + type + " {\n";
          Q_ASSERT(obj.contains("type") && obj.contains("id"));
 
-         out += intendent + "// component (Instance) level: " + QString::number(m_componentLevel)  + " \n";
-         if(m_componentLevel == 0) {
+         out += intendent + "// component (Instance) level: " + QString::number(m_componentLevel)  + " " + obj["name"].toString()  + " \n";
+
+         //const auto is_component_declaration = m_componentLevel != 0;
+
+       //  if(!is_component_declaration) {
             const auto id_string = makeId(obj);
             out += intendent1 + "id: " + id_string + "\n";
             if(obj["name"].toString().startsWith(QML_TAG))
                 m_aliases.append({id_string, obj});
-         }
+        // } else {
+        //      out += intendent1 + "id: athis\n";
+        // }
 
          out += intendent1 + "// # \"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
          if(!isQul()) // what was the role of objectName? To document, however not applicable for Qt for MCU
             out += intendent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
+
+         if(makeFileName(obj, "component").startsWith("Component__F")) {
+             qDebug() << "here is clear" <<  makeFileName(obj, "component") << bool(m_flags & GenerateAccess) << bool(m_flags & ParseComponent) << bool( m_componentLevel != 0);
+
+             //if(!(m_flags & ParseComponent)) {
+             //    qDebug() << "should be?";
+             //}
+         }
+
+         if((m_flags & GenerateAccess) && /*(m_flags & ParseComponent)*/ m_componentLevel != 0) { // when m_componentLevel is zero this is component to-file write
+             APPENDERR(out, makeComponentPropertyChangeHandler(obj, intendents));
+         }
+
          return out;
      }
 
-    QByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int intendents) {
         QByteArray out;
         const auto intendent1 = tabs(intendents);
-        out += makeComponentInstance(type, obj, intendents);
+        APPENDERR(out, makeComponentInstance(type, obj, intendents));
         out += makeEffects(obj, intendents);
         out += makeTransforms(obj, intendents);
         if(obj.contains("visible") && !obj["visible"].toBool()) {
@@ -422,6 +559,23 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(obj.contains("opacity")) {
              out += intendent1 + "opacity: " +  QString::number(obj["opacity"].toDouble()) + "\n";
         }
+
+        const auto properties = getProperties(obj);
+        if(properties) {
+            const auto intendent2 = tabs(intendents + 1);
+            const auto& [obj_name, name, var, is_comp] = properties.value();
+            if(var.contains(ON_CLICK)) {
+                out += intendent1 + "MouseArea {\n";
+                out += intendent2 + "anchors.fill: parent\n";
+                /*out += intend2 + "x: " + mouse_area_name.first + ".x\n";
+                          out += intend2 + "y: " + mouse_area_name.first + ".y\n";
+                          out += intend2 + "width: " + mouse_area_name.first + ".width\n";
+                          out += intend2 + "height: " + mouse_area_name.first + ".height\n";*/
+                out += intendent2 + "onClicked: { FigmaQmlSingleton.requestValue( '"  +  name + "', 'mouse_click' ); }\n";
+                out += intendent1 + "}\n";
+            }
+        }
+
         return out;
     }
 
@@ -823,13 +977,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
     EByteArray FigmaParser::makePlainItem(const QJsonObject& obj, int intendents) {
-         QByteArray out;
-         out += makeItem("Rectangle", obj, intendents); //TODO: set to item
-         APPENDERR(out, makeFill(obj, intendents));
-         out += makeExtents(obj, intendents);
-         APPENDERR(out, parseChildren(obj, intendents));
-         out += tabs(intendents - 1) + "}\n";
-         return out;
+        QByteArray out;
+        APPENDERR(out, makeItem("Rectangle", obj, intendents)); //TODO: set to item
+        APPENDERR(out, makeFill(obj, intendents));
+        out += makeExtents(obj, intendents);
+        APPENDERR(out, parseChildren(obj, intendents));
+        out += tabs(intendents - 1) + "}\n";
+        return out;
     }
 
     QByteArray FigmaParser::makeSvgPath(int index, bool isFill, const QJsonObject& obj, int intendents) {
@@ -989,9 +1143,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
       * to if-else hell and wrote open to keep normal/inside/outside and image/fill
       * cases managed
     */
-     QByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int intendents) {
          QByteArray out;
-         out += makeItem("Shape", obj, intendents);
+         APPENDERR(out, makeItem("Shape", obj, intendents));
          out += makeExtents(obj, intendents);
      //    out += makeSvgPathProperty(obj, intendents);
          const auto intendent = tabs(intendents);
@@ -1010,7 +1164,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto intendent = tabs(intendents);
          const auto intendent1 = tabs(intendents + 1);
 
-         out += makeItem("Item", obj, intendents);
+         APPENDERR(out, makeItem("Item", obj, intendents));
          out += makeExtents(obj, intendents);
 
         APPENDERR(out, makeImageMaskData(image, obj, intendents));
@@ -1034,10 +1188,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return image ? makeVectorNormalFill(*image, obj, intendents) : makeVectorNormalFill(obj, intendents);
     }
 
-    QByteArray FigmaParser::makeVectorInsideFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorInsideFill(const QJsonObject& obj, int intendents) {
         QByteArray out;
         out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        out += makeItem("Item", obj, intendents);
+        APPENDERR(out, makeItem("Item", obj, intendents));
         out += makeExtents(obj, intendents);
         const auto borderSourceId = makeId("borderSource_", obj);
 
@@ -1095,7 +1249,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     EByteArray FigmaParser::makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents) {
         QByteArray out;
         out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        out += makeItem("Item", obj, intendents);
+        APPENDERR(out, makeItem("Item", obj, intendents));
         out += makeExtents(obj, intendents);
 
         const auto borderSourceId = makeId("borderSource_", obj);
@@ -1162,11 +1316,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return image ? makeVectorInsideFill(*image, obj, intendentsBase) : makeVectorInsideFill(obj, intendentsBase);
     }
 
-    QByteArray FigmaParser::makeVectorOutsideFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorOutsideFill(const QJsonObject& obj, int intendents) {
         QByteArray out;
         const auto borderWidth = obj["strokeWeight"].toDouble();
         out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        out += makeItem("Item", obj, intendents);
+        APPENDERR(out, makeItem("Item", obj, intendents));
         out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
         const auto borderSourceId = makeId( "borderSource_", obj);
@@ -1255,7 +1409,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         QByteArray out;
         const auto borderWidth = obj["strokeWeight"].toDouble();
         out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        out += makeItem("Item", obj, intendents);
+        APPENDERR(out, makeItem("Item", obj, intendents));
         out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
         const auto borderSourceId = makeId("borderSource_", obj);
@@ -1451,7 +1605,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     EByteArray FigmaParser::parseText(const QJsonObject& obj, int intendents) {
         QByteArray out;
-        out += makeItem("Text", obj, intendents);
+        APPENDERR(out, makeItem("Text", obj, intendents));
         APPENDERR(out, makeVector(obj, intendents));
         const auto intendent = tabs(intendents);
         if(!isQul()) // word wrap is not supported
@@ -1469,7 +1623,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
      EByteArray FigmaParser::parseFrame(const QJsonObject& obj, int intendents) {
-         QByteArray out = makeItem("Rectangle", obj, intendents);
+         QByteArray out;
+         APPENDERR(out, makeItem("Rectangle", obj, intendents));
          APPENDERR(out, makeVector(obj, intendents));
          const auto intendent = tabs(intendents);
          if(obj.contains("cornerRadius")) {
@@ -1546,10 +1701,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          for(const auto& key : keys) {
              const auto id = componentName(key);
            //  const auto component_name = QString(id[0]).toUpper() + id.mid(1);
-             out += intendent + QString("Component {\n");
-             out += intendent2 + QString("id: comp_%1\n").arg(id);
-             out += intendent2 + children[key];
-             out += intendent + QString("}\n");
+//             out += intendent + QString("Component {\n");
+//             out += intendent2 + QString("id: comp_%1\n").arg(id);
+//             out += intendent2 + children[key];
+//             out += intendent + QString("}\n");
 #ifdef QUL_LOADER_WORKAROUND
             out += intendent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
 #else
@@ -1582,12 +1737,26 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              return  parseInstance(obj, intendents);
         } else {
              const auto intendent = tabs(intendents);
-             QByteArray out = makeItem("Rectangle", obj, intendents);
+            QByteArray out;
+             APPENDERR(out, makeItem("Rectangle", obj, intendents));
              APPENDERR(out, makeVector(obj, intendents));
              if(obj.contains("cornerRadius")) {
                  out += intendent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
              }
              out += intendent + "clip: " + (obj["clipsContent"].toBool() ? "true" : "false") + " \n";
+
+             // this and below implements revealing a property (doReveal:type:name)
+             // 1st write such properties
+             /*const auto properties = getProperties(obj);
+             if(properties) {
+                 const auto& [qa, name, vars] = properties.value();
+                 for(const auto& var : vars) {
+                     if(name == DO_REVEAL) {
+                        const auto reveal = getReveal(var);
+                        out += intendent + "property " + reveal.first + " " + reveal.second + "\n";
+                    }
+                 }
+             }*/
 
              const auto children = parseChildrenItems(obj, intendents);
              if(!children)
@@ -1596,7 +1765,27 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 out += parseQulComponent(*children, intendents);
              else
                out += parseQtComponent(*children, intendents);
+
+             // then (note its only oneway)
+             // write that value upon change, supposedly there are many "undefined" use cases!
+             /*if(properties) {
+                 const auto& [qa, name, vars] = properties.value();
+                 const auto intendent2 = tabs(intendents + 1);
+                 for(const auto& var : vars) {
+                     if(name == DO_REVEAL) {
+                        const auto reveal = getReveal(var);
+                         out += intendent + toCamel("on", reveal.first, "Changed") + ": {\n";
+                         for(const auto& key : children->keys()) {
+                            const auto id = componentName(key);
+                            out += intendent2 + QString("loader_%1.item = %2;\n").arg(id, reveal.first);
+                        }
+                        out += intendent + "}\n";
+                     }
+                 }
+             }*/
+
              out += tabs(intendents - 1) + "}\n";
+
              return out;
          }
      }
@@ -1826,7 +2015,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto operation = obj["booleanOperation"].toString();
 
          QByteArray out;
-         out += makeItem("Item", obj, intendents);
+         APPENDERR(out, makeItem("Item", obj, intendents));
          out += makeExtents(obj, intendents);
          //const auto intendent = tabs(intendents);
          //const auto intendent1 = tabs(intendents + 1);
@@ -1882,7 +2071,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
      EByteArray FigmaParser::parseRendered(const QJsonObject& obj, int intendents) {
          QByteArray out;
-         out += makeComponentInstance("Item", obj, intendents);
+         APPENDERR(out, makeComponentInstance("Item", obj, intendents));
          const auto intendent = tabs(intendents );
          Q_ASSERT(m_parent.obj->contains("absoluteBoundingBox"));
          const auto prect = m_parent["absoluteBoundingBox"].toObject();
@@ -1937,6 +2126,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         for(const auto& cc : compChildren) {
             //first we find the corresponsing object child
             const auto cchild = cc.toObject();
+
             const auto id = cchild["id"].toString();
             //when it's keys last section  match
             const auto keyit = std::find_if(keys.begin(), keys.end(), [&id](const auto& key){return key.split(';').last() == id;});
@@ -2013,7 +2203,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto comp = (*m_components)[componentId];
 
          if(!isInstance) {
-             out += makeComponentInstance(comp->name(), obj, intendents);
+             APPENDERR(out, makeComponentInstance(comp->name(), obj, intendents));
          } else {
 
              auto instanceObject = delta(obj, comp->object(), {"children"}, {});
@@ -2028,7 +2218,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                  instanceObject.insert("strokes", "");
              }
 
-             out += makeItem(comp->name(), instanceObject, intendents);
+             APPENDERR(out, makeItem(comp->name(), instanceObject, intendents));
              APPENDERR(out, makeVector(instanceObject, intendents));
 
              APPENDERR(out, makeInstanceChildren(obj, comp->object(), intendents));
@@ -2047,62 +2237,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
           // add alias set signal
 
-          if(!m_parent.parent->parent && (m_flags & GenerateAccess) && !m_aliases.isEmpty()) {
-              const auto intend = tabs(intendents);
-              const auto intend2 = tabs(intendents + 1);
-              const auto intend3 = tabs(intendents + 2);
-              /*if(m_flags & QulMode) {
-
-                  out += intend + "FigmaQmlSingleton.onSetValue: {\n";
-
-                  out += intend3 + "console.log(element, value);\n";
-
-                  out += intend2 + "switch(element) {\n";
-
-                  for(const auto& alias : m_aliases) {
-                      const auto obj_name = alias.obj["name"].toString();
-                      const auto begin = obj_name.indexOf('?');
-                      const auto end = obj_name.lastIndexOf('.');
-                      const auto name = obj_name.mid(begin + 1, end - begin - 1);
-                      const auto var = obj_name.mid(end);
-                      out += intend3 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
-                  }
-                  out +=  intend2 + "}\n";
-                  out += intend + "}\n";
-
-              } else*/ {
-                  out += intend + "Connections {\n";
-                  out += intend2 + "target: FigmaQmlSingleton\n";
-                  /*
-                   * The standard Qt Quick offers a new QML syntax to define signal handlers as a function within a Connections type. Qt Quick Ultralite does not support this feature yet, and it does not warn if you use it.
-                   * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
-                   */
-                  out += intend2 + "onSetValue: {\n";
-                  //out += intend2 + "function onSetValue(element, value) {\n";
-                  //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
-                  out += intend3 + "switch(element) {\n";
-
-                  for(const auto& alias : m_aliases) {
-                      const auto obj_name = alias.obj["name"].toString();
-                      const auto begin = obj_name.indexOf('?');
-                      const auto end = obj_name.lastIndexOf('.');
-                      const auto name = obj_name.mid(begin + 1, end - begin - 1);
-                      const auto var = obj_name.mid(end);
-                      if(var != ON_MOUSE_CLICK) {
-                        const auto intend4 = tabs(intendents + 3);
-                         out += intend4 + "case '" + name + "': " + alias.id + var + " = value; break;\n";
-                      } else {
-                          qDebug() << "TODO " << ON_MOUSE_CLICK;
-                      }
-                  }
-
-                  out +=  intend3 + "}\n";
-                  out +=  intend2 + "}\n";
-                  out += intend + "}\n";
-              }
-          }
+          if(!m_parent.parent->parent && (m_flags & GenerateAccess)) {
+            out += makePropertyChangeHandler(obj, intendents);
+            }
           return out;
-      }
+    }
 
     EByteArray FigmaParser::makeChildMask(const QJsonObject& child, int intendents) {
           QByteArray out;
@@ -2171,15 +2310,27 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return last_parse_error;
     }
 
+    QString FigmaParser::makeFileName(const QJsonObject& obj, const QString& prefix) const {
+        const auto name = prefix + '_' + obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_counter) + FIGMA_SUFFIX;
+        const auto filename = makeFileName(name).toLatin1();
+        return filename;
+    }
+
 
     QByteArray FigmaParser::addComponentStream(const QJsonObject& obj,  const QByteArray& child_item) {
         QByteArray filename;
+        //const auto is_component_declaration = m_componentLevel != 0;
         for(;;) {
-            const auto name = obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_counter) + FIGMA_SUFFIX;
-            Q_ASSERT(!name.isEmpty());
-            filename = makeFileName("component_" + name).toLatin1();
-            const auto it = m_componetStreams.find(filename);
-            if(it == m_componetStreams.end())
+            filename = makeFileName(obj, "component").toLatin1();
+            /*if(is_component_declaration) {
+                const auto fname = m_data.qmlTargetDir() + filename + ".qml";
+                if(QFile::exists(fname)) {
+                    m_componentStreams.insert(filename, std::make_tuple(obj, child_item, fname)); // what to do for std::move ?
+                    return filename + ".qml"; // there can be such a component
+                }
+            }*/
+            const auto it = m_componentStreams.find(filename);
+            if(it == m_componentStreams.end())
                 break;  // not found
             const auto& current_data = std::get<QByteArray>(*it);
             const auto& current_obj = std::get<QJsonObject>(*it);
@@ -2188,6 +2339,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             }
             ++m_counter;
         };
-        m_componetStreams.insert(filename, std::make_tuple(obj, child_item)); // what to do for std::move ?
+        m_componentStreams.insert(filename, std::make_tuple(obj, child_item, QString{})); // what to do for std::move ?
         return filename + ".qml";
     }

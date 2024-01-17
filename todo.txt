@@ -9,6 +9,8 @@
  * Qt for MCU font support (see https://doc.qt.io/QtForMCUs-2.5/qtul-fonts.html#fontmaps)
  * Mouse actions
  * Z-actions
+ * Find from document could be a savior
+ * Connect is annoying. Better would be disconnect after a load
 
 
 

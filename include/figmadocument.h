@@ -245,7 +245,7 @@ public:
         Q_ASSERT(!name.isEmpty());
         Q_ASSERT(!data.isEmpty());
         if(m_components.contains(name)) {
-            qDebug() << "warn:" << name << "already added";
+          //TODO  qDebug() << "warn:" << name << "already added" << ((qChecksum(data) == qChecksum(m_components[name].first)) ? "same" : "not");
         }
         m_components.insert(name, {data, QJsonDocument(obj).toJson()});
     }
@@ -255,7 +255,7 @@ public:
         return m_components[componentName].first;
     }
 
-    QByteArray componentData(const QString& componentName) const {
+    QByteArray componentObject(const QString& componentName) const {
         Q_ASSERT(m_components.contains(componentName));
         return m_components[componentName].second;
     }
