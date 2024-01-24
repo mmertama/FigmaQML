@@ -436,7 +436,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              out += intend + "Connections {\n";
              out += intend2 + "target: FigmaQmlSingleton\n";
 
-             out += intend2 + "onSetValue: {\n";
+             out += intend2 + "onValueChanged: {\n";
              //out += intend2 + "function onSetValue(element, value) {\n";
              //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
              out += intend3 + "switch(element) {\n";
@@ -475,9 +475,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             out += intend + "Connections {\n";
             out += intend2 + "target: FigmaQmlSingleton\n";
 
-            out += intend2 + "onSetValue: {\n";
+            out += intend2 + "onValueChanged: {\n";
             //out += intend2 + "function onSetValue(element, value) {\n";
-            //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
+            //out += intend3 + "console.log('FigmaQmlSingleton-valueChanged:', element, value);\n";
             out += intend3 + "switch(element) {\n";
 
             const auto id_string = makeId(obj);
@@ -571,7 +571,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                           out += intend2 + "y: " + mouse_area_name.first + ".y\n";
                           out += intend2 + "width: " + mouse_area_name.first + ".width\n";
                           out += intend2 + "height: " + mouse_area_name.first + ".height\n";*/
-                out += intendent2 + "onClicked: { FigmaQmlSingleton.requestValue( '"  +  name + "', 'mouse_click' ); }\n";
+                out += intendent2 + "onClicked: { FigmaQmlSingleton.applyValue( '"  +  name + "', 'mouse_click' ); }\n";
                 out += intendent1 + "}\n";
             }
         }

@@ -1133,7 +1133,7 @@ ApplicationWindow {
     Dialog {
         id: send_set_value
         modal: Qt.NonModal
-        title: "Send SetValue"
+        title: "Request applyValue"
         contentItem: Rectangle {
             color: "white"
             implicitWidth: 400
@@ -1162,7 +1162,7 @@ ApplicationWindow {
                     DialogButtonBox.buttonRole: DialogButtonBox.DestructiveRole
                 }
                 onAccepted: {
-                    FigmaQmlSingleton.requestValue(send_element.text, send_value.text)
+                    FigmaQmlSingleton.applyValue(send_element.text, send_value.text)
                     send_set_value.done(Dialog.Accepted)
                 }
                 onRejected: send_set_value.done(Dialog.Rejected)
@@ -1178,8 +1178,8 @@ ApplicationWindow {
         * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
         */
         //function onSetValue(element, value) {
-        onSetValue: {
-            console.log("setValue:", element, value);
+        onValueChanged: {
+            console.log("onValueChanged:", element, value);
         }
     }
   //  FigmaQmlSingleton.fig: 12;
