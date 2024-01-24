@@ -1,6 +1,7 @@
 import QmlProject 1.3
 
 Project {
+    qtForMCUs: true
     MCU.Module {
         uri: "FigmaQmlInterface"
     }

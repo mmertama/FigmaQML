@@ -11,6 +11,11 @@
  * Z-actions
  * Find from document could be a savior
  * Connect is annoying. Better would be disconnect after a load
+ * Naming FigmaQMLSingleton --> FigmaQMLApp
+ * setValue --> valueChanged
+ * requestValue --> applyValue (or setValue)
+ * mouse_click --> click or touch_event
+
 
 
 
