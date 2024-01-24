@@ -20,11 +20,11 @@ class FigmaQmlSingleton : public QObject {
     Q_OBJECT
 public:
     FigmaQmlSingleton() = default;
-    Q_INVOKABLE void requestValue(const QString& element, const QString& value) {
-        emit setValue(element, value);
+    Q_INVOKABLE void applyValue(const QString& element, const QString& value) {
+        emit valueChanged(element, value);
     }
 signals:
-    void setValue(const QString& element, const QString& value);
+    void valueChanged(const QString& element, const QString& value);
 };
 
 QML_DECLARE_TYPE(FigmaQmlSingleton)

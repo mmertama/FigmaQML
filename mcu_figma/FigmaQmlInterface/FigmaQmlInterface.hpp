@@ -16,7 +16,7 @@ using SignalString = std::string;
 
 class FigmaQmlSingleton : public Qul::Singleton<FigmaQmlSingleton> {
 public:
-    Qul::Signal<void(SignalString element, SignalString value)> setValue;
-    void requestValue(SignalString element, SignalString value) {setValue(element, value);}
+    Qul::Signal<void(SignalString element, SignalString value)> valueChanged;
+    void applyValue(SignalString element, SignalString value) {valueChanged(element, value);}
 };
 
