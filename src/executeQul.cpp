@@ -156,8 +156,16 @@ QSerialPortInfo getSerialPort(const QString& id) {
     return QSerialPortInfo{};
 }
 
-static
-    bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement, const QStringList context) {
+/**
+ * @brief replaceInFile
+ * @param fname
+ * @param re
+ * @param replacement
+ * @param context
+ * @param force_context is a hack so I can use this for C++ files, sorry
+ * @return
+ */
+static bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement, const QStringList context, bool force_context = false) {
     Q_ASSERT_X(re.isValid(), "regexp", re.errorString().toLocal8Bit().constData());
     QFile file(fname);
     if(!file.open(QFile::ReadOnly)) {  // I have no idea (not looked very much) why readwrite wont work in my system, hence read and then write
@@ -166,7 +174,7 @@ static
     }
 
     bool wait_context = false;
-    bool in_context = false;
+    bool in_context = force_context;
     bool next_context = false;
     bool skip = false;
     QStack<QString> current_context;
@@ -244,19 +252,9 @@ QString qq(const QString& str) {
     return '"' + str + '"';
 }
 
-bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp) {
+static
+bool writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, QStringList& qml_files, QSet<QString>& save_image_filter) {
 
-    const auto abs_path = QFileInfo(path).absolutePath();
-    VERIFY(QDir().mkpath(path + '/' + FOLDER + QML_PREFIX), "Cannot create folder " + abs_path + FOLDER + QML_PREFIX)
-
-    if(!copy_resources(path, writeAsApp ? QStringList{} : QStringList{"FigmaQmlInterface"}))
-        return false;
-
-    QSet<QString> save_image_filter {{figmaQml.elementName()}};
-
-    QStringList qml_files;
-    const auto main_elemement_name = FigmaQml::validFileName(figmaQml.elementName());
-    const auto main_file_name =  QML_PREFIX + main_elemement_name + QML_EXT;
     qml_files << qq(main_file_name);
     QFile qml_out(path + '/' + FOLDER + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
@@ -278,6 +276,35 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
         component_out.write(component_src);
         component_out.close();
     }
+    return true;
+}
+
+bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+
+    const auto abs_path = QFileInfo(path).absolutePath();
+    VERIFY(QDir().mkpath(path + '/' + FOLDER + QML_PREFIX), "Cannot create folder " + abs_path + FOLDER + QML_PREFIX)
+
+    if(!copy_resources(path, writeAsApp ? QStringList{} : QStringList{"FigmaQmlInterface"}))
+        return false;
+
+    QStringList qmlItemNames;
+
+    QSet<QString> save_image_filter {{figmaQml.elementName()}};
+    QStringList qml_files;
+    const auto file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
+    qmlItemNames.append(qq(file_name));
+
+    if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter))
+        return false; // it already tells what went wrong
+
+    const auto els = figmaQml.elements();
+    for(const auto& var : elements) {
+        const auto element_name = els[var].toMap()["element_name"].toString();
+        const auto file_name =  QML_PREFIX + FigmaQml::validFileName(element_name) + QML_EXT;
+        if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter))
+            return false; // it already tells what went wrong
+        qmlItemNames.append(qq(file_name + QML_EXT));
+    }
 
     const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
 
@@ -294,13 +321,14 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
 
     VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject", re_images, R"(\1)" + local_images.join(",") + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
-    static const QRegularExpression re_qml(R"(//component)");
-    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlUi.qml", re_qml, main_elemement_name + R"({anchors.fill: parent;})", {"Item"}), "Cannot update qml file");
+    static const QRegularExpression re_qml(R"(\/\*element_declarations\*\/)");
+
+    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.hpp", re_qml, qmlItemNames.join(","), {}, true), "Cannot update cpp file");
 
     return true;
 }
 
-bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
+bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements) {
 
     // create a monitor
     auto qulInfo = QulInfo::instance(figmaQml);
@@ -308,7 +336,7 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml) {
 
     QTemporaryDir dir;
     VERIFY(dir.isValid(), "Cannot create temp dir")
-    if(!writeQul(dir.path(), parameters, figmaQml, true))
+    if(!writeQul(dir.path(), parameters, figmaQml, true, elements))
         return false;
 
     QProcess build_process;

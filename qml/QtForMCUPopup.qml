@@ -18,6 +18,14 @@ Dialog {
 
     signal saveRequest;
 
+    function elements() {
+        let els = []
+        for(let i = 1; i < included_views.count; ++i) {  // starting from 1, 0 is current
+            els.push(included_views.getIndex(i));
+        }
+        return els;
+    }
+
     readonly property var params: {
         'qtDir': qtDir.text,
         'qulVer': qulVer.text,
@@ -123,6 +131,25 @@ Dialog {
                 folderDialog.open()
             }
         }
+
+
+        Text {text: "Included views"; font.weight: Font.Medium}
+        RowLayout {
+            Layout.preferredWidth: parent.width
+            IncludeList {
+                id: included_views
+                Layout.preferredHeight: Math.max(contentHeight, 100)
+                Layout.preferredWidth: parent.width - 120
+            }
+            Button {
+                text: "Add view..."
+                onClicked: included_views.show_add()
+            }
+        }
+    onVisibleChanged: {
+        included_views.init_view()
+    }
+
     }
 
     footer: Row {

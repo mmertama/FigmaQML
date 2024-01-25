@@ -1044,7 +1044,7 @@ ApplicationWindow {
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
-            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(qtForMCUPopup.params, path, qtForMCUPopup.saveAsApp);
+            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(qtForMCUPopup.params, path, qtForMCUPopup.saveAsApp, qtForMCUPopup.elements());
             if(!save_ok) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
@@ -1092,9 +1092,8 @@ ApplicationWindow {
     QtForMCUPopup {
         id: qtForMCUPopup
         anchors.centerIn: parent
-        onSaveRequest: saveCurrentQML()
-        onAccepted: figmaQml.executeQul(params);
-
+        onSaveRequest: saveCurrentQML(elements())
+        onAccepted: figmaQml.executeQul(params, elements());
 
     }
 

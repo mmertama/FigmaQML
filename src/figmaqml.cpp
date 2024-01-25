@@ -20,8 +20,8 @@
 
 
 #ifdef HAS_QUL
-extern void executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml);
-extern bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp);
+extern void executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
+extern bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
 #endif
 
 #include <QTime>
@@ -302,7 +302,14 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
 
     QObject::connect(this, &FigmaQml::fontFolderChanged, this, fontFolderChanged);
     fontFolderChanged();
+
+
+    QObject::connect(this, &FigmaQml::canvasCountChanged, this, &FigmaQml::elementsChanged);
+    QObject::connect(this, &FigmaQml::elementCountChanged, this, &FigmaQml::elementsChanged);
+    QObject::connect(this, &FigmaQml::sourceCodeChanged, this, &FigmaQml::elementsChanged);
+
 }
+
 
 void FigmaQml::updateDefaultImports() {
     const auto di = defaultImports();
@@ -321,6 +328,28 @@ void FigmaQml::updateDefaultImports() {
     if(has_changes) {
         emit importsChanged();
     }
+}
+
+QVariantList FigmaQml::elements() const {
+    QVariantList el_list;
+    int canvas_index = 0;
+    if(!m_sourceDoc)
+        return el_list;
+    for(const auto& canvas : *m_sourceDoc) {
+        int element_index = 0;
+        for(const auto& element : *canvas) {
+            QVariantMap map{
+                {"canvas", canvas_index},
+                {"element", element_index},
+                {"canvas_name", canvas->name()},
+                {"element_name", element->name()}
+            };
+            el_list.append(std::move(map));
+            ++element_index;
+        }
+        ++canvas_index;
+    }
+    return el_list;
 }
 
 QVariantMap FigmaQml::defaultImports() const {
@@ -1046,19 +1075,21 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 #endif
 
 
-void FigmaQml::executeQul(const QVariantMap& parameters) {
+void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>& elements) {
 #ifdef HAS_QUL
-    executeQulApp(parameters, *this);
+    executeQulApp(parameters, *this, elements);
 #else
     (void) parameters;
+    (void) elements;
 #endif
 }
 
-bool FigmaQml::saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp) {
+bool FigmaQml::saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
 #ifdef HAS_QUL
-    return writeQul(folderName, parameters, *this, writeAsApp);
+    return writeQul(folderName, parameters, *this, writeAsApp, elements);
 #else
     (void) parameters;
+    (void) elements;
     return true;
 #endif
 }
@@ -1070,6 +1101,7 @@ bool FigmaQml::hasFontPathInfo() const {
     return false;
 #endif
 }
+
 
 void FigmaQml::findFontPath(const QString& fontFamilyName) const {
     const QFont font(fontFamilyName);

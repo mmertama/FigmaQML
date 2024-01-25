@@ -38,6 +38,7 @@ class FigmaQml : public QObject, public FigmaParserData {
     Q_PROPERTY(QVariantMap fonts READ fonts WRITE setFonts NOTIFY fontsChanged STORED false)
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
     Q_PROPERTY(QString documentsLocation READ documentsLocation CONSTANT)
+    Q_PROPERTY(QVariantList elements READ elements NOTIFY elementsChanged)
 public:
     enum Flags { // WARNING these map values are (partly) same with figmaparser flags
         PrerenderShapes     = 0x2,
@@ -85,8 +86,9 @@ public:
     void setFilter(const QMap<int, QSet<int>>& filter);
     void restore(int flags, const QVariantMap& imports);
     QString documentsLocation() const;
+    QVariantList elements() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
-    Q_INVOKABLE bool saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp);
+    Q_INVOKABLE bool saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;
@@ -98,7 +100,7 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
-    Q_INVOKABLE void executeQul(const QVariantMap& parameters);
+    Q_INVOKABLE void executeQul(const QVariantMap& parameters, const std::vector<int>& elements);
     Q_INVOKABLE bool hasFontPathInfo() const;
     Q_INVOKABLE void findFontPath(const QString& fontFamilyName) const;
 #ifdef USE_NATIVE_FONT_DIALOG
@@ -147,6 +149,7 @@ signals:
     void fontLoaded(const QFont& font);
     void fontPathFound(const QString& fontPath);
     void fontPathError(const QString& error);
+    void elementsChanged();
 #ifdef USE_NATIVE_FONT_DIALOG
     void fontAdded(const QString& fontFamilyName);
 #endif
