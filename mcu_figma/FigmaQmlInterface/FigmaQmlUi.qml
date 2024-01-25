@@ -1,6 +1,9 @@
 import QtQuick
 // This file is generated
 Item {
-    //component
+    Loader {
+        anchors.fill: parent
+        source: FigmaQmlSingleton.getView(0)
+        }
 }
 
