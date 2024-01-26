@@ -23,7 +23,7 @@ ListView {
     model: included_list_items
     delegate: ItemDelegate {
         text: content
-        width: parent.width
+        width: included_views.width
         onDoubleClicked: {
             if(included_views.currentIndex > 0) // current cannot be removed
                 included_list_items.remove(included_views.currentIndex)
@@ -70,21 +70,29 @@ ListView {
 
     Dialog {
         id: included_views_add
+        title: qsTr("Add View")
         standardButtons: Dialog.Ok | Dialog.Cancel
+        width: included_views.width
         ComboBox {
             id: included_views_add_combox
+            textRole: 'content'
             ListModel {
                 id: included_list_add_items
             }
             model: included_list_add_items
             delegate: ItemDelegate {
+                width: included_views_add.width
                 text: content
             }
         }
         onAboutToShow: {
             included_list_add_items.clear()
-            for(var i = 0; i < figmaQml.elements.length; ++i) {
-                included_list_add_items.append(included_views._format_included_view(i))
+            for(let i = 0; i < figmaQml.elements.length; ++i) {
+                const line = included_views._format_included_view(i);
+                for(let j = 0; j < included_list_items.count; ++j) {
+                    if(line !== included_list_items.get(i))
+                        included_list_add_items.append(line)
+                }
             }
         }
         onAccepted: {

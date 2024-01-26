@@ -66,6 +66,7 @@ public:
     FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject* parent = nullptr);
     ~FigmaQml();
     QByteArray sourceCode() const;
+    QByteArray sourceCode(unsigned canvasIndex, unsigned elementIndex) const;
     QUrl element() const;
     int canvasCount() const;
     int elementCount() const;
@@ -79,6 +80,7 @@ public:
     QString documentName() const;
     QString qmlDir() const;
     QStringList components() const;
+    QStringList components(int canvas_index, int element_index) const;
     QVariantMap fonts() const;
     void setFonts(const QVariantMap& map);
     bool setBrokenPlaceholder(const QString& placeholder);

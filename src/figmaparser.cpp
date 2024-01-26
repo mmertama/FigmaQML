@@ -571,7 +571,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                           out += intend2 + "y: " + mouse_area_name.first + ".y\n";
                           out += intend2 + "width: " + mouse_area_name.first + ".width\n";
                           out += intend2 + "height: " + mouse_area_name.first + ".height\n";*/
-                out += intendent2 + "onClicked: { FigmaQmlSingleton.applyValue( '"  +  name + "', 'mouse_click' ); }\n";
+                out += intendent2 + "onClicked: { FigmaQmlSingleton.event( '"  +  name + "', 'click_event' ); }\n";
                 out += intendent1 + "}\n";
             }
         }
@@ -707,7 +707,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
     QByteArray FigmaParser::makeTransforms(const QJsonObject& obj, int intendents) {
         QByteArray out;
-        if(obj.contains("relativeTransform")) {
+        if(obj.contains("relativeTransform") && (!isQul()  // transforms has only a limited support ...
+                                                  || type(obj).value_or(FigmaParser::ItemType::None) == FigmaParser::ItemType::Text // only Text ...
+                                                  || isRendering(obj)    // ... and images ...
+                                                  || imageFill(obj))) {    // ... I hope these handle most of the cases propertly enough ...) {
             const auto rows = obj["relativeTransform"].toArray();
             const auto row1 = rows[0].toArray();
             const auto row2 = rows[1].toArray();

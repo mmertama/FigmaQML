@@ -253,23 +253,29 @@ QString qq(const QString& str) {
 }
 
 static
-bool writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, QStringList& qml_files, QSet<QString>& save_image_filter) {
+    bool writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, QStringList& qml_files, QSet<QString>& save_image_filter, std::pair<int, int> indices) {
 
     qml_files << qq(main_file_name);
     QFile qml_out(path + '/' + FOLDER + main_file_name);
     VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
-    qml_out.write(figmaQml.sourceCode());
+
+    const auto bytes = figmaQml.sourceCode(indices.first, indices.second);
+    VERIFY(!bytes.isEmpty(), "Cannot find data for " + main_file_name);
+    qml_out.write(bytes);
+
     qml_out.close();
 
-    for(const auto& component_name : figmaQml.components()) {
+    for(const auto& component_name : figmaQml.components(indices.first, indices.second)) {
         save_image_filter.insert(component_name);
         const auto file_name = QML_PREFIX + FigmaQml::validFileName(component_name) + QML_EXT;
         qml_files << qq(file_name);
 
         const auto target_path = path + '/' + FOLDER + file_name;
         QFile component_out(target_path);
-        if(QFile::exists(target_path))
+        if(QFile::exists(target_path)) {
+            qDebug() << "File replaced" << target_path;
             QFile::remove(target_path);
+        }
         VERIFY(component_out.open(QFile::WriteOnly), "Cannot write component " + file_name);
         const auto component_src = figmaQml.componentSourceCode(component_name);
         Q_ASSERT(!component_src.isEmpty());
@@ -278,6 +284,12 @@ bool writeElement(const QString& path, const QString& main_file_name, const Figm
     }
     return true;
 }
+
+//TODO this function is run debug only - kind of unit test
+//[[maybe_unused]]
+//static bool verify_data_integrity(const FigmaQml& figmaQml, const std::vector<int>& elements) {
+//
+//}
 
 bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
 
@@ -294,16 +306,19 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
     const auto file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
     qmlItemNames.append(qq(file_name));
 
-    if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter))
+    if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter, {figmaQml.currentCanvas(), figmaQml.currentElement()}))
         return false; // it already tells what went wrong
 
     const auto els = figmaQml.elements();
     for(const auto& var : elements) {
-        const auto element_name = els[var].toMap()["element_name"].toString();
+        const auto& map = els[var].toMap();
+        const auto element_name = map["element_name"].toString();
+        const auto canvas_index = map["canvas"].toInt();
+        const auto element_index = map["element"].toInt();
         const auto file_name =  QML_PREFIX + FigmaQml::validFileName(element_name) + QML_EXT;
-        if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter))
+        if(!writeElement(path, file_name, figmaQml, qml_files, save_image_filter, {canvas_index, element_index}))
             return false; // it already tells what went wrong
-        qmlItemNames.append(qq(file_name + QML_EXT));
+        qmlItemNames.append(qq(file_name));
     }
 
     const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);

@@ -20,10 +20,57 @@ using SignalString = std::string;
 
 class FigmaQmlSingleton : public Qul::Singleton<FigmaQmlSingleton> {
 public:
+    /**
+     * @brief currentView
+     */
+    Qul::Property<std::string> currentView;
+
+    /**
+     * @brief viewCount
+     */
+    const Qul::Property<int> viewCount;
+
+    /**
+     * @brief valueChanged
+     */
     Qul::Signal<void(SignalString element, SignalString value)> valueChanged;
+
+    /**
+     * @brief event
+     */
+    Qul::Signal<void(SignalString element, SignalString value)> event;
+
+    /**
+     * @brief applyValue
+     * @param element
+     * @param value
+     */
     void applyValue(SignalString element, SignalString value) {valueChanged(element, value);}
-    std::string getView(int index) const {return elements[index];}
-    int viewCount() const {return elements.size();}
-    const std::vector<std::string> elements {/*element_declarations*/};
+
+    /**
+     * @brief setView
+     * @param index
+     */
+    bool setView(int index) {
+        if(index >= 0 && index < elements.size()) {
+            currentView.setValue(elements[index]);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @brief view
+     * @param index
+     * @return
+     */
+    std::string view(int index) const {return index < elements.size() ? elements[index] : std::string{};}
+
+    /**
+     * @brief elements, static and sole
+     */
+    static inline const std::vector<std::string> elements {/*element_declarations*/};
+
+    FigmaQmlSingleton() : currentView{elements[0]}, viewCount{static_cast<int>(elements.size())} {}
 };
 
