@@ -496,7 +496,7 @@ int main(int argc, char *argv[]) {
 
 
     QQmlApplicationEngine engine;
-    FigmaQmlSingleton figmaQmlSingleton;
+    FigmaQmlSingleton figmaQmlSingleton{*figmaQml};
     engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaQmlSingleton); // emulates Qt for MCU kind singletons signals
 
      if(!(state & CmdLine)) {

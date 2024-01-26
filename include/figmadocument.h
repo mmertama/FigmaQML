@@ -47,11 +47,8 @@ public:
         ElementVector::const_iterator end() const {
             return m_elements.end();
         }
-     /*   QByteArray& operator[](int index) {
-            return m_elements[index].second;
-        }*/
 
-        QByteArray current() const {
+        QByteArray data() const {
             return m_elements[m_current]->data();
         }
 

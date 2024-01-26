@@ -202,11 +202,11 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
 }
 
 QUrl FigmaQml::element() const {
-    return (m_uiDoc && !m_uiDoc->empty()) ?  QUrl::fromLocalFile(QString(m_uiDoc->current().current())) : QUrl();
+    return (m_uiDoc && !m_uiDoc->empty()) ?  QUrl::fromLocalFile(QString(m_uiDoc->current().data())) : QUrl();
 }
 
 QByteArray FigmaQml::sourceCode() const {
-     return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().current() : QByteArray();
+    return (m_sourceDoc && !m_sourceDoc->empty()) ?  m_sourceDoc->current().data() : QByteArray();
 }
 
 FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject *parent) : QObject(parent),
@@ -386,11 +386,17 @@ bool FigmaQml::isValid() const {
     return m_uiDoc && !m_uiDoc->empty();
 }
 
-
 QStringList FigmaQml::components() const {
     if(m_sourceDoc && !m_sourceDoc->empty()) {
-        const auto currentElement =  m_sourceDoc->current().currentIndex();
-        const auto key = m_sourceDoc->current().name(currentElement);
+        return components(m_sourceDoc->currentIndex(), m_sourceDoc->current().currentIndex());
+    }
+    return {};
+}
+
+
+QStringList FigmaQml::components(int canvas_index, int element_index) const {
+    if(m_sourceDoc && !m_sourceDoc->empty()) {
+        const auto key = (*(m_sourceDoc->begin() + canvas_index))->name(element_index);
         const auto component_list = m_sourceDoc->components(key);
         for(const auto& c : component_list) {
             const auto name_s = qmlTargetDir() + '/' + c + ".qml";
@@ -416,6 +422,7 @@ QByteArray FigmaQml::componentSourceCode(const QString &name) const {
 QString FigmaQml::componentObject(const QString &name) const {
     return (!name.isEmpty()) && m_sourceDoc && m_sourceDoc->containsComponent(name) ? m_sourceDoc->componentObject(name) : QString();
 }
+
 
 void FigmaQml::cancel() {
     emit cancelled();
@@ -1107,3 +1114,10 @@ void FigmaQml::findFontPath(const QString& fontFamilyName) const {
     const QFont font(fontFamilyName);
     m_fontInfo->getFontFilePath(font);
 }
+
+QByteArray FigmaQml::sourceCode(unsigned canvasIndex, unsigned elementIndex) const {
+    const auto cit = m_sourceDoc->begin() + canvasIndex;
+    const auto eit = (*cit)->begin() + elementIndex;
+    return (*eit)->data();
+}
+

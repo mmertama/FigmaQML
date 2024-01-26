@@ -1178,7 +1178,11 @@ ApplicationWindow {
         */
         //function onSetValue(element, value) {
         onValueChanged: {
-            console.log("onValueChanged:", element, value);
+            console.log("FigmaQmlSingleton - onValueChanged:", element, value);
+        }
+
+        onEvent: {
+            console.log("FigmaQmlSingleton - Event:", element, value);
         }
     }
   //  FigmaQmlSingleton.fig: 12;
