@@ -24,19 +24,30 @@
 const auto QML_TAG = "qml?";
 const auto COMP_PARAM = "comp";
 const auto ON_CLICK = "onClick";
+const auto AS_LOADER = "asLoader";
 const auto ID_PREFIX = "figma_";
 
-static QString last_parse_error;
+static auto& last_parse_error() {
+    static QString last_error_string;
+    return last_error_string;
+}
 
 #define QUL_LOADER_WORKAROUND
 
 using EByteArray = FigmaParser::EByteArray;
 
-#define ERR(...) {last_parse_error = (toStr(__VA_ARGS__)); return std::nullopt;}
+#define ERR(...) {last_parse_error() = (toStr(__VA_ARGS__)); return std::nullopt;}
 
 static inline bool eq(double a, double b) {return std::fabs(a - b) < std::numeric_limits<double>::epsilon();}
 
 #define APPENDERR(val, fn) {const auto ob_ = fn; if(!ob_) return std::nullopt; val += ob_.value();}
+
+static
+bool isReservedName(const QString& name) {
+    const QSet<QString> set {ON_CLICK, AS_LOADER};
+    return set.contains(name);
+}
+
 
 
 struct Properties {
@@ -352,12 +363,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 std::move(ids),
                 std::move(image_contexts),
                 std::move(aliases),
-                m_componentStreams
+                m_componentStreams,
+                m_externalLoaders
         };
     }
 
-    QString FigmaParser::tabs(int intendents) const {
-        return QString(m_intendent).repeated(intendents);
+    QString FigmaParser::tabs(int indents) const {
+        return QString(m_indent).repeated(indents);
     }
 
 #if 0
@@ -427,74 +439,74 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
       * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
       */
 
-     QByteArray FigmaParser::makePropertyChangeHandler(const QJsonObject& obj, int intendents) {
+     QByteArray FigmaParser::makePropertyChangeHandler(const QJsonObject& obj, int indents) {
          QByteArray out;
          if(!m_aliases.isEmpty()) {
-             const auto intend = tabs(intendents);
-             const auto intend2 = tabs(intendents + 1);
-             const auto intend3 = tabs(intendents + 2);
-             out += intend + "Connections {\n";
-             out += intend2 + "target: FigmaQmlSingleton\n";
+             const auto indent = tabs(indents);
+             const auto indent2 = tabs(indents + 1);
+             const auto indent3 = tabs(indents + 2);
+             out += indent + "Connections {\n";
+             out += indent2 + "target: FigmaQmlSingleton\n";
 
-             out += intend2 + "onValueChanged: {\n";
-             //out += intend2 + "function onSetValue(element, value) {\n";
-             //out += intend3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
-             out += intend3 + "switch(element) {\n";
+             out += indent2 + "onValueChanged: {\n";
+             //out += indent2 + "function onSetValue(element, value) {\n";
+             //out += indent3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
+             out += indent3 + "switch(element) {\n";
 
              for(const auto& alias : m_aliases) {
                  const auto properties = getProperties(alias.obj);
                  if(properties) {
                      const auto& [obj_name, name, vars, is_comp] = properties.value();
                      for(const auto& var : vars) {
-                         if(var != ON_CLICK && !is_comp) {
-                             const auto intend4 = tabs(intendents + 3);
-                             out += intend4 + "case '" + name + "': " + alias.id + '.' + var + " = value; break;\n";
+                         if(!isReservedName(var) && !is_comp) {
+                             const auto indent4 = tabs(indents + 3);
+                             out += indent4 + "case '" + name + "': " + alias.id + '.' + var + " = value; break;\n";
                          }
                      }
                  }
 
              }
-             out +=  intend3 + "}\n";
-             out +=  intend2 + "}\n";
-             out += intend + "}\n";
+             out +=  indent3 + "}\n";
+             out +=  indent2 + "}\n";
+             out += indent + "}\n";
          }
          return out;
      }
 
 
-     EByteArray FigmaParser::makeComponentPropertyChangeHandler(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents) {
          QByteArray out;
 
         const auto properties = getProperties(obj);
         if(properties) {
-            const auto intend = tabs(intendents);
-            const auto intend2 = tabs(intendents + 1);
-            const auto intend3 = tabs(intendents + 2);
+            const auto indent = tabs(indents);
+            const auto indent2 = tabs(indents + 1);
+            const auto indent3 = tabs(indents + 2);
 
 
-            out += intend + "Connections {\n";
-            out += intend2 + "target: FigmaQmlSingleton\n";
+            out += indent + "Connections {\n";
+            out += indent2 + "target: FigmaQmlSingleton\n";
 
-            out += intend2 + "onValueChanged: {\n";
-            //out += intend2 + "function onSetValue(element, value) {\n";
-            //out += intend3 + "console.log('FigmaQmlSingleton-valueChanged:', element, value);\n";
-            out += intend3 + "switch(element) {\n";
+            out += indent2 + "onValueChanged: {\n";
+            //out += indent2 + "function onSetValue(element, value) {\n";
+            //out += indent3 + "console.log('FigmaQmlSingleton-valueChanged:', element, value);\n";
+            out += indent3 + "switch(element) {\n";
 
             const auto id_string = makeId(obj);
             const auto& [obj_name, name, vars, is_comp] = properties.value();
             for(const auto& var : vars) {
-                if(var != ON_CLICK) {
+                if(!isReservedName(var)) {
                     if(!is_comp) {
                         ERR("Expected comp parameter in name (Figma name as 'qml?comp?')");
                     }
-                    const auto intend4 = tabs(intendents + 3);
-                    out += intend4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
+                    const auto indent4 = tabs(indents + 3);
+                    out += indent4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
                     }
                 }
 
-            out +=  intend3 + "}\n";
-            out +=  intend2 + "}\n";
-            out += intend + "}\n";
+            out +=  indent3 + "}\n";
+            out +=  indent2 + "}\n";
+            out += indent + "}\n";
         }
          return out;
      }
@@ -508,29 +520,29 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return qml_id;
     }
 
-     EByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int indents) {
          QByteArray out;
-         const auto intendent = tabs(intendents - 1);
-         const auto intendent1 = tabs(intendents);
-         out += intendent + type + " {\n";
+         const auto indent = tabs(indents - 1);
+         const auto indent1 = tabs(indents);
+         out += indent + type + " {\n";
          Q_ASSERT(obj.contains("type") && obj.contains("id"));
 
-         out += intendent + "// component (Instance) level: " + QString::number(m_componentLevel)  + " " + obj["name"].toString()  + " \n";
+         out += indent + "// component (Instance) level: " + QString::number(m_componentLevel)  + " " + obj["name"].toString()  + " \n";
 
          //const auto is_component_declaration = m_componentLevel != 0;
 
        //  if(!is_component_declaration) {
             const auto id_string = makeId(obj);
-            out += intendent1 + "id: " + id_string + "\n";
+            out += indent1 + "id: " + id_string + "\n";
             if(obj["name"].toString().startsWith(QML_TAG))
                 m_aliases.append({id_string, obj});
         // } else {
-        //      out += intendent1 + "id: athis\n";
+        //      out += indent1 + "id: athis\n";
         // }
 
-         out += intendent1 + "// # \"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
+         out += indent1 + "// # \"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
          if(!isQul()) // what was the role of objectName? To document, however not applicable for Qt for MCU
-            out += intendent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
+            out += indent1 + "objectName:\"" + obj["name"].toString().replace("\"", "\\\"") + "\"\n";
 
          if(makeFileName(obj, "component").startsWith("Component__F")) {
              qDebug() << "here is clear" <<  makeFileName(obj, "component") << bool(m_flags & GenerateAccess) << bool(m_flags & ParseComponent) << bool( m_componentLevel != 0);
@@ -541,38 +553,38 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          }
 
          if((m_flags & GenerateAccess) && /*(m_flags & ParseComponent)*/ m_componentLevel != 0) { // when m_componentLevel is zero this is component to-file write
-             APPENDERR(out, makeComponentPropertyChangeHandler(obj, intendents));
+             APPENDERR(out, makeComponentPropertyChangeHandler(obj, indents));
          }
 
          return out;
      }
 
-    EByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int indents) {
         QByteArray out;
-        const auto intendent1 = tabs(intendents);
-        APPENDERR(out, makeComponentInstance(type, obj, intendents));
-        out += makeEffects(obj, intendents);
-        out += makeTransforms(obj, intendents);
+        const auto indent1 = tabs(indents);
+        APPENDERR(out, makeComponentInstance(type, obj, indents));
+        out += makeEffects(obj, indents);
+        out += makeTransforms(obj, indents);
         if(obj.contains("visible") && !obj["visible"].toBool()) {
-            out += intendent1 + "visible: false\n";
+            out += indent1 + "visible: false\n";
         }
         if(obj.contains("opacity")) {
-             out += intendent1 + "opacity: " +  QString::number(obj["opacity"].toDouble()) + "\n";
+             out += indent1 + "opacity: " +  QString::number(obj["opacity"].toDouble()) + "\n";
         }
 
         const auto properties = getProperties(obj);
         if(properties) {
-            const auto intendent2 = tabs(intendents + 1);
+            const auto indent2 = tabs(indents + 1);
             const auto& [obj_name, name, var, is_comp] = properties.value();
             if(var.contains(ON_CLICK)) {
-                out += intendent1 + "MouseArea {\n";
-                out += intendent2 + "anchors.fill: parent\n";
-                /*out += intend2 + "x: " + mouse_area_name.first + ".x\n";
-                          out += intend2 + "y: " + mouse_area_name.first + ".y\n";
-                          out += intend2 + "width: " + mouse_area_name.first + ".width\n";
-                          out += intend2 + "height: " + mouse_area_name.first + ".height\n";*/
-                out += intendent2 + "onClicked: { FigmaQmlSingleton.event( '"  +  name + "', 'click_event' ); }\n";
-                out += intendent1 + "}\n";
+                out += indent1 + "MouseArea {\n";
+                out += indent2 + "anchors.fill: parent\n";
+                /*out += indent2 + "x: " + mouse_area_name.first + ".x\n";
+                          out += indent2 + "y: " + mouse_area_name.first + ".y\n";
+                          out += indent2 + "width: " + mouse_area_name.first + ".width\n";
+                          out += indent2 + "height: " + mouse_area_name.first + ".height\n";*/
+                out += indent2 + "onClicked: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'click_event' ); }\n";
+                out += indent1 + "}\n";
             }
         }
 
@@ -586,11 +598,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return {row1[2].toDouble(), row2[2].toDouble()};
     }
 
-    QByteArray FigmaParser::makeExtents(const QJsonObject& obj, int intendents, const QRectF& extents) {
+    QByteArray FigmaParser::makeExtents(const QJsonObject& obj, int indents, const QRectF& extents) {
         QByteArray out;
         QString horizontal("LEFT");
         QString vertical("TOP");
-        const auto intendent = tabs(intendents);
+        const auto indent = tabs(indents);
         if(obj.contains("constraints")) {
             const auto constraints = obj["constraints"].toObject();
             vertical = constraints["vertical"].toString();
@@ -610,61 +622,61 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
 
             if(horizontal == "LEFT" || horizontal == "SCALE" || horizontal == "LEFT_RIGHT" || horizontal == "RIGHT") {
-                out += intendent + QString("x:%1\n").arg(tx);
+                out += indent + QString("x:%1\n").arg(tx);
             } else if(horizontal == "CENTER") {
                 const auto parentWidth = m_parent["size"].toObject()["x"].toDouble();
                 const auto extent_id = QString(makeId(*m_parent.obj));
                 const auto width = getValue(obj, "size").toObject()["x"].toDouble();
                 const auto staticWidth = (parentWidth - width) / 2. - tx;
                 if(eq(staticWidth, 0))
-                    out += intendent + QString("x: (%1.width - width) / 2\n").arg(extent_id);
+                    out += indent + QString("x: (%1.width - width) / 2\n").arg(extent_id);
                 else
-                    out += intendent + QString("x: (%1.width - width) / 2 %2 %3\n").arg(extent_id).arg(staticWidth < 0 ? "+" : "-").arg(std::abs(staticWidth));
+                    out += indent + QString("x: (%1.width - width) / 2 %2 %3\n").arg(extent_id).arg(staticWidth < 0 ? "+" : "-").arg(std::abs(staticWidth));
             }
 
             if(vertical == "TOP" || vertical == "SCALE" || vertical == "TOP_BOTTOM" || vertical == "BOTTOM") {
-               out += intendent + QString("y:%1\n").arg(ty);
+               out += indent + QString("y:%1\n").arg(ty);
             } else  if(vertical == "CENTER") {
                 const auto parentHeight = m_parent["size"].toObject()["y"].toDouble();
                 const auto extent_id = QString(makeId(*m_parent.obj));
                 const auto height = getValue(obj, "size").toObject()["y"].toDouble();
                 const auto staticHeight = (parentHeight - height) / 2. - ty;
                 if(eq(staticHeight, 0))
-                    out += intendent + QString("y: (%1.height - height) / 2\n").arg(extent_id);
+                    out += indent + QString("y: (%1.height - height) / 2\n").arg(extent_id);
                 else
-                    out += intendent + QString("y: (%1.height - height) / 2 %2 %3\n").arg(extent_id).arg(staticHeight < 0 ? "+" : "-").arg(std::abs(staticHeight));
+                    out += indent + QString("y: (%1.height - height) / 2 %2 %3\n").arg(extent_id).arg(staticHeight < 0 ? "+" : "-").arg(std::abs(staticHeight));
             }
         }
         if(obj.contains("size")) {
             const auto vec = obj["size"];
             const auto width = vec["x"].toDouble();
             const auto height = vec["y"].toDouble();
-                out += intendent + QString("width:%1\n").arg(width + extents.width());
-                out += intendent + QString("height:%1\n").arg(height + extents.height());
+                out += indent + QString("width:%1\n").arg(width + extents.width());
+                out += indent + QString("height:%1\n").arg(height + extents.height());
         }
         return out;
     }
 
-    QByteArray FigmaParser::makeSize(const QJsonObject& obj, int intendents, const QSizeF& extents) {
+    QByteArray FigmaParser::makeSize(const QJsonObject& obj, int indents, const QSizeF& extents) {
         QByteArray out;
-        const auto intendent = tabs(intendents);
+        const auto indent = tabs(indents);
         const auto s = obj["size"].toObject();
         const auto width = s["x"].toDouble()  + extents.width();
         const auto height = s["y"].toDouble()  + extents.height();
-        out += intendent + QString("width:%1\n").arg(width);
-        out += intendent + QString("height:%1\n").arg(height);
+        out += indent + QString("width:%1\n").arg(width);
+        out += indent + QString("height:%1\n").arg(height);
         return out;
     }
 
-    QByteArray FigmaParser::makeColor(const QJsonObject& obj, int intendents, double opacity) {
+    QByteArray FigmaParser::makeColor(const QJsonObject& obj, int indents, double opacity) {
         QByteArray out;
-        const auto intendent = tabs(intendents);
+        const auto indent = tabs(indents);
         Q_ASSERT(obj["r"].isDouble() && obj["g"].isDouble() && obj["b"].isDouble() && obj["a"].isDouble());
-        out += intendent + "color:" + toColor(obj["r"].toDouble(), obj["g"].toDouble(), obj["b"].toDouble(), obj["a"].toDouble() * opacity) + "\n";
+        out += indent + "color:" + toColor(obj["r"].toDouble(), obj["g"].toDouble(), obj["b"].toDouble(), obj["a"].toDouble() * opacity) + "\n";
         return out;
     }
 
-    QByteArray FigmaParser::makeEffects(const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::makeEffects(const QJsonObject& obj, int indents) {
         QByteArray out;
 
         if(isQul())
@@ -673,31 +685,31 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(obj.contains("effects")) {
                 const auto effects = obj["effects"].toArray();
                 if(!effects.isEmpty()) {
-                    const auto intendent = tabs(intendents);
-                    const auto intendent1 = tabs(intendents + 1);
+                    const auto indent = tabs(indents);
+                    const auto indent1 = tabs(indents + 1);
                     const auto& e = effects[0];   //Qt supports only ONE effect!
                     const auto effect = e.toObject();
                     if(effect["type"] == "INNER_SHADOW" || effect["type"] == "DROP_SHADOW") {
                         const auto color = e["color"].toObject();
                         const auto radius = e["radius"].toDouble();
                         const auto offset = e["offset"].toObject();
-                        out += tabs(intendents) + "layer.enabled:true\n";
-                        out += tabs(intendents) + "layer.effect: DropShadow {\n";
+                        out += tabs(indents) + "layer.enabled:true\n";
+                        out += tabs(indents) + "layer.effect: DropShadow {\n";
                         if(effect["type"] == "INNER_SHADOW") {
-                            out += intendent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
-                            out += intendent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
+                            out += indent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
+                            out += indent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
                         } else {
-                            out += intendent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
-                            out += intendent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
+                            out += indent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
+                            out += indent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
                         }
-                        out += intendent1 + "radius: " + QString::number(radius) + "\n";
-                        out += intendent1 + "samples: 17\n";
-                        out += intendent1 + "color: " + toColor(
+                        out += indent1 + "radius: " + QString::number(radius) + "\n";
+                        out += indent1 + "samples: 17\n";
+                        out += indent1 + "color: " + toColor(
                                 color["r"].toDouble(),
                                 color["g"].toDouble(),
                                 color["b"].toDouble(),
                                 color["a"].toDouble()) + "\n";
-                        out += intendent + "}\n";
+                        out += indent + "}\n";
                     }
                 }
         }
@@ -705,7 +717,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
 
-    QByteArray FigmaParser::makeTransforms(const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::makeTransforms(const QJsonObject& obj, int indents) {
         QByteArray out;
         if(obj.contains("relativeTransform") && (!isQul()  // transforms has only a limited support ...
                                                   || type(obj).value_or(FigmaParser::ItemType::None) == FigmaParser::ItemType::Text // only Text ...
@@ -714,26 +726,26 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             const auto rows = obj["relativeTransform"].toArray();
             const auto row1 = rows[0].toArray();
             const auto row2 = rows[1].toArray();
-            const auto intendent = tabs(intendents + 1);
+            const auto indent = tabs(indents + 1);
 
             const double r1[3] = {row1[0].toDouble(), row1[1].toDouble(), row1[2].toDouble()};
             const double r2[3] = {row2[0].toDouble(), row2[1].toDouble(), row2[2].toDouble()};
 
             if(!eq(r1[0], 1.0) || !eq(r1[1], 0.0) || !eq(r2[0], 0.0) || !eq(r2[1], 1.0)) {
-                out += tabs(intendents) + "transform: Matrix4x4 {\n";
-                out += intendent + "matrix: Qt.matrix4x4(\n";
-                out += intendent + QString("%1, %2, %3, 0,\n").arg(r1[0]).arg(r1[1]).arg(r1[2]);
-                out += intendent + QString("%1, %2, %3, 0,\n").arg(r2[0]).arg(r2[1]).arg(r2[2]);
+                out += tabs(indents) + "transform: Matrix4x4 {\n";
+                out += indent + "matrix: Qt.matrix4x4(\n";
+                out += indent + QString("%1, %2, %3, 0,\n").arg(r1[0]).arg(r1[1]).arg(r1[2]);
+                out += indent + QString("%1, %2, %3, 0,\n").arg(r2[0]).arg(r2[1]).arg(r2[2]);
 
-                out += intendent + "0, 0, 1, 0,\n";
-                out += intendent + "0, 0, 0, 1)\n";
-                out += tabs(intendents) + "}\n";
+                out += indent + "0, 0, 1, 0,\n";
+                out += indent + "0, 0, 0, 1)\n";
+                out += tabs(indents) + "}\n";
             }
         }
         return out;
     }
 
-    EByteArray FigmaParser::makeImageSource(const QString& image, bool isRendering, int intendents, const QString& placeHolder) {
+    EByteArray FigmaParser::makeImageSource(const QString& image, bool isRendering, int indents, const QString& placeHolder) {
         QByteArray out;
         m_imageContext.insert(image);
         auto imageData = m_data.imageData(image, isRendering);
@@ -745,8 +757,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                  if(imageData.isEmpty()) {
                      ERR("Cannot load placeholder");
                  }
-                out += tabs(intendents) + "//Image load failed, placeholder\n";
-                out += tabs(intendents) + "sourceSize: Qt.size(parent.width, parent.height)\n";
+                out += tabs(indents) + "//Image load failed, placeholder\n";
+                out += tabs(indents) + "sourceSize: Qt.size(parent.width, parent.height)\n";
             }
         }
 
@@ -754,25 +766,25 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             imageData.insert(pos, "\" +\n \"");
         }
 
-        out += tabs(intendents) + "source: \"" + imageData + "\"\n";
+        out += tabs(indents) + "source: \"" + imageData + "\"\n";
         return out;
     }
 
-    EByteArray FigmaParser::makeImageRef(const QString& image, int intendents) {
+    EByteArray FigmaParser::makeImageRef(const QString& image, int indents) {
         QByteArray out;
-        const auto intendent = tabs(intendents + 1);
-        out += tabs(intendents) + "Image {\n";
-        out += intendent + "anchors.fill: parent\n";
+        const auto indent = tabs(indents + 1);
+        out += tabs(indents) + "Image {\n";
+        out += indent + "anchors.fill: parent\n";
         if(!isQul())
-            out += intendent + "mipmap: true\n";
-        out += intendent + "fillMode: Image.PreserveAspectCrop\n";
-        APPENDERR(out, makeImageSource(image, false, intendents + 1));
-        out += tabs(intendents) + "}\n";
+            out += indent + "mipmap: true\n";
+        out += indent + "fillMode: Image.PreserveAspectCrop\n";
+        APPENDERR(out, makeImageSource(image, false, indents + 1));
+        out += tabs(indents) + "}\n";
         return out;
     }
 
     // if graddients are not supported flat them to a single color - kind of weighted avg
-    QByteArray FigmaParser::makeGradientToFlat(const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::makeGradientToFlat(const QJsonObject& obj, int indents) {
         double a0 = 0;
         double r0 = 0;
         double g0 = 0;
@@ -814,18 +826,18 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             b0 += b * f;
         }
 
-        auto intendent = tabs(intendents);
+        auto indent = tabs(indents);
         QByteArray o;
-        o += intendent + "color: " + FigmaParser::toColor(r0, g0, b0, a0) + "\n";
+        o += indent + "color: " + FigmaParser::toColor(r0, g0, b0, a0) + "\n";
         return o;
     }
 
-    EByteArray FigmaParser::makeGradientFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeGradientFill(const QJsonObject& obj, int indents) {
         QByteArray out;
-        out  += tabs(intendents) + "gradient: \n";
-        const auto idt1 = tabs(intendents + 1);
-        const auto idt2 = tabs(intendents + 2);
-        const auto idt3 = tabs(intendents + 3);
+        out  += tabs(indents) + "gradient: \n";
+        const auto idt1 = tabs(indents + 1);
+        const auto idt2 = tabs(indents + 2);
+        const auto idt3 = tabs(indents + 3);
 
         unsigned handle_pos = 0;
         const auto handle_positions = obj["gradientHandlePositions"].toArray();
@@ -847,7 +859,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             for(const auto& stop : gradients_stops) {
                 out += idt2 + "GradientStop {\n";
                 out += idt3 + "position: " + QString::number(stop.toObject()["position"].toDouble()) + "\n";
-                out += makeColor(stop.toObject()["color"].toObject(), intendents + 3);
+                out += makeColor(stop.toObject()["color"].toObject(), indents + 3);
                 out += idt2 + "}\n";
             }
 
@@ -865,50 +877,50 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return out;
     }
 
-    EByteArray FigmaParser::makeFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeFill(const QJsonObject& obj, int indents) {
         QByteArray out;
         const auto invisible = obj.contains("visible") && !obj["visible"].toBool();
         if(obj.contains("color")) {
             const auto color = obj["color"].toObject();
             if(!invisible && obj.contains("opacity")) {
-                out += makeColor(color, intendents, obj["opacity"].toDouble());
+                out += makeColor(color, indents, obj["opacity"].toDouble());
             } else {
-                out += makeColor(color, intendents, invisible ? 0.0 : 1.0);
+                out += makeColor(color, indents, invisible ? 0.0 : 1.0);
             }
         } else if(obj.contains("type")) {
             if(m_flags & FigmaParser::NoGradients) {
-                out += makeGradientToFlat(obj, intendents);
+                out += makeGradientToFlat(obj, indents);
             } else {
-                const auto f = makeGradientFill(obj, intendents);
+                const auto f = makeGradientFill(obj, indents);
                 if(f)
                     out += f.value();
                 else
-                    out += makeGradientToFlat(obj, intendents);
+                    out += makeGradientToFlat(obj, indents);
             }
         } else {
-            out  += tabs(intendents) + "color: \"transparent\"\n";
+            out  += tabs(indents) + "color: \"transparent\"\n";
         }
         if(obj.contains("imageRef")) {
-            APPENDERR(out, makeImageRef(obj["imageRef"].toString(), intendents + 1));
+            APPENDERR(out, makeImageRef(obj["imageRef"].toString(), indents + 1));
         }
         return out;
     }
 
-    EByteArray FigmaParser::makeVector(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVector(const QJsonObject& obj, int indents) {
         QByteArray out;
-        out += makeExtents(obj, intendents);
+        out += makeExtents(obj, indents);
         const auto fills = obj["fills"].toArray();
         if(fills.size() > 0) {
-           APPENDERR(out, makeFill(fills[0].toObject(), intendents));
+           APPENDERR(out, makeFill(fills[0].toObject(), indents));
         } else if(!obj["fills"].isString()) {
-            out += tabs(intendents) + "color: \"transparent\"\n"; // by default vector shape background is transparent
+            out += tabs(indents) + "color: \"transparent\"\n"; // by default vector shape background is transparent
         }
         return out;
     }
 
 
 
-    QByteArray FigmaParser::makeStrokeJoin(const QJsonObject& stroke, int intendent) {
+    QByteArray FigmaParser::makeStrokeJoin(const QJsonObject& stroke, int indent) {
         QByteArray out;
         if(stroke.contains("strokeJoin")) {
             const QHash<QString, QString> joins = {
@@ -916,29 +928,29 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                {"BEVEL", "MiterBevel"},
                {"ROUND", "MiterRound"}
             };
-             out += tabs(intendent) + "joinStyle: ShapePath."  + joins[stroke["strokeJoin"].toString()] + "\n";
+             out += tabs(indent) + "joinStyle: ShapePath."  + joins[stroke["strokeJoin"].toString()] + "\n";
         } else {
-            out += tabs(intendent) + "joinStyle: ShapePath.MiterJoin\n";
+            out += tabs(indent) + "joinStyle: ShapePath.MiterJoin\n";
         }
         return out;
     }
 
-    QByteArray FigmaParser::makeShapeStroke(const QJsonObject& obj, int intendents, StrokeType type) {
+    QByteArray FigmaParser::makeShapeStroke(const QJsonObject& obj, int indents, StrokeType type) {
         QByteArray out;
-        const auto intendent =  tabs(intendents);
+        const auto indent =  tabs(indents);
         const QByteArray colorType = obj["type"] == "LINE" ? "fillColor" : "strokeColor"; //LINE works better this way
         if(obj.contains("strokes") && !obj["strokes"].toArray().isEmpty()) {
             const auto stroke = obj["strokes"].toArray()[0].toObject();
-            out += makeStrokeJoin(stroke, intendents);
+            out += makeStrokeJoin(stroke, indents);
             const auto opacity = stroke.contains("opacity") ? stroke["opacity"].toDouble() : 1.0;
             const auto color = stroke["color"].toObject();
-            out += intendent + colorType + ": " + toColor(
+            out += indent + colorType + ": " + toColor(
                     color["r"].toDouble(),
                     color["g"].toDouble(),
                     color["b"].toDouble(),
                     color["a"].toDouble() * opacity) + "\n";
         } else if(!obj["strokes"].isString()) {
-             out += intendent + colorType + ": \"transparent\"\n";
+             out += indent + colorType + ": \"transparent\"\n";
         }
         if(obj.contains("strokeWeight")) {
             auto val = 1.0;
@@ -947,66 +959,66 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 if(type == StrokeType::Double)
                     val *= 2.0;
                 }
-            out += intendent + "strokeWidth:" + QString::number(val) + "\n";
+            out += indent + "strokeWidth:" + QString::number(val) + "\n";
         }
         return out;
     }
 
-    QByteArray FigmaParser::makeShapeFill(const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::makeShapeFill(const QJsonObject& obj, int indents) {
         QByteArray out;
-        const auto intendent =  tabs(intendents);
+        const auto indent =  tabs(indents);
         if(obj["type"] != "LINE") {
             if(obj.contains("fills") && !obj["fills"].toArray().isEmpty()) {
                 const auto fills = obj["fills"].toArray();
                 const auto fill = fills[0].toObject();
                 const double opacity = fill.contains("opacity") ? fill["opacity"].toDouble() : 1.0;
                 const auto color = fill["color"].toObject();
-                out += intendent + "fillColor:" + toColor(
+                out += indent + "fillColor:" + toColor(
                         color["r"].toDouble(),
                         color["g"].toDouble(),
                         color["b"].toDouble(),
                         color["a"].toDouble() * opacity) + "\n";
             } else if(!obj["fills"].isString()){
-                out += intendent + "fillColor:\"transparent\"\n";
+                out += indent + "fillColor:\"transparent\"\n";
             }
         } else
-            out += intendent + "strokeColor: \"transparent\"\n";
+            out += indent + "strokeColor: \"transparent\"\n";
 
-        out += intendent + "// component (shapeFill) level: " + QString::number(m_componentLevel)  + " \n";
+        out += indent + "// component (shapeFill) level: " + QString::number(m_componentLevel)  + " \n";
         if(m_componentLevel == 0)
-            out += intendent + "id: " + makeId("svgpath_" , obj) + "\n";
+            out += indent + "id: " + makeId("svgpath_" , obj) + "\n";
 
         return out;
     }
 
-    EByteArray FigmaParser::makePlainItem(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makePlainItem(const QJsonObject& obj, int indents) {
         QByteArray out;
-        APPENDERR(out, makeItem("Rectangle", obj, intendents)); //TODO: set to item
-        APPENDERR(out, makeFill(obj, intendents));
-        out += makeExtents(obj, intendents);
-        APPENDERR(out, parseChildren(obj, intendents));
-        out += tabs(intendents - 1) + "}\n";
+        APPENDERR(out, makeItem("Rectangle", obj, indents)); //TODO: set to item
+        APPENDERR(out, makeFill(obj, indents));
+        out += makeExtents(obj, indents);
+        APPENDERR(out, parseChildren(obj, indents));
+        out += tabs(indents - 1) + "}\n";
         return out;
     }
 
-    QByteArray FigmaParser::makeSvgPath(int index, bool isFill, const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::makeSvgPath(int index, bool isFill, const QJsonObject& obj, int indents) {
         QByteArray out;
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
 
         const auto array = isFill ? obj["fillGeometry"].toArray() : obj["strokeGeometry"].toArray();
         const auto path = array[index].toObject();
         if(index == 0 && path["windingRule"] == "NONZERO") { //figma let set winding for each path, QML does not
-            out += intendent +  "fillRule: ShapePath.WindingFill\n";
+            out += indent +  "fillRule: ShapePath.WindingFill\n";
         }
 
-        out += intendent + "PathSvg {\n";
-        out += intendent1 + "path: \"" + path["path"].toString() + "\"\n";
-        out += intendent + "} \n";
+        out += indent + "PathSvg {\n";
+        out += indent1 + "path: \"" + path["path"].toString() + "\"\n";
+        out += indent + "} \n";
         return out;
     }
 
-    EByteArray FigmaParser::parse(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::parse(const QJsonObject& obj, int indents) {
         const auto type = obj["type"].toString();
         const QHash<QString, std::function<EByteArray (const QJsonObject&, int)> > parsers {
             {"RECTANGLE", std::bind(&FigmaParser::parseVector, this, std::placeholders::_1, std::placeholders::_2)},
@@ -1031,9 +1043,14 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(!parsers.contains(type)) {
             ERR(QString("Non supported object type:\"%1\"").arg(type))
         }
+
         if(isRendering(obj))
-            return parseRendered(obj, intendents);
-        return parsers[type](obj, intendents);
+            return parseContainer(obj, Content::Rendered, indents);
+
+        if(const auto properties = getProperties(obj); properties && properties.value().var.contains(AS_LOADER)) {
+            return parseContainer(obj, Content::Loader, indents);
+        }
+        return parsers[type](obj, indents);
     }
 
     bool FigmaParser::isGradient(const QJsonObject& obj) const {
@@ -1059,86 +1076,86 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return std::nullopt;
     }
 
-    EByteArray FigmaParser::makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int indents) {
         QByteArray out;
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
 
         const auto sourceId =  makeId("source_", obj);
         const auto maskSourceId = makeId( "maskSource_", obj);
 
 
-        out += intendent + "OpacityMask {\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += intendent1 + "source: " + sourceId +  "\n";
-        out += intendent1 + "maskSource: " + maskSourceId + "\n";
-        out += intendent + "}\n";
+        out += indent + "OpacityMask {\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += indent1 + "source: " + sourceId +  "\n";
+        out += indent1 + "maskSource: " + maskSourceId + "\n";
+        out += indent + "}\n";
 
-        out += intendent + "Image {\n";
-        out += intendent1 + "id: " + sourceId + "\n";
-        out += intendent1 + "layer.enabled: true\n";
-        out += intendent1 + "fillMode: Image.PreserveAspectCrop\n";
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "mipmap: true\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        APPENDERR(out, makeImageSource(imageRef, false, intendents + 1));
-        out += intendent + "}\n";
+        out += indent + "Image {\n";
+        out += indent1 + "id: " + sourceId + "\n";
+        out += indent1 + "layer.enabled: true\n";
+        out += indent1 + "fillMode: Image.PreserveAspectCrop\n";
+        out += indent1 + "visible: false\n";
+        out += indent1 + "mipmap: true\n";
+        out += indent1 + "anchors.fill:parent\n";
+        APPENDERR(out, makeImageSource(imageRef, false, indents + 1));
+        out += indent + "}\n";
 
 
-        out += intendent + "Shape {\n";
-        out += intendent1 + "id: " + maskSourceId + "\n";
-        out += intendent1 + "anchors.fill: parent\n";
-        out += intendent1 + "layer.enabled: true\n";
-        out += intendent1 + "visible: false\n";
+        out += indent + "Shape {\n";
+        out += indent1 + "id: " + maskSourceId + "\n";
+        out += indent1 + "anchors.fill: parent\n";
+        out += indent1 + "layer.enabled: true\n";
+        out += indent1 + "visible: false\n";
 
-        out += intendent1 + "ShapePath {\n";
-        out += makeShapeStroke(obj, intendents + 2, StrokeType::Normal);
-        out += tabs(intendents + 2) + "fillColor:\"black\"\n";
-        out += makeShapeFillData(obj, intendents + 2);
+        out += indent1 + "ShapePath {\n";
+        out += makeShapeStroke(obj, indents + 2, StrokeType::Normal);
+        out += tabs(indents + 2) + "fillColor:\"black\"\n";
+        out += makeShapeFillData(obj, indents + 2);
 
-        out += intendent1 + "}\n";
-        out += intendent + "}\n";
+        out += indent1 + "}\n";
+        out += indent + "}\n";
 
         return out;
     }
 
 
 
-    EByteArray FigmaParser::makeImageMaskDataQul(const QString& imageRef, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeImageMaskDataQul(const QString& imageRef, const QJsonObject& obj, int indents) {
         QByteArray out;
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
         const auto sourceId = makeId("source_", obj);
-        out += intendent + "Image {\n";
-        out += intendent1 + "id: " + sourceId + "\n";
-        out += intendent1 + "fillMode: Image.PreserveAspectCrop\n";
-        out += intendent1 + "visible: true\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        APPENDERR(out, makeImageSource(imageRef, false, intendents + 1));
-        out += intendent + "}\n";
+        out += indent + "Image {\n";
+        out += indent1 + "id: " + sourceId + "\n";
+        out += indent1 + "fillMode: Image.PreserveAspectCrop\n";
+        out += indent1 + "visible: true\n";
+        out += indent1 + "anchors.fill:parent\n";
+        APPENDERR(out, makeImageSource(imageRef, false, indents + 1));
+        out += indent + "}\n";
         return out;
     }
 
-    EByteArray FigmaParser::makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int intendents) {
-        return isQul() ? makeImageMaskDataQul(imageRef, obj, intendents) : makeImageMaskDataQt(imageRef, obj, intendents);
+    EByteArray FigmaParser::makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int indents) {
+        return isQul() ? makeImageMaskDataQul(imageRef, obj, indents) : makeImageMaskDataQt(imageRef, obj, indents);
     }
 
-     QByteArray FigmaParser::makeShapeFillData(const QJsonObject& obj, int shapeIntendents) {
+     QByteArray FigmaParser::makeShapeFillData(const QJsonObject& obj, int shapeindents) {
          QByteArray out;
          if(!obj["fillGeometry"].toArray().isEmpty()) {
              for(int i = 0; i < obj["fillGeometry"].toArray().count(); i++)
-                 out += makeSvgPath(i, true, obj, shapeIntendents );
+                 out += makeSvgPath(i, true, obj, shapeindents );
          } else if(!obj["strokeGeometry"].toArray().isEmpty()) {
              for(int i = 0; i < obj["strokeGeometry"].toArray().count(); i++)
-                 out += makeSvgPath(i, false, obj, shapeIntendents);
+                 out += makeSvgPath(i, false, obj, shapeindents);
          }
          return out;
      }
 
 
-     QByteArray FigmaParser::makeAntialising(int intendents) const {
+     QByteArray FigmaParser::makeAntialising(int indents) const {
          return !isQul() && (m_flags & AntializeShapes) ? // antialiazing is not supported
-            (tabs(intendents) + "antialiasing: true\n").toLatin1() : QByteArray();
+            (tabs(indents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 
      /*
@@ -1146,377 +1163,377 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
       * to if-else hell and wrote open to keep normal/inside/outside and image/fill
       * cases managed
     */
-     EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int indents) {
          QByteArray out;
-         APPENDERR(out, makeItem("Shape", obj, intendents));
-         out += makeExtents(obj, intendents);
-     //    out += makeSvgPathProperty(obj, intendents);
-         const auto intendent = tabs(intendents);
-         out += makeAntialising(intendents);
-         out += intendent + "ShapePath {\n";
-         out += makeShapeStroke(obj, intendents + 1, StrokeType::Normal);
-         out += makeShapeFill(obj, intendents + 1);
-         out += makeShapeFillData(obj, intendents + 1);
-         out += intendent + "}\n";
-         out += tabs(intendents - 1) + "}\n";
+         APPENDERR(out, makeItem("Shape", obj, indents));
+         out += makeExtents(obj, indents);
+     //    out += makeSvgPathProperty(obj, indents);
+         const auto indent = tabs(indents);
+         out += makeAntialising(indents);
+         out += indent + "ShapePath {\n";
+         out += makeShapeStroke(obj, indents + 1, StrokeType::Normal);
+         out += makeShapeFill(obj, indents + 1);
+         out += makeShapeFillData(obj, indents + 1);
+         out += indent + "}\n";
+         out += tabs(indents - 1) + "}\n";
          return out;
      }
 
-     EByteArray FigmaParser::makeVectorNormalFill(const QString& image, const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeVectorNormalFill(const QString& image, const QJsonObject& obj, int indents) {
          QByteArray out;
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
+         const auto indent = tabs(indents);
+         const auto indent1 = tabs(indents + 1);
 
-         APPENDERR(out, makeItem("Item", obj, intendents));
-         out += makeExtents(obj, intendents);
+         APPENDERR(out, makeItem("Item", obj, indents));
+         out += makeExtents(obj, indents);
 
-        APPENDERR(out, makeImageMaskData(image, obj, intendents));
+        APPENDERR(out, makeImageMaskData(image, obj, indents));
 
-         out += intendent + "Shape {\n";
-         out += intendent1 + "anchors.fill: parent\n";
-         out += makeAntialising(intendents + 1);
-         out += intendent1 + "ShapePath {\n";
-         out += makeShapeStroke(obj, intendents + 2, StrokeType::Normal);
-         out += makeShapeFill(obj, intendents + 2);
-         out += makeShapeFillData(obj, intendents + 2);
-         out += intendent1 + "}\n";
-         out += intendent + "}\n";
+         out += indent + "Shape {\n";
+         out += indent1 + "anchors.fill: parent\n";
+         out += makeAntialising(indents + 1);
+         out += indent1 + "ShapePath {\n";
+         out += makeShapeStroke(obj, indents + 2, StrokeType::Normal);
+         out += makeShapeFill(obj, indents + 2);
+         out += makeShapeFillData(obj, indents + 2);
+         out += indent1 + "}\n";
+         out += indent + "}\n";
 
-         out += tabs(intendents - 1) + "} \n";
+         out += tabs(indents - 1) + "} \n";
          return out;
      }
 
-    EByteArray FigmaParser::makeVectorNormal(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorNormal(const QJsonObject& obj, int indents) {
         const auto image = imageFill(obj);
-        return image ? makeVectorNormalFill(*image, obj, intendents) : makeVectorNormalFill(obj, intendents);
+        return image ? makeVectorNormalFill(*image, obj, indents) : makeVectorNormalFill(obj, indents);
     }
 
-    EByteArray FigmaParser::makeVectorInsideFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorInsideFill(const QJsonObject& obj, int indents) {
         QByteArray out;
-        out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        APPENDERR(out, makeItem("Item", obj, intendents));
-        out += makeExtents(obj, intendents);
+        out += tabs(indents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
+        APPENDERR(out, makeItem("Item", obj, indents));
+        out += makeExtents(obj, indents);
         const auto borderSourceId = makeId("borderSource_", obj);
 
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
 
-        out += intendent + "Shape { \n";
-        out += intendent1 + "id:" + borderSourceId + "\n";
+        out += indent + "Shape { \n";
+        out += indent1 + "id:" + borderSourceId + "\n";
 
-        out += intendent1 + "anchors.fill: parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "ShapePath {\n";
-        out += makeShapeStroke(obj, intendents + 2, StrokeType::Double);
-        out += makeShapeFill(obj, intendents + 2);
-        out += makeShapeFillData(obj, intendents + 2);
+        out += indent1 + "anchors.fill: parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "visible: false\n";
+        out += indent1 + "ShapePath {\n";
+        out += makeShapeStroke(obj, indents + 2, StrokeType::Double);
+        out += makeShapeFill(obj, indents + 2);
+        out += makeShapeFillData(obj, indents + 2);
 
-        out += tabs(intendents + 2) + "}\n";
-        out += intendent1 + "}\n";
+        out += tabs(indents + 2) + "}\n";
+        out += indent1 + "}\n";
 
 
         const auto borderMaskId = makeId("borderMask_", obj);
-        out += intendent1 + "Shape {\n";
-        out += intendent1 + "id: " + borderMaskId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "layer.enabled: true\n"; //we drawn out of bounds
-        out += intendent1 + "visible: false\n";
+        out += indent1 + "Shape {\n";
+        out += indent1 + "id: " + borderMaskId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "layer.enabled: true\n"; //we drawn out of bounds
+        out += indent1 + "visible: false\n";
 
-        out += intendent1 + "ShapePath {\n";
-        const auto intendent2 = tabs(intendents + 2);
-        out +=  intendent2 + "fillColor: \"black\"\n";
-        out +=  intendent2 + "strokeColor: \"transparent\"\n";
-        out +=  intendent2 + "strokeWidth: 0\n";
-        out +=  intendent2 + "joinStyle: ShapePath.MiterJoin\n";
+        out += indent1 + "ShapePath {\n";
+        const auto indent2 = tabs(indents + 2);
+        out +=  indent2 + "fillColor: \"black\"\n";
+        out +=  indent2 + "strokeColor: \"transparent\"\n";
+        out +=  indent2 + "strokeWidth: 0\n";
+        out +=  indent2 + "joinStyle: ShapePath.MiterJoin\n";
 
-        out += makeShapeFillData(obj, intendents + 2);
+        out += makeShapeFillData(obj, indents + 2);
 
-        out += intendent1 + "}\n"; //shapemask
-        out += intendent + "}\n"; //shape
+        out += indent1 + "}\n"; //shapemask
+        out += indent + "}\n"; //shape
 
         if(!isQul()) { // OpacityMask is not supported
-            out += intendent + "OpacityMask {\n";
-            out += intendent1 + "anchors.fill:parent\n";
-            out += intendent1 + "source: " + borderSourceId +  "\n";
-            out += intendent1 + "maskSource: " + borderMaskId + "\n";
-            out += intendent + "}\n"; //Opacity
+            out += indent + "OpacityMask {\n";
+            out += indent1 + "anchors.fill:parent\n";
+            out += indent1 + "source: " + borderSourceId +  "\n";
+            out += indent1 + "maskSource: " + borderMaskId + "\n";
+            out += indent + "}\n"; //Opacity
         }
 
-        out += tabs(intendents - 1) + "}\n"; //Item
+        out += tabs(indents - 1) + "}\n"; //Item
 
         return out;
     }
 
-    EByteArray FigmaParser::makeVectorInsideFill(const QString& image, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorInsideFill(const QString& image, const QJsonObject& obj, int indents) {
         QByteArray out;
-        out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        APPENDERR(out, makeItem("Item", obj, intendents));
-        out += makeExtents(obj, intendents);
+        out += tabs(indents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
+        APPENDERR(out, makeItem("Item", obj, indents));
+        out += makeExtents(obj, indents);
 
         const auto borderSourceId = makeId("borderSource_", obj);
 
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
-        const auto intendent2 = tabs(intendents + 2);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
+        const auto indent2 = tabs(indents + 2);
 
-        out += intendent + "Item {\n";
-        out += intendent1 + "id:" + borderSourceId + "\n";
-        out += intendent1 + "anchors.fill: parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "visible: false\n";
+        out += indent + "Item {\n";
+        out += indent1 + "id:" + borderSourceId + "\n";
+        out += indent1 + "anchors.fill: parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "visible: false\n";
 
-        APPENDERR(out, makeImageMaskData(image, obj, intendents + 1));
+        APPENDERR(out, makeImageMaskData(image, obj, indents + 1));
 
-        out += intendent1 + "Shape {\n";
-        out += intendent2 + "anchors.fill: parent\n";
-        out += makeAntialising(intendents + 2);
+        out += indent1 + "Shape {\n";
+        out += indent2 + "anchors.fill: parent\n";
+        out += makeAntialising(indents + 2);
 
-        out += intendent2 + "ShapePath {\n";
-        out += makeShapeStroke(obj, intendents + 3, StrokeType::Double);
-        out += makeShapeFill(obj, intendents + 3);
-        out += makeShapeFillData(obj, intendents + 3);
-        out += intendent2 + "}\n";
-        out += intendent1 + "}\n";
-        out += intendent + "}\n";
+        out += indent2 + "ShapePath {\n";
+        out += makeShapeStroke(obj, indents + 3, StrokeType::Double);
+        out += makeShapeFill(obj, indents + 3);
+        out += makeShapeFillData(obj, indents + 3);
+        out += indent2 + "}\n";
+        out += indent1 + "}\n";
+        out += indent + "}\n";
 
         const auto borderMaskId =  makeId("borderMask_", obj);
-        out += intendent + "Shape {\n";
-        out += intendent1 + "id: " + borderMaskId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "layer.enabled: true\n"; //we drawn out of bounds
-        out += intendent1 + "visible: false\n";
+        out += indent + "Shape {\n";
+        out += indent1 + "id: " + borderMaskId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "layer.enabled: true\n"; //we drawn out of bounds
+        out += indent1 + "visible: false\n";
 
-        out += intendent1 + "ShapePath {\n";
-        out +=  intendent2 + "fillColor: \"black\"\n";
-        out +=  intendent2 + "strokeColor: \"transparent\"\n";
-        out +=  intendent2 + "strokeWidth: 0\n";
-        out +=  intendent2 + "joinStyle: ShapePath.MiterJoin\n";
+        out += indent1 + "ShapePath {\n";
+        out +=  indent2 + "fillColor: \"black\"\n";
+        out +=  indent2 + "strokeColor: \"transparent\"\n";
+        out +=  indent2 + "strokeWidth: 0\n";
+        out +=  indent2 + "joinStyle: ShapePath.MiterJoin\n";
 
-        out += makeShapeFillData(obj, intendents + 2);
+        out += makeShapeFillData(obj, indents + 2);
 
-        out += intendent1 + "}\n"; //shapemask
-        out += intendent + "}\n"; //shape
+        out += indent1 + "}\n"; //shapemask
+        out += indent + "}\n"; //shape
 
         if(!isQul()) { // OpacityMask is not supported
-            out += intendent + "OpacityMask {\n";
-            out += intendent1 + "anchors.fill:parent\n";
-            out += intendent1 + "source: " + borderSourceId +  "\n";
-            out += intendent1 + "maskSource: " + borderMaskId + "\n";
-            out += intendent + "}\n"; //Opacity
+            out += indent + "OpacityMask {\n";
+            out += indent1 + "anchors.fill:parent\n";
+            out += indent1 + "source: " + borderSourceId +  "\n";
+            out += indent1 + "maskSource: " + borderMaskId + "\n";
+            out += indent + "}\n"; //Opacity
         }
 
-        out += tabs(intendents - 1) + "}\n"; //Item
+        out += tabs(indents - 1) + "}\n"; //Item
 
         return out;
 
     }
 
-    EByteArray FigmaParser::makeVectorInside(const QJsonObject& obj, int intendentsBase) {
+    EByteArray FigmaParser::makeVectorInside(const QJsonObject& obj, int indentsBase) {
         const auto image = imageFill(obj);
-        return image ? makeVectorInsideFill(*image, obj, intendentsBase) : makeVectorInsideFill(obj, intendentsBase);
+        return image ? makeVectorInsideFill(*image, obj, indentsBase) : makeVectorInsideFill(obj, indentsBase);
     }
 
-    EByteArray FigmaParser::makeVectorOutsideFill(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorOutsideFill(const QJsonObject& obj, int indents) {
         QByteArray out;
         const auto borderWidth = obj["strokeWeight"].toDouble();
-        out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        APPENDERR(out, makeItem("Item", obj, intendents));
-        out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
+        out += tabs(indents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
+        APPENDERR(out, makeItem("Item", obj, indents));
+        out += makeExtents(obj, indents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
         const auto borderSourceId = makeId( "borderSource_", obj);
 
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
-        const auto intendent2 = tabs(intendents + 2);
-        const auto intendent3 = tabs(intendents + 3);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
+        const auto indent2 = tabs(indents + 2);
+        const auto indent3 = tabs(indents + 3);
 
-        out += intendent + "Shape {\n";
+        out += indent + "Shape {\n";
 
-        out += intendent1 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent1 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 1);
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "ShapePath {\n";
-        out += makeShapeFill(obj, intendents + 2);
-        out += makeShapeFillData(obj, intendents + 2);
+        out += indent1 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent1 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 1);
+        out += makeAntialising(indents + 1);
+        out += indent1 + "ShapePath {\n";
+        out += makeShapeFill(obj, indents + 2);
+        out += makeShapeFillData(obj, indents + 2);
 
-        out += intendent2 + "strokeWidth: 0\n";
-        out += intendent2 + "strokeColor: fillColor\n";
-        out += intendent2 + "joinStyle: ShapePath.MiterJoin\n";
+        out += indent2 + "strokeWidth: 0\n";
+        out += indent2 + "strokeColor: fillColor\n";
+        out += indent2 + "joinStyle: ShapePath.MiterJoin\n";
 
 
-        out += intendent1 + "}\n";
-        out += intendent + "}\n";
+        out += indent1 + "}\n";
+        out += indent + "}\n";
 
-        out += intendent + "Item {\n";
-        out += intendent1 + "id: " + borderSourceId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "Shape {\n";
-        out += makeAntialising(intendents + 2);
-        out += intendent2 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent2 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 2);
-        out += intendent2 + "ShapePath {\n";
-        out += intendent3 + "fillColor: \"black\"\n";
-        out += makeShapeStroke(obj,  intendents + 3, StrokeType::Double);
+        out += indent + "Item {\n";
+        out += indent1 + "id: " + borderSourceId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += indent1 + "visible: false\n";
+        out += indent1 + "Shape {\n";
+        out += makeAntialising(indents + 2);
+        out += indent2 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent2 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 2);
+        out += indent2 + "ShapePath {\n";
+        out += indent3 + "fillColor: \"black\"\n";
+        out += makeShapeStroke(obj,  indents + 3, StrokeType::Double);
 
-        out += makeShapeFillData(obj, intendents + 3);
+        out += makeShapeFillData(obj, indents + 3);
 
-        out += intendent2 + "}\n"; //shapepath
-        out += intendent1 + "}\n"; //shape
-        out += intendent + "}\n"; //Item
+        out += indent2 + "}\n"; //shapepath
+        out += indent1 + "}\n"; //shape
+        out += indent + "}\n"; //Item
 
 
         const auto borderMaskId = makeId("borderMask_", obj);
-        out += intendent + "Item {\n";
-        out += intendent1 + "id: " + borderMaskId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "Shape {\n";
-        out += intendent2 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent2 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 2);
+        out += indent + "Item {\n";
+        out += indent1 + "id: " + borderMaskId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "visible: false\n";
+        out += indent1 + "Shape {\n";
+        out += indent2 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent2 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 2);
 
-        out += intendent2 + "ShapePath {\n";
-        out += intendent3 + "fillColor: \"black\"\n";
-        out += intendent3 + "strokeColor: \"transparent\"\n";
-        out += intendent3 + "strokeWidth: "  + QString::number(borderWidth) + "\n";
-        out += intendent3 + "joinStyle: ShapePath.MiterJoin\n";
+        out += indent2 + "ShapePath {\n";
+        out += indent3 + "fillColor: \"black\"\n";
+        out += indent3 + "strokeColor: \"transparent\"\n";
+        out += indent3 + "strokeWidth: "  + QString::number(borderWidth) + "\n";
+        out += indent3 + "joinStyle: ShapePath.MiterJoin\n";
 
-        out += makeShapeFillData(obj, intendents + 3);
+        out += makeShapeFillData(obj, indents + 3);
 
-        out += intendent2 + "}\n"; //shapemask
-        out += intendent1 + "}\n"; //shape
-        out += intendent + "}\n"; //Item
+        out += indent2 + "}\n"; //shapemask
+        out += indent1 + "}\n"; //shape
+        out += indent + "}\n"; //Item
 
         if(!isQul()) { // OpacityMask is not supported
-            out += intendent + "OpacityMask {\n";
-            out += intendent1 + "anchors.fill:parent\n";
-            out += intendent1 + "maskSource: " + borderMaskId +  "\n";
-            out += intendent1 + "source: " + borderSourceId + "\n";
-            out += intendent1 + "invert: true\n";
-            out += intendent + "}\n"; //Opacity
+            out += indent + "OpacityMask {\n";
+            out += indent1 + "anchors.fill:parent\n";
+            out += indent1 + "maskSource: " + borderMaskId +  "\n";
+            out += indent1 + "source: " + borderSourceId + "\n";
+            out += indent1 + "invert: true\n";
+            out += indent + "}\n"; //Opacity
         }
 
-        out += tabs(intendents - 1) + "}\n"; //Item
+        out += tabs(indents - 1) + "}\n"; //Item
 
         return out;
     }
 
-    EByteArray FigmaParser::makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::makeVectorOutsideFill(const QString& image, const QJsonObject& obj, int indents) {
         QByteArray out;
         const auto borderWidth = obj["strokeWeight"].toDouble();
-        out += tabs(intendents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
-        APPENDERR(out, makeItem("Item", obj, intendents));
-        out += makeExtents(obj, intendents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
+        out += tabs(indents - 1) + "// QML (SVG) supports only center borders, thus an extra mask is created for " + obj["strokeAlign"].toString()  + "\n";
+        APPENDERR(out, makeItem("Item", obj, indents));
+        out += makeExtents(obj, indents, {-borderWidth, -borderWidth, borderWidth * 2., borderWidth * 2.}); //since borders shall fit in we must expand (otherwise the mask is not big enough, it always clips)
 
         const auto borderSourceId = makeId("borderSource_", obj);
 
-        const auto intendent = tabs(intendents);
-        const auto intendent1 = tabs(intendents + 1);
-        const auto intendent2 = tabs(intendents + 2);
-        const auto intendent3 = tabs(intendents + 3);
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
+        const auto indent2 = tabs(indents + 2);
+        const auto indent3 = tabs(indents + 3);
 
-        out += intendent + "Item {\n";
-        out += intendent1 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent1 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 1);
-        out += makeAntialising(intendents + 1);
+        out += indent + "Item {\n";
+        out += indent1 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent1 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 1);
+        out += makeAntialising(indents + 1);
 
-        APPENDERR(out, makeImageMaskData(image, obj, intendents + 1));
+        APPENDERR(out, makeImageMaskData(image, obj, indents + 1));
 
-        out += intendent1 + "Shape {\n";
-        out += intendent2 + "anchors.fill: parent\n";
-        out += makeAntialising(intendents + 2);
-        out += intendent2 + "ShapePath {\n";
-        out += intendent3 + "strokeColor: \"transparent\"\n";
-        out += intendent3 + "strokeWidth: 0\n";
-        out += intendent3 + "joinStyle: ShapePath.MiterJoin\n";
-        out += makeShapeFill(obj, intendents + 3);
-        out += makeShapeFillData(obj, intendents  + 3);
+        out += indent1 + "Shape {\n";
+        out += indent2 + "anchors.fill: parent\n";
+        out += makeAntialising(indents + 2);
+        out += indent2 + "ShapePath {\n";
+        out += indent3 + "strokeColor: \"transparent\"\n";
+        out += indent3 + "strokeWidth: 0\n";
+        out += indent3 + "joinStyle: ShapePath.MiterJoin\n";
+        out += makeShapeFill(obj, indents + 3);
+        out += makeShapeFillData(obj, indents  + 3);
 
-        out += intendent2 + "} \n";
-        out += intendent1 + "} \n";
-        out += intendent + "} \n";
+        out += indent2 + "} \n";
+        out += indent1 + "} \n";
+        out += indent + "} \n";
 
-        out += intendent + "Item {\n";
-        out += intendent1 + "id: " + borderSourceId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "Shape {\n";
-        out += makeAntialising(intendents + 2);
-        out += intendent2 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent2 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 2);
-        out += intendent2 + "ShapePath {\n";
-        out += intendent3 + "fillColor: \"black\"\n";
-        out += makeShapeStroke(obj,  intendents + 3, StrokeType::Double);
+        out += indent + "Item {\n";
+        out += indent1 + "id: " + borderSourceId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += indent1 + "visible: false\n";
+        out += indent1 + "Shape {\n";
+        out += makeAntialising(indents + 2);
+        out += indent2 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent2 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 2);
+        out += indent2 + "ShapePath {\n";
+        out += indent3 + "fillColor: \"black\"\n";
+        out += makeShapeStroke(obj,  indents + 3, StrokeType::Double);
 
-        out += makeShapeFillData(obj, intendents + 3);
+        out += makeShapeFillData(obj, indents + 3);
 
-        out += intendent2 + "}\n"; //shapepath
-        out += intendent1 + "}\n"; //shape
-        out += intendent + "}\n"; //Item
+        out += indent2 + "}\n"; //shapepath
+        out += indent1 + "}\n"; //shape
+        out += indent + "}\n"; //Item
 
         const auto borderMaskId = makeId("borderMask_", obj);
-        out += intendent + "Item {\n";
-        out += intendent1 + "id: " + borderMaskId + "\n";
-        out += intendent1 + "anchors.fill:parent\n";
-        out += makeAntialising(intendents + 1);
-        out += intendent1 + "visible: false\n";
-        out += intendent1 + "Shape {\n";
-        out += intendent2 + "x: " + QString::number(borderWidth) + "\n";
-        out += intendent2 + "y: " + QString::number(borderWidth) + "\n";
-        out += makeSize(obj, intendents + 2);
+        out += indent + "Item {\n";
+        out += indent1 + "id: " + borderMaskId + "\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += makeAntialising(indents + 1);
+        out += indent1 + "visible: false\n";
+        out += indent1 + "Shape {\n";
+        out += indent2 + "x: " + QString::number(borderWidth) + "\n";
+        out += indent2 + "y: " + QString::number(borderWidth) + "\n";
+        out += makeSize(obj, indents + 2);
 
-        out += intendent2 + "ShapePath {\n";
-        out += intendent3 + "fillColor: \"black\"\n";
-        out += intendent3 + "strokeColor: \"transparent\"\n";
-        out += intendent3 + "strokeWidth: "  + QString::number(borderWidth) + "\n";
-        out += intendent3 + "joinStyle: ShapePath.MiterJoin\n";
+        out += indent2 + "ShapePath {\n";
+        out += indent3 + "fillColor: \"black\"\n";
+        out += indent3 + "strokeColor: \"transparent\"\n";
+        out += indent3 + "strokeWidth: "  + QString::number(borderWidth) + "\n";
+        out += indent3 + "joinStyle: ShapePath.MiterJoin\n";
 
-        out += makeShapeFillData(obj, intendents + 3);
+        out += makeShapeFillData(obj, indents + 3);
 
-        out += intendent2 + "}\n"; //shapemask
-        out += intendent1 + "}\n"; //shape
-        out += intendent + "}\n"; //Item
+        out += indent2 + "}\n"; //shapemask
+        out += indent1 + "}\n"; //shape
+        out += indent + "}\n"; //Item
 
         if(!isQul()) { // OpacityMask is not supported
-            out += intendent + "OpacityMask {\n";
-            out += intendent1 + "anchors.fill:parent\n";
-            out += intendent1 + "maskSource: " + borderMaskId +  "\n";
-            out += intendent1 + "source: " + borderSourceId + "\n";
-            out += intendent1 + "invert: true\n";
-            out += intendent + "}\n"; //Opacity
+            out += indent + "OpacityMask {\n";
+            out += indent1 + "anchors.fill:parent\n";
+            out += indent1 + "maskSource: " + borderMaskId +  "\n";
+            out += indent1 + "source: " + borderSourceId + "\n";
+            out += indent1 + "invert: true\n";
+            out += indent + "}\n"; //Opacity
         }
 
-        out += tabs(intendents - 1) + "}\n"; //Item
+        out += tabs(indents - 1) + "}\n"; //Item
 
         return out;
     }
 
-    EByteArray FigmaParser::makeVectorOutside(const QJsonObject& obj, int intendentsBase) {
+    EByteArray FigmaParser::makeVectorOutside(const QJsonObject& obj, int indentsBase) {
         const auto image = imageFill(obj);
-        return image ? makeVectorOutsideFill(*image, obj, intendentsBase) : makeVectorOutsideFill(obj, intendentsBase);
+        return image ? makeVectorOutsideFill(*image, obj, indentsBase) : makeVectorOutsideFill(obj, indentsBase);
     }
 
 
 
 
-    EByteArray FigmaParser::parseVector(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::parseVector(const QJsonObject& obj, int indents) {
 
         const auto hasBorders = obj.contains("strokes") && !obj["strokes"].toArray().isEmpty() && obj.contains("strokeWeight") && obj["strokeWeight"].toDouble() > 1.0;
         if(hasBorders && obj["strokeAlign"] == "INSIDE")
-            return makeVectorInside(obj, intendents);
+            return makeVectorInside(obj, indents);
         if(hasBorders && obj["strokeAlign"] == "OUTSIDE")
-            return makeVectorOutside(obj, intendents);
+            return makeVectorOutside(obj, indents);
         else
-            return makeVectorNormal(obj, intendents);
+            return makeVectorNormal(obj, indents);
 
     }
 
@@ -1572,18 +1589,18 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return styles;
     }
 
-    EByteArray FigmaParser::parseStyle(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::parseStyle(const QJsonObject& obj, int indents) {
          QByteArray out;
-         const auto intendent = tabs(intendents);
+         const auto indent = tabs(indents);
          const auto styles = toQMLTextStyles(obj);
          for(const auto& k : styles.keys()) {
              const auto v = styles[k];
              const auto value = v.toVariant().toString();
-             out += intendent + k + ": " + value + "\n";
+             out += indent + k + ": " + value + "\n";
          }
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {
-             APPENDERR(out, makeFill(fills[0].toObject(), intendents));
+             APPENDERR(out, makeFill(fills[0].toObject(), indents));
          }
          return out;
     }
@@ -1606,36 +1623,36 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return false;
     }
 
-    EByteArray FigmaParser::parseText(const QJsonObject& obj, int intendents) {
+    EByteArray FigmaParser::parseText(const QJsonObject& obj, int indents) {
         QByteArray out;
-        APPENDERR(out, makeItem("Text", obj, intendents));
-        APPENDERR(out, makeVector(obj, intendents));
-        const auto intendent = tabs(intendents);
+        APPENDERR(out, makeItem("Text", obj, indents));
+        APPENDERR(out, makeVector(obj, indents));
+        const auto indent = tabs(indents);
         if(!isQul()) // word wrap is not supported
-            out += intendent + "wrapMode: TextEdit.WordWrap\n";
-        out += intendent + "text:\"" + obj["characters"].toString() + "\"\n";
-        APPENDERR(out, parseStyle(obj["style"].toObject(), intendents));
-        out += tabs(intendents - 1) + "}\n";
+            out += indent + "wrapMode: TextEdit.WordWrap\n";
+        out += indent + "text:\"" + obj["characters"].toString() + "\"\n";
+        APPENDERR(out, parseStyle(obj["style"].toObject(), indents));
+        out += tabs(indents - 1) + "}\n";
         return out;
      }
 
-    QByteArray FigmaParser::parseSkip(const QJsonObject& obj, int intendents) {
+    QByteArray FigmaParser::parseSkip(const QJsonObject& obj, int indents) {
         Q_UNUSED(obj);
-        Q_UNUSED(intendents);
+        Q_UNUSED(indents);
         return QByteArray();
     }
 
-     EByteArray FigmaParser::parseFrame(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::parseFrame(const QJsonObject& obj, int indents) {
          QByteArray out;
-         APPENDERR(out, makeItem("Rectangle", obj, intendents));
-         APPENDERR(out, makeVector(obj, intendents));
-         const auto intendent = tabs(intendents);
+         APPENDERR(out, makeItem("Rectangle", obj, indents));
+         APPENDERR(out, makeVector(obj, indents));
+         const auto indent = tabs(indents);
          if(obj.contains("cornerRadius")) {
-             out += intendent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
+             out += indent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
          }
-         out += intendent + "clip: " + (obj["clipsContent"].toBool() ? "true" : "false") + " \n";
-         APPENDERR(out, parseChildren(obj, intendents));
-         out += tabs(intendents - 1) + "}\n";
+         out += indent + "clip: " + (obj["clipsContent"].toBool() ? "true" : "false") + " \n";
+         APPENDERR(out, parseChildren(obj, indents));
+         out += tabs(indents - 1) + "}\n";
          return out;
      }
 
@@ -1646,40 +1663,40 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      }
 
 
-     QByteArray FigmaParser::parseQtComponent(const OrderedMap<QString, QByteArray>& children, int intendents) {
+     QByteArray FigmaParser::parseQtComponent(const OrderedMap<QString, QByteArray>& children, int indents) {
        QByteArray out;
-       const auto intendent = tabs(intendents);
+       const auto indent = tabs(indents);
        const auto keys = children.keys();
         for(const auto& key : keys) {
             const auto id = delegateName(key);
             const auto component_name = QString(id[0]).toUpper() + id.mid(1);
-            out += intendent + QString("property Component %1: ").arg(id).toLatin1() + children[key];
-            out += intendent + QString("property Item i_%1\n").arg(id);
-            out += intendent + QString("property matrix4x4 %1_transform: Qt.matrix4x4(%2)\n").arg(id).arg(QString("Nan ").repeated(16).split(' ').join(",")).toLatin1();
-            out += intendent + QString("on%1_transformChanged: {if(i_%2 && i_%2.transform != %2_transform) i_%2.transform = %2_transform;}\n").arg(component_name, id).toLatin1();
+            out += indent + QString("property Component %1: ").arg(id).toLatin1() + children[key];
+            out += indent + QString("property Item i_%1\n").arg(id);
+            out += indent + QString("property matrix4x4 %1_transform: Qt.matrix4x4(%2)\n").arg(id).arg(QString("Nan ").repeated(16).split(' ').join(",")).toLatin1();
+            out += indent + QString("on%1_transformChanged: {if(i_%2 && i_%2.transform != %2_transform) i_%2.transform = %2_transform;}\n").arg(component_name, id).toLatin1();
             const QStringList properties = {"x", "y", "width", "height"};
             for(const auto& p : properties) {
-                out += intendent + QString("property real %1_%2: NaN\n").arg(id, p).toLatin1();
-                out += intendent + QString("on%1_%3Changed: {if(i_%2 && i_%2.%3 != %2_%3) i_%2.%3 = %2_%3;}\n").arg(component_name, id, p).toLatin1();
+                out += indent + QString("property real %1_%2: NaN\n").arg(id, p).toLatin1();
+                out += indent + QString("on%1_%3Changed: {if(i_%2 && i_%2.%3 != %2_%3) i_%2.%3 = %2_%3;}\n").arg(component_name, id, p).toLatin1();
             }
         }
 
-        const auto intendent1 = tabs(intendents + 1);
-        out += intendent + "Component.onCompleted: {\n";
+        const auto indent1 = tabs(indents + 1);
+        out += indent + "Component.onCompleted: {\n";
         for(const auto& key : keys) {
             const auto dname = delegateName(key);
-            out += intendent1 + "const o_" + dname + " = {}\n";
-            out += intendent1 + QString("if(!isNaN(%1_transform.m11)) o_%1['transform'] = %1_transform;\n").arg(dname);
+            out += indent1 + "const o_" + dname + " = {}\n";
+            out += indent1 + QString("if(!isNaN(%1_transform.m11)) o_%1['transform'] = %1_transform;\n").arg(dname);
             const QStringList properties = {"x", "y", "width", "height"};
             for(const auto& p : properties) {
-                out += intendent1 + QString("if(!isNaN(%1_%2)) o_%1['%2'] = %1_%2;\n").arg(dname, p);
+                out += indent1 + QString("if(!isNaN(%1_%2)) o_%1['%2'] = %1_%2;\n").arg(dname, p);
             }
-            out += intendent1 + QString("i_%1 = %1.createObject(this, o_%1)\n").arg(dname).toLatin1();
+            out += indent1 + QString("i_%1 = %1.createObject(this, o_%1)\n").arg(dname).toLatin1();
             for(const auto& p : properties) {
-                out += intendent1 + QString("%1_%2 = Qt.binding(()=>i_%1.%2)\n").arg(dname, p);
+                out += indent1 + QString("%1_%2 = Qt.binding(()=>i_%1.%2)\n").arg(dname, p);
             }
         }
-        out += intendent + "}\n";
+        out += indent + "}\n";
         return out;
     }
 
@@ -1696,22 +1713,22 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     // and therefore can be just children, what is going on here?
     // ... It creates a component of that name, as it says and then a Item to plug a delegate and that is wrapped
     // in component... is that then some one else to access the component? Kind of chain?
-     QByteArray FigmaParser::parseQulComponent(const OrderedMap<QString, QByteArray>& children, int intendents) {
+     QByteArray FigmaParser::parseQulComponent(const OrderedMap<QString, QByteArray>& children, int indents) {
          QByteArray out;
-         const auto intendent = tabs(intendents);
-         const auto intendent2 = tabs(intendents + 1);
+         const auto indent = tabs(indents);
+         const auto indent2 = tabs(indents + 1);
          const auto keys = children.keys();
          for(const auto& key : keys) {
              const auto id = componentName(key);
            //  const auto component_name = QString(id[0]).toUpper() + id.mid(1);
-//             out += intendent + QString("Component {\n");
-//             out += intendent2 + QString("id: comp_%1\n").arg(id);
-//             out += intendent2 + children[key];
-//             out += intendent + QString("}\n");
+//             out += indent + QString("Component {\n");
+//             out += indent2 + QString("id: comp_%1\n").arg(id);
+//             out += indent2 + children[key];
+//             out += indent + QString("}\n");
 #ifdef QUL_LOADER_WORKAROUND
-            out += intendent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
+            out += indent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
 #else
-            out += intendent + QString("property alias %1: loader_%2.sourceComponent\n").arg(delegateName(key), id);
+            out += indent + QString("property alias %1: loader_%2.sourceComponent\n").arg(delegateName(key), id);
 #endif
          }
 
@@ -1721,32 +1738,32 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          */
 
         for(const auto& key : keys) {
-            out += intendent + "Loader {\n";
+            out += indent + "Loader {\n";
             const auto id = componentName(key);
-            out += intendent2 + QString("id: loader_%1\n").arg(id);
-          //  out += intendent2 + QString("sourceComponent: comp_%1\n").arg(id);
-            out += intendent + "}\n";
+            out += indent2 + QString("id: loader_%1\n").arg(id);
+          //  out += indent2 + QString("sourceComponent: comp_%1\n").arg(id);
+            out += indent + "}\n";
          }
 
         //for(const auto& key : keys) {
         //    const auto dname = componentName(key);
-        //    out += intendent + dname + " {}\n";
+        //    out += indent + dname + " {}\n";
         // }
          return out;
      }
 
-     EByteArray FigmaParser::parseComponent(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::parseComponent(const QJsonObject& obj, int indents) {
          if(!(m_flags & Flags::ParseComponent)) {
-             return  parseInstance(obj, intendents);
+             return  parseInstance(obj, indents);
         } else {
-             const auto intendent = tabs(intendents);
+             const auto indent = tabs(indents);
             QByteArray out;
-             APPENDERR(out, makeItem("Rectangle", obj, intendents));
-             APPENDERR(out, makeVector(obj, intendents));
+             APPENDERR(out, makeItem("Rectangle", obj, indents));
+             APPENDERR(out, makeVector(obj, indents));
              if(obj.contains("cornerRadius")) {
-                 out += intendent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
+                 out += indent + "radius:" + QString::number(obj["cornerRadius"].toDouble()) + "\n";
              }
-             out += intendent + "clip: " + (obj["clipsContent"].toBool() ? "true" : "false") + " \n";
+             out += indent + "clip: " + (obj["clipsContent"].toBool() ? "true" : "false") + " \n";
 
              // this and below implements revealing a property (doReveal:type:name)
              // 1st write such properties
@@ -1756,260 +1773,260 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                  for(const auto& var : vars) {
                      if(name == DO_REVEAL) {
                         const auto reveal = getReveal(var);
-                        out += intendent + "property " + reveal.first + " " + reveal.second + "\n";
+                        out += indent + "property " + reveal.first + " " + reveal.second + "\n";
                     }
                  }
              }*/
 
-             const auto children = parseChildrenItems(obj, intendents);
+             const auto children = parseChildrenItems(obj, indents);
              if(!children)
                  return std::nullopt;
              if(isQul())
-                out += parseQulComponent(*children, intendents);
+                out += parseQulComponent(*children, indents);
              else
-               out += parseQtComponent(*children, intendents);
+               out += parseQtComponent(*children, indents);
 
              // then (note its only oneway)
              // write that value upon change, supposedly there are many "undefined" use cases!
              /*if(properties) {
                  const auto& [qa, name, vars] = properties.value();
-                 const auto intendent2 = tabs(intendents + 1);
+                 const auto indent2 = tabs(indents + 1);
                  for(const auto& var : vars) {
                      if(name == DO_REVEAL) {
                         const auto reveal = getReveal(var);
-                         out += intendent + toCamel("on", reveal.first, "Changed") + ": {\n";
+                         out += indent + toCamel("on", reveal.first, "Changed") + ": {\n";
                          for(const auto& key : children->keys()) {
                             const auto id = componentName(key);
-                            out += intendent2 + QString("loader_%1.item = %2;\n").arg(id, reveal.first);
+                            out += indent2 + QString("loader_%1.item = %2;\n").arg(id, reveal.first);
                         }
-                        out += intendent + "}\n";
+                        out += indent + "}\n";
                      }
                  }
              }*/
 
-             out += tabs(intendents - 1) + "}\n";
+             out += tabs(indents - 1) + "}\n";
 
              return out;
          }
      }
 
-     EByteArray FigmaParser::parseBooleanOperationUnion(const QJsonObject& obj, int intendents, const QString& sourceId, const QString& maskSourceId) {
+     EByteArray FigmaParser::parseBooleanOperationUnion(const QJsonObject& obj, int indents, const QString& sourceId, const QString& maskSourceId) {
         Q_ASSERT(!isQul());
         QByteArray out;
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
-         out += intendent + "Rectangle {\n";
-         out += intendent1 + "id: " + sourceId + "\n";
-         out += intendent1 + "anchors.fill: parent\n";
+         const auto indent = tabs(indents);
+         const auto indent1 = tabs(indents + 1);
+         out += indent + "Rectangle {\n";
+         out += indent1 + "id: " + sourceId + "\n";
+         out += indent1 + "anchors.fill: parent\n";
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {
-             APPENDERR(out, makeFill(fills[0].toObject(), intendents + 1));
+             APPENDERR(out, makeFill(fills[0].toObject(), indents + 1));
          } else if(!obj["fills"].isString()) {
-             out += intendent1 + "color: \"transparent\"\n";
+             out += indent1 + "color: \"transparent\"\n";
          }
-         out += intendent1 + "visible: false\n";
-         out += intendent + "}\n";
+         out += indent1 + "visible: false\n";
+         out += indent + "}\n";
 
-         out += intendent + "Item {\n";
-         out += intendent1 + "anchors.fill: parent\n";
-         out += intendent1 + "visible: false\n";
-         out += intendent1 + "id: " + maskSourceId + "\n";
-         APPENDERR(out, parseChildren(obj, intendents + 1));
-         out += intendent + "}\n";
+         out += indent + "Item {\n";
+         out += indent1 + "anchors.fill: parent\n";
+         out += indent1 + "visible: false\n";
+         out += indent1 + "id: " + maskSourceId + "\n";
+         APPENDERR(out, parseChildren(obj, indents + 1));
+         out += indent + "}\n";
 
 
-        out += intendent + "OpacityMask {\n";
-        out += intendent1 + "anchors.fill:" + sourceId + "\n";
-        out += intendent1 + "source:" + sourceId + "\n";
-        out += intendent1 + "maskSource:" + maskSourceId + "\n";
-        out += intendent + "}\n";
+        out += indent + "OpacityMask {\n";
+        out += indent1 + "anchors.fill:" + sourceId + "\n";
+        out += indent1 + "source:" + sourceId + "\n";
+        out += indent1 + "maskSource:" + maskSourceId + "\n";
+        out += indent + "}\n";
 
          return out;
      }
 
-     EByteArray FigmaParser::parseBooleanOperationSubtract(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId) {
+     EByteArray FigmaParser::parseBooleanOperationSubtract(const QJsonObject& obj, const QJsonArray& children, int indents, const QString& sourceId, const QString& maskSourceId) {
         Q_ASSERT(!isQul());
         QByteArray out;
 
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
-         out += intendent + "Item {\n";
-         out += intendent1 + "anchors.fill: parent\n";
-         out += intendent1 + "visible: false\n";
-         out += intendent1 + "id: " + sourceId + "_subtract\n";
-         const auto intendent2 = tabs(intendents + 2);
-         out += intendent1 + "Rectangle {\n";
-         out += intendent2 + "id: " + sourceId + "\n";
-         out += intendent2 + "anchors.fill: parent\n";
-         out += intendent2 + "visible: false\n";
+         const auto indent = tabs(indents);
+         const auto indent1 = tabs(indents + 1);
+         out += indent + "Item {\n";
+         out += indent1 + "anchors.fill: parent\n";
+         out += indent1 + "visible: false\n";
+         out += indent1 + "id: " + sourceId + "_subtract\n";
+         const auto indent2 = tabs(indents + 2);
+         out += indent1 + "Rectangle {\n";
+         out += indent2 + "id: " + sourceId + "\n";
+         out += indent2 + "anchors.fill: parent\n";
+         out += indent2 + "visible: false\n";
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {
-             APPENDERR(out, makeFill(fills[0].toObject(), intendents + 2));
+             APPENDERR(out, makeFill(fills[0].toObject(), indents + 2));
          } else if(!obj["fills"].isString()) {
-             out += intendent1 + "color: \"transparent\"\n";
+             out += indent1 + "color: \"transparent\"\n";
          }
-         out += intendent1 + "}\n";
-         out += intendent1 + "Item {\n";
-         out += intendent2 + "anchors.fill: parent\n";
-         out += intendent2 + "visible: false\n";
-         out += intendent2 + "id:" + maskSourceId + "\n";
-         APPENDERR(out, parse(children[0].toObject(), intendents + 3));
-         out += intendent1 + "}\n";
+         out += indent1 + "}\n";
+         out += indent1 + "Item {\n";
+         out += indent2 + "anchors.fill: parent\n";
+         out += indent2 + "visible: false\n";
+         out += indent2 + "id:" + maskSourceId + "\n";
+         APPENDERR(out, parse(children[0].toObject(), indents + 3));
+         out += indent1 + "}\n";
 
-         out += intendent1 + "OpacityMask {\n";
-         out += intendent2 + "anchors.fill:" + sourceId + "\n";
-         out += intendent2 + "source:" + sourceId + "\n";
-         out += intendent2 + "maskSource:" + maskSourceId + "\n";
-         out += intendent1 + "}\n";
-         out += intendent + "}\n";
+         out += indent1 + "OpacityMask {\n";
+         out += indent2 + "anchors.fill:" + sourceId + "\n";
+         out += indent2 + "source:" + sourceId + "\n";
+         out += indent2 + "maskSource:" + maskSourceId + "\n";
+         out += indent1 + "}\n";
+         out += indent + "}\n";
          //This was one we subtracts from
 
-         out += intendent + "Item {\n";
-         out += intendent1 + "anchors.fill: parent\n";
-         out += intendent1 + "visible: false\n";
-         out += intendent1 + "id: " + maskSourceId + "_subtract\n";
+         out += indent + "Item {\n";
+         out += indent1 + "anchors.fill: parent\n";
+         out += indent1 + "visible: false\n";
+         out += indent1 + "id: " + maskSourceId + "_subtract\n";
          for(int i = 1; i < children.size(); i++ )
-            APPENDERR(out, parse(children[i].toObject(), intendents + 2));
-         out += intendent + "}\n";
+            APPENDERR(out, parse(children[i].toObject(), indents + 2));
+         out += indent + "}\n";
 
-         out += intendent + "OpacityMask {\n";
-         out += intendent1 + "anchors.fill:" + sourceId + "_subtract\n";
-         out += intendent1 + "source:" + sourceId + "_subtract\n";
-         out += intendent1 + "maskSource:" + maskSourceId + "_subtract\n";
-         out += intendent1 + "invert: true\n";
-         out += intendent + "}\n";
+         out += indent + "OpacityMask {\n";
+         out += indent1 + "anchors.fill:" + sourceId + "_subtract\n";
+         out += indent1 + "source:" + sourceId + "_subtract\n";
+         out += indent1 + "maskSource:" + maskSourceId + "_subtract\n";
+         out += indent1 + "invert: true\n";
+         out += indent + "}\n";
          return out;
      }
 
-     EByteArray FigmaParser::parseBooleanOperationIntersect(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId) {
+     EByteArray FigmaParser::parseBooleanOperationIntersect(const QJsonObject& obj, const QJsonArray& children, int indents, const QString& sourceId, const QString& maskSourceId) {
         Q_ASSERT(!isQul());
          QByteArray out;
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
+         const auto indent = tabs(indents);
+         const auto indent1 = tabs(indents + 1);
 
-         out += intendent + "Rectangle {\n";
-         out += intendent1 + "id: " + sourceId + "\n";
-         out += intendent1 + "anchors.fill: parent\n";
+         out += indent + "Rectangle {\n";
+         out += indent1 + "id: " + sourceId + "\n";
+         out += indent1 + "anchors.fill: parent\n";
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {
-             APPENDERR(out, makeFill(fills[0].toObject(), intendents + 1));
+             APPENDERR(out, makeFill(fills[0].toObject(), indents + 1));
          } else if(!obj["fills"].isString()) {
-             out += intendent1 + "color: \"transparent\"\n";
+             out += indent1 + "color: \"transparent\"\n";
          }
-         out += intendent1 + "visible: false\n";
-         out += intendent + "}\n";
+         out += indent1 + "visible: false\n";
+         out += indent + "}\n";
 
          auto nextSourceId = sourceId;
 
          for(auto i = 0; i < children.size(); i++) {
              const auto maskId =  maskSourceId + "_" + QString::number(i);
-             out += intendent + "Item {\n";
-             out += intendent1 + "anchors.fill: parent\n";
-             out += intendent1 + "visible: false\n";
-             APPENDERR(out, parse(children[i].toObject(), intendents + 2));
-             out += intendent1 + "id: " + maskId + "\n";
-             out += intendent + "}\n";
+             out += indent + "Item {\n";
+             out += indent1 + "anchors.fill: parent\n";
+             out += indent1 + "visible: false\n";
+             APPENDERR(out, parse(children[i].toObject(), indents + 2));
+             out += indent1 + "id: " + maskId + "\n";
+             out += indent + "}\n";
 
-             out += intendent + "OpacityMask {\n";
-             out += intendent1 + "anchors.fill:" + sourceId + "\n";
-             out += intendent1 + "source:" + nextSourceId + "\n";
-             out += intendent1 + "maskSource:" + maskId + "\n";
+             out += indent + "OpacityMask {\n";
+             out += indent1 + "anchors.fill:" + sourceId + "\n";
+             out += indent1 + "source:" + nextSourceId + "\n";
+             out += indent1 + "maskSource:" + maskId + "\n";
              nextSourceId = sourceId + "_" + QString::number(i).toLatin1();
-             out += intendent1 + "id: " + nextSourceId + "\n";
+             out += indent1 + "id: " + nextSourceId + "\n";
              if(i < children.size() - 1)
-                out += intendent1 + "visible: false\n";
-             out += intendent + "}\n";
+                out += indent1 + "visible: false\n";
+             out += indent + "}\n";
          }
          return out;
      }
 
-     EByteArray FigmaParser::parseBooleanOperationExclude(const QJsonObject& obj, const QJsonArray& children, int intendents, const QString& sourceId, const QString& maskSourceId) {
+     EByteArray FigmaParser::parseBooleanOperationExclude(const QJsonObject& obj, const QJsonArray& children, int indents, const QString& sourceId, const QString& maskSourceId) {
         Q_ASSERT(!isQul());
          QByteArray out;
 
-         const auto intendent = tabs(intendents);
-         const auto intendent1 = tabs(intendents + 1);
+         const auto indent = tabs(indents);
+         const auto indent1 = tabs(indents + 1);
 
-         out += intendent + "Rectangle {\n";
-         out += intendent1 + "id: " + sourceId + "\n";
-         out += intendent1 + "anchors.fill: parent\n";
+         out += indent + "Rectangle {\n";
+         out += indent1 + "id: " + sourceId + "\n";
+         out += indent1 + "anchors.fill: parent\n";
          const auto fills = obj["fills"].toArray();
          if(fills.size() > 0) {
-             APPENDERR(out, makeFill(fills[0].toObject(), intendents + 1));
+             APPENDERR(out, makeFill(fills[0].toObject(), indents + 1));
          } else if(!obj["fills"].isString()) {
-             out += intendent1 + "color: \"transparent\"\n";
+             out += indent1 + "color: \"transparent\"\n";
          }
-         out += intendent1 + "visible: false\n";
-         out += intendent1 + "layer.enabled: true\n";
+         out += indent1 + "visible: false\n";
+         out += indent1 + "layer.enabled: true\n";
 
 
-         const auto intendent2 = tabs(intendents + 2);
-         const auto intendent3 = tabs(intendents + 3);
-         out += intendent1 + "readonly property string shaderSource: \"\n";
-         out += intendent2 + "uniform lowp sampler2D colorSource;\n";
-         out += intendent2 + "uniform lowp sampler2D prevMask;\n";
-         out += intendent2 + "uniform lowp sampler2D currentMask;\n";
-         out += intendent2 + "uniform lowp float qt_Opacity;\n";
-         out += intendent2 + "varying highp vec2 qt_TexCoord0;\n";
-         out += intendent2 + "void main() {\n";
-         out += intendent3 + "vec4 color = texture2D(colorSource, qt_TexCoord0);\n";
-         out += intendent3 + "vec4 cm = texture2D(currentMask, qt_TexCoord0);\n";
-         out += intendent3 + "vec4 pm = texture2D(prevMask, qt_TexCoord0);\n";
+         const auto indent2 = tabs(indents + 2);
+         const auto indent3 = tabs(indents + 3);
+         out += indent1 + "readonly property string shaderSource: \"\n";
+         out += indent2 + "uniform lowp sampler2D colorSource;\n";
+         out += indent2 + "uniform lowp sampler2D prevMask;\n";
+         out += indent2 + "uniform lowp sampler2D currentMask;\n";
+         out += indent2 + "uniform lowp float qt_Opacity;\n";
+         out += indent2 + "varying highp vec2 qt_TexCoord0;\n";
+         out += indent2 + "void main() {\n";
+         out += indent3 + "vec4 color = texture2D(colorSource, qt_TexCoord0);\n";
+         out += indent3 + "vec4 cm = texture2D(currentMask, qt_TexCoord0);\n";
+         out += indent3 + "vec4 pm = texture2D(prevMask, qt_TexCoord0);\n";
 
-         out += intendent3 + "gl_FragColor = qt_Opacity * color * ((cm.a * (1.0 - pm.a)) + ((1.0 - cm.a) * pm.a));\n";
-         out += intendent2 + "}\"\n";
+         out += indent3 + "gl_FragColor = qt_Opacity * color * ((cm.a * (1.0 - pm.a)) + ((1.0 - cm.a) * pm.a));\n";
+         out += indent2 + "}\"\n";
 
-         out += intendent1 + "readonly property string shaderSource0: \"\n";
-         out += intendent2 + "uniform lowp sampler2D colorSource;\n";
-         out += intendent2 + "uniform lowp sampler2D currentMask;\n";
-         out += intendent2 + "uniform lowp float qt_Opacity;\n";
-         out += intendent2 + "varying highp vec2 qt_TexCoord0;\n";
-         out += intendent2 + "void main() {\n";
-         out += intendent3 + "vec4 color = texture2D(colorSource, qt_TexCoord0);\n";
-         out += intendent3 + "vec4 cm = texture2D(currentMask, qt_TexCoord0);\n";
-         out += intendent3 + "gl_FragColor = cm.a * color;\n";
-         out += intendent2 + "}\"\n";
+         out += indent1 + "readonly property string shaderSource0: \"\n";
+         out += indent2 + "uniform lowp sampler2D colorSource;\n";
+         out += indent2 + "uniform lowp sampler2D currentMask;\n";
+         out += indent2 + "uniform lowp float qt_Opacity;\n";
+         out += indent2 + "varying highp vec2 qt_TexCoord0;\n";
+         out += indent2 + "void main() {\n";
+         out += indent3 + "vec4 color = texture2D(colorSource, qt_TexCoord0);\n";
+         out += indent3 + "vec4 cm = texture2D(currentMask, qt_TexCoord0);\n";
+         out += indent3 + "gl_FragColor = cm.a * color;\n";
+         out += indent2 + "}\"\n";
 
-         out += intendent + "}\n";
+         out += indent + "}\n";
 
          QString nextSourceId;
 
          for(auto i = 0; i < children.size() ; i++) {
              const auto maskId =  maskSourceId + "_" + QString::number(i);
-             out += intendent + "Item {\n";
-             out += intendent1 + "visible: false\n";
-             out += intendent1 + "anchors.fill: parent\n";
-             APPENDERR(out, parse(children[i].toObject(), intendents + 2));
-             out += intendent1 + "layer.enabled: true\n";
-             out += intendent1 + "id: " + maskId + "\n";
-             out += intendent + "}\n";
+             out += indent + "Item {\n";
+             out += indent1 + "visible: false\n";
+             out += indent1 + "anchors.fill: parent\n";
+             APPENDERR(out, parse(children[i].toObject(), indents + 2));
+             out += indent1 + "layer.enabled: true\n";
+             out += indent1 + "id: " + maskId + "\n";
+             out += indent + "}\n";
 
-             out += intendent + "ShaderEffect {\n";
-             out += intendent1 + "anchors.fill: parent\n";
-             out += intendent1 + "layer.enabled: true\n";
-             out += intendent1 + "property var colorSource:" +  sourceId + "\n";
+             out += indent + "ShaderEffect {\n";
+             out += indent1 + "anchors.fill: parent\n";
+             out += indent1 + "layer.enabled: true\n";
+             out += indent1 + "property var colorSource:" +  sourceId + "\n";
              if(!nextSourceId.isEmpty()) {
-                  out += intendent2 + "property var prevMask: ShaderEffectSource {\n";
-                  out += intendent2 + "sourceItem: " + nextSourceId + "\n";
-                  out += intendent1 + "}\n";
+                  out += indent2 + "property var prevMask: ShaderEffectSource {\n";
+                  out += indent2 + "sourceItem: " + nextSourceId + "\n";
+                  out += indent1 + "}\n";
 
              }
-             out += intendent1 + "property var currentMask:" +  maskId + "\n";
-             out += intendent1 + "fragmentShader: " + sourceId + (nextSourceId.isEmpty() ? ".shaderSource0" : ".shaderSource") + "\n";
+             out += indent1 + "property var currentMask:" +  maskId + "\n";
+             out += indent1 + "fragmentShader: " + sourceId + (nextSourceId.isEmpty() ? ".shaderSource0" : ".shaderSource") + "\n";
              nextSourceId = sourceId + "_" + QString::number(i).toLatin1();
              if(i < children.size() - 1) {
-                  out += intendent1 + "visible: false\n";
-                  out += intendent1 + "id: " + nextSourceId + "\n";
+                  out += indent1 + "visible: false\n";
+                  out += indent1 + "id: " + nextSourceId + "\n";
              }
-             out += intendent1 + "}\n";
+             out += indent1 + "}\n";
          }
          return out;
      }
 
 
-     EByteArray FigmaParser::parseBooleanOperation(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::parseBooleanOperation(const QJsonObject& obj, int indents) {
          if((m_flags & Flags::BreakBooleans) == 0 || isQul()) // Qul does not support boolean operations (due no OpacityMasks)
-            return parseVector(obj, intendents);
+            return parseVector(obj, indents);
 
          const auto children = obj["children"].toArray();
          if(children.size() < 2) {
@@ -2018,25 +2035,25 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto operation = obj["booleanOperation"].toString();
 
          QByteArray out;
-         APPENDERR(out, makeItem("Item", obj, intendents));
-         out += makeExtents(obj, intendents);
-         //const auto intendent = tabs(intendents);
-         //const auto intendent1 = tabs(intendents + 1);
+         APPENDERR(out, makeItem("Item", obj, indents));
+         out += makeExtents(obj, indents);
+         //const auto indent = tabs(indents);
+         //const auto indent1 = tabs(indents + 1);
          const auto sourceId = makeId("source_", obj);
          const auto maskSourceId = makeId("maskSource_", obj);
          if(operation == "UNION") {
-            APPENDERR(out, parseBooleanOperationUnion(obj, intendents, sourceId, maskSourceId));
+            APPENDERR(out, parseBooleanOperationUnion(obj, indents, sourceId, maskSourceId));
          } else if(operation == "SUBTRACT") {
-             APPENDERR(out, parseBooleanOperationSubtract(obj, children, intendents, sourceId, maskSourceId));
+             APPENDERR(out, parseBooleanOperationSubtract(obj, children, indents, sourceId, maskSourceId));
          } else if(operation == "INTERSECT") {
-            APPENDERR(out, parseBooleanOperationIntersect(obj, children, intendents, sourceId, maskSourceId));
+            APPENDERR(out, parseBooleanOperationIntersect(obj, children, indents, sourceId, maskSourceId));
          } else if(operation == "EXCLUDE") {
-            APPENDERR(out, parseBooleanOperationExclude(obj, children, intendents, sourceId, maskSourceId));
+            APPENDERR(out, parseBooleanOperationExclude(obj, children, indents, sourceId, maskSourceId));
          } else {
              // not supported
              return QByteArray();
          }
-         out += tabs(intendents - 1) + "}\n";
+         out += tabs(indents - 1) + "}\n";
          return out;
      }
 
@@ -2054,28 +2071,66 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              return sz;
      }
 
-     EByteArray FigmaParser::makeRendered(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeRendered(const QJsonObject& obj, int indents) {
          const auto imageId = makeId("i_", obj);
          QByteArray out;
-         const auto intendent = tabs(intendents );
-         out += intendent + "Image {\n";
-         const auto intendent1 = tabs(intendents + 1);
-         out += intendent1 + "id: " + imageId + "\n";
-         out += intendent1 + "anchors.centerIn: parent\n";
+         const auto indent = tabs(indents );
+         out += indent + "Image {\n";
+         const auto indent1 = tabs(indents + 1);
+         out += indent1 + "id: " + imageId + "\n";
+         out += indent1 + "anchors.centerIn: parent\n";
          if(!isQul())
-             out += intendent1 + "mipmap: true\n";
-         out += intendent1 + "fillMode: Image.PreserveAspectFit\n";
+             out += indent1 + "mipmap: true\n";
+         out += indent1 + "fillMode: Image.PreserveAspectFit\n";
 
-         APPENDERR(out, makeImageSource(obj["id"].toString(), true, intendents + 1, PlaceHolder));
-         out += intendent + "}\n";
+         APPENDERR(out, makeImageSource(obj["id"].toString(), true, indents + 1, PlaceHolder));
+         out += indent + "}\n";
          return out;
      }
 
 
-     EByteArray FigmaParser::parseRendered(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::makeLoader(const QJsonObject& obj, int indents) {
+         const auto properties = getProperties(obj);
+         const auto& [obj_name, name, var, is_comp] = properties.value(); // already ok
+         const auto loaderId = makeId("l_", obj);
          QByteArray out;
-         APPENDERR(out, makeComponentInstance("Item", obj, intendents));
-         const auto intendent = tabs(intendents );
+         const auto indent = tabs(indents );
+         out += indent + "Loader {\n";
+         const auto indent1 = tabs(indents + 1);
+         const auto indent2 = tabs(indents + 2);
+         const auto indent3 = tabs(indents + 3);
+         const auto indent4 = tabs(indents + 4);
+         out += indent1 + "id: " + loaderId + "\n";
+         out += indent1 + "anchors.fill: parent\n";
+         out += indent1 + "Connections {\n";
+         out += indent2 + "target: FigmaQmlSingleton\n";
+         out += indent2 + "onSetSource: {\n";
+         out += indent3 + "if(element == '" + name + "')\n";
+         out += indent4 + loaderId + ".source = source;\n";
+         out += indent2 + "}\n";
+         out += indent2 + "onSetSourceComponent: {\n";
+         out += indent3 + "if(element == '" + name + "')\n";
+         out += indent4 + loaderId + ".sourceComponent = sourceComponent;\n";
+         out += indent2 + "}\n";
+         out += indent1 + "}\n";
+         out += indent + "}\n";
+
+         QByteArray rendered;
+         if(! (m_flags & Flags::LoaderPlaceHolders)) {
+            const auto image = makeRendered(obj, indents);
+            if(!image) return std::nullopt; // could be warning / place holder as is assumed to be only for FigmaQML UI placeholder
+            rendered = image.value();
+         }
+
+         m_externalLoaders.insert(loaderId, std::make_tuple(rendered, name));
+         return out;
+     }
+
+
+     EByteArray FigmaParser::parseContainer(const QJsonObject& obj, Content content, int indents) {
+         QByteArray out;
+         APPENDERR(out, makeComponentInstance("Item", obj, indents));
+         const auto indent = tabs(indents );
          Q_ASSERT(m_parent.obj->contains("absoluteBoundingBox"));
          const auto prect = m_parent["absoluteBoundingBox"].toObject();
          const auto px = prect["x"].toDouble();
@@ -2091,30 +2146,37 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
 
 
-         out += intendent + QString("x: %1\n").arg(x - px);
-         out += intendent + QString("y: %1\n").arg(y - py);
+         out += indent + QString("x: %1\n").arg(x - px);
+         out += indent + QString("y: %1\n").arg(y - py);
 
-         out += intendent + QString("width:%1\n").arg(width);
-         out += intendent + QString("height:%1\n").arg(height);
+         out += indent + QString("width:%1\n").arg(width);
+         out += indent + QString("height:%1\n").arg(height);
 
          const auto invisible = obj.contains("visible") && !obj["visible"].toBool();
          if(!invisible) {  //Prerendering is not available for invisible elements
-             APPENDERR(out, makeRendered(obj, intendents + 1));
+             switch (content) {
+             case Content::Rendered:
+                APPENDERR(out, makeRendered(obj, indents + 1));
+                break;
+             case Content::Loader:
+                APPENDERR(out, makeLoader(obj, indents + 1));
+                break;
+             }
          }
-         out += tabs(intendents - 1) + "}\n";
+         out += tabs(indents - 1) + "}\n";
          return out;
      }
 
 
 
-     EByteArray FigmaParser::makeInstanceChildren(const QJsonObject& obj, const QJsonObject& comp, int intendents) {
+     EByteArray FigmaParser::makeInstanceChildren(const QJsonObject& obj, const QJsonObject& comp, int indents) {
         QByteArray out;
         // m_componentLevel should propably apply for Qul only
         ++m_componentLevel;
         RAII_ raii {[this](){--m_componentLevel;}};
         const auto compChildren = comp["children"].toArray();
         const auto objChildren = obj["children"].toArray();
-        auto children = parseChildrenItems(obj, intendents);  //const not accepted! bug in VC??
+        auto children = parseChildrenItems(obj, indents);  //const not accepted! bug in VC??
         if(!children)
             return std::nullopt;
         if(compChildren.size() != children->size()) { //TODO: better heuristics what to do if kids count wont match, problem is z-order, but we can do better
@@ -2125,7 +2187,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      //   QSet<QString> unmatched = QSet<QString>::fromList(children.keys());
      //   Q_ASSERT(compChildren.size() == children.size());
         const auto keys = children->keys();
-        const auto intendent = tabs(intendents);
+        const auto indent = tabs(indents);
         for(const auto& cc : compChildren) {
             //first we find the corresponsing object child
             const auto cchild = cc.toObject();
@@ -2158,17 +2220,17 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                                 || deltaObject.contains("size"))))) {
                 const auto delegateId = delegateName(id);
                 if(deltaObject.contains("relativeTransform")) {
-                    const auto transform = makeTransforms(objChild, intendents + 1);
+                    const auto transform = makeTransforms(objChild, indents + 1);
                     if(!transform.isEmpty())
-                        out += intendent + QString("%1_transform: %2\n").arg(delegateId, QString(transform));
+                        out += indent + QString("%1_transform: %2\n").arg(delegateId, QString(transform));
                     const auto pos = position(objChild);
-                    out += intendent + QString("%1_x: %2\n").arg(delegateId).arg(static_cast<int>(pos.x()));
-                    out += intendent + QString("%1_y: %2\n").arg(delegateId).arg(static_cast<int>(pos.y()));
+                    out += indent + QString("%1_x: %2\n").arg(delegateId).arg(static_cast<int>(pos.x()));
+                    out += indent + QString("%1_y: %2\n").arg(delegateId).arg(static_cast<int>(pos.y()));
                 }
                 if(deltaObject.contains("size")) {
                     const auto size = deltaObject["size"].toObject();
-                    out += intendent + QString("%1_width: %2\n").arg(delegateId).arg(static_cast<int>(size["x"].toDouble()));
-                    out += intendent + QString("%1_height: %2\n").arg(delegateId).arg(static_cast<int>(size["y"].toDouble()));
+                    out += indent + QString("%1_width: %2\n").arg(delegateId).arg(static_cast<int>(size["x"].toDouble()));
+                    out += indent + QString("%1_height: %2\n").arg(delegateId).arg(static_cast<int>(size["y"].toDouble()));
                 }
                 continue;
             }
@@ -2176,9 +2238,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 #ifdef QUL_LOADER_WORKAROUND
             const auto sub_component =  addComponentStream(cchild, child_item);
             Q_ASSERT(!sub_component.isEmpty());
-            out += intendent + delegateName(id) + ": \"" + sub_component + "\"\n";
+            out += indent + delegateName(id) + ": \"" + sub_component + "\"\n";
 #else
-            out += intendent + delegateName(id) + ": " + child_item;
+            out += indent + delegateName(id) + ": " + child_item;
 #endif
         }
         return out;
@@ -2193,7 +2255,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return QJsonValue();
     }
 
-     EByteArray FigmaParser::parseInstance(const QJsonObject& obj, int intendents) {
+     EByteArray FigmaParser::parseInstance(const QJsonObject& obj, int indents) {
          QByteArray out;
          const auto isInstance = type(obj) == ItemType::Instance;
          const auto componentId = (isInstance ? obj["componentId"] : obj["id"]).toString();
@@ -2206,7 +2268,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto comp = (*m_components)[componentId];
 
          if(!isInstance) {
-             APPENDERR(out, makeComponentInstance(comp->name(), obj, intendents));
+             APPENDERR(out, makeComponentInstance(comp->name(), obj, indents));
          } else {
 
              auto instanceObject = delta(obj, comp->object(), {"children"}, {});
@@ -2221,18 +2283,18 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                  instanceObject.insert("strokes", "");
              }
 
-             APPENDERR(out, makeItem(comp->name(), instanceObject, intendents));
-             APPENDERR(out, makeVector(instanceObject, intendents));
+             APPENDERR(out, makeItem(comp->name(), instanceObject, indents));
+             APPENDERR(out, makeVector(instanceObject, indents));
 
-             APPENDERR(out, makeInstanceChildren(obj, comp->object(), intendents));
+             APPENDERR(out, makeInstanceChildren(obj, comp->object(), indents));
          }
-         out += tabs(intendents - 1) + "}\n";
+         out += tabs(indents - 1) + "}\n";
          return out;
      }
 
-      EByteArray FigmaParser::parseChildren(const QJsonObject& obj, int intendents) {
+      EByteArray FigmaParser::parseChildren(const QJsonObject& obj, int indents) {
           QByteArray out;
-          const auto items = parseChildrenItems(obj, intendents);
+          const auto items = parseChildrenItems(obj, indents);
           if(!items)
               return std::nullopt;
           for(const auto& [k, bytes] : *items)
@@ -2241,40 +2303,40 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
           // add alias set signal
 
           if(!m_parent.parent->parent && (m_flags & GenerateAccess)) {
-            out += makePropertyChangeHandler(obj, intendents);
+            out += makePropertyChangeHandler(obj, indents);
             }
           return out;
     }
 
-    EByteArray FigmaParser::makeChildMask(const QJsonObject& child, int intendents) {
+    EByteArray FigmaParser::makeChildMask(const QJsonObject& child, int indents) {
           QByteArray out;
-          const auto intendent = tabs(intendents);
-          const auto intendent1 = tabs(intendents + 1);
+          const auto indent = tabs(indents);
+          const auto indent1 = tabs(indents + 1);
           const auto maskSourceId = makeId("mask_", child);
           const auto sourceId = makeId("source_", child);
-          out += tabs(intendents) + "Item {\n";
-          out += intendent + "anchors.fill:parent\n";
+          out += tabs(indents) + "Item {\n";
+          out += indent + "anchors.fill:parent\n";
           if(!isQul()) {
-              out += intendent + "OpacityMask {\n";
-              out += intendent1 + "anchors.fill:parent\n";
-              out += intendent1 + "source: " + sourceId +  "\n";
-              out += intendent1 + "maskSource: " + maskSourceId + "\n";
-              out += intendent + "}\n\n";
+              out += indent + "OpacityMask {\n";
+              out += indent1 + "anchors.fill:parent\n";
+              out += indent1 + "source: " + sourceId +  "\n";
+              out += indent1 + "maskSource: " + maskSourceId + "\n";
+              out += indent + "}\n\n";
           }
-          out += intendent + "Item {\n";
-          out += intendent1 + "id: " + maskSourceId + "\n";
-          out += intendent1 + "anchors.fill:parent\n";
-          APPENDERR(out, parse(child, intendents + 2));
-          out += intendent1 + "visible:false\n";
-          out += intendent + "}\n\n";
-          out += intendent + "Item {\n";
-          out += intendent1 + "id: " + sourceId + "\n";
-          out += intendent1 + "anchors.fill:parent\n";
-          out += intendent1 + "visible:false\n";
+          out += indent + "Item {\n";
+          out += indent1 + "id: " + maskSourceId + "\n";
+          out += indent1 + "anchors.fill:parent\n";
+          APPENDERR(out, parse(child, indents + 2));
+          out += indent1 + "visible:false\n";
+          out += indent + "}\n\n";
+          out += indent + "Item {\n";
+          out += indent1 + "id: " + sourceId + "\n";
+          out += indent1 + "anchors.fill:parent\n";
+          out += indent1 + "visible:false\n";
           return out;
       }
 
-    std::optional<OrderedMap<QString, QByteArray>> FigmaParser::parseChildrenItems(const QJsonObject& obj, int intendents) {
+    std::optional<OrderedMap<QString, QByteArray>> FigmaParser::parseChildrenItems(const QJsonObject& obj, int indents) {
         OrderedMap<QString, QByteArray> childrenItems;
         m_parent.push(&obj);
         if(obj.contains("children")) {
@@ -2286,10 +2348,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 auto child = c.toObject();
                 const bool isMask = child.contains("isMask") && child["isMask"].toBool(); //mask may not be the first, but it masks the rest
                 if(isMask) {
-                    APPENDERR(out, makeChildMask(child, intendents));
+                    APPENDERR(out, makeChildMask(child, indents));
                     hasMask = true;
                 } else {
-                    const auto parsed = parse(child, hasMask ? intendents + 2 : intendents + 1);
+                    const auto parsed = parse(child, hasMask ? indents + 2 : indents + 1);
                     if(!parsed)
                         return std::nullopt;
                     childrenItems.insert(child["id"].toString(), *parsed);
@@ -2298,8 +2360,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             if(hasMask) {
                 for(const auto& [k, bytes]: childrenItems)
                     out += bytes;
-                out += tabs(intendents + 1) + "}\n";
-                out += tabs(intendents) + "}\n";
+                out += tabs(indents + 1) + "}\n";
+                out += tabs(indents) + "}\n";
                 childrenItems.clear();
                 childrenItems.insert("maskedItem", out);
             }
@@ -2310,7 +2372,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
     QString FigmaParser::lastError() {
-        return last_parse_error;
+        return last_parse_error();
     }
 
     QString FigmaParser::makeFileName(const QJsonObject& obj, const QString& prefix) const {
@@ -2342,6 +2404,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             }
             ++m_counter;
         };
-        m_componentStreams.insert(filename, std::make_tuple(obj, child_item, QString{})); // what to do for std::move ?
+        m_componentStreams.insert(filename, std::make_tuple(obj, child_item)); // what to do for std::move ?
         return filename + ".qml";
     }

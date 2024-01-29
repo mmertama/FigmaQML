@@ -55,6 +55,7 @@ public:
         Timed               = 0x20000,
         AltFontMatch        = 0x40000,
         KeepFigmaFontName   = 0x80000,
+        LoaderPlaceHolders  = 0x100000,
     };
     Q_ENUM(Flags)
 public:
@@ -89,6 +90,7 @@ public:
     void restore(int flags, const QVariantMap& imports);
     QString documentsLocation() const;
     QVariantList elements() const;
+    const auto& externalLoaders() const {return m_externalLoaders;}
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
     Q_INVOKABLE bool saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
     Q_INVOKABLE void cancel();
@@ -116,6 +118,8 @@ public:
     Q_INVOKABLE void restore();
 #endif
     std::optional<QStringList> saveImages(const QString &folder, const QSet<QString>& filter = {}) const;
+    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {}) const;
+    QByteArray makeHeader() const;
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
@@ -176,7 +180,6 @@ private:
     bool writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header);
     bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
     QString qmlTargetDir() const override;
-    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {}) const;
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;
@@ -200,6 +203,7 @@ private:
     std::function<void (bool)> mRestore = nullptr;
     QHash<QString, QSet<QString>> m_imageContexts;
     FontInfo* m_fontInfo;
+    FigmaParser::ExternalLoaders m_externalLoaders;
 };
 
 

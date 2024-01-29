@@ -77,6 +77,11 @@ ApplicationWindow {
 
     Connections {
         target: figmaQml
+
+        function onFontLoaded(font) {
+            fontDialog.currentFont = font
+        }
+
         function onError(errorString) {
             updater.stop();
             errorNote.text = errorString;
@@ -372,6 +377,17 @@ ApplicationWindow {
                                     figmaQml.flags |= FigmaQml.NoGradients
                                 else
                                     figmaQml.flags &= ~FigmaQml.NoGradients
+                            }
+                        }
+                        QtCheckBox {
+                            text: "Loader placeholders"
+                            visible: has_qul
+                            checked: figmaQml.flags & FigmaQml.LoaderPlaceHolders
+                            onCheckedChanged: {
+                                if(checked)
+                                    figmaQml.flags |= FigmaQml.LoaderPlaceHolders
+                                else
+                                    figmaQml.flags &= ~FigmaQml.LoaderPlaceHolders
                             }
                         }
                         Repeater {
@@ -969,13 +985,6 @@ ApplicationWindow {
 
     }
 
-    Connections {
-        target: figmaQml
-        function onFontLoaded(font) {
-            fontDialog.currentFont = font
-        }
-    }
-
     /*
     Connections {
         id: fontDialog
@@ -1176,24 +1185,21 @@ ApplicationWindow {
         * The standard Qt Quick offers a new QML syntax to define signal handlers as a function within a Connections type. Qt Quick Ultralite does not support this feature yet, and it does not warn if you use it.
         * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
         */
-        //function onSetValue(element, value) {
         onValueChanged: {
             console.log("FigmaQmlSingleton - onValueChanged:", element, value);
         }
 
-        onEvent: {
+        onEventReceived: {
             console.log("FigmaQmlSingleton - Event:", element, value);
         }
+
+        onSetSource: {
+            console.log("FigmaQmlSingleton - setSource:", element, source);
+        }
+
+        onSetSourceComponent: {
+            console.log("FigmaQmlSingleton - setSourceComponent:", element, sourceComponent);
+        }
     }
-  //  FigmaQmlSingleton.fig: 12;
 
-  //  FigmaQmlSingleton.onSetValue: function(e, v) {
-  //      console.log("aviathan")
-  //  }
-
-    Component.onCompleted: {
-      //  FigmaQmlSingleton.fig = 12;
-     //  FigmaQmlSingleton.onSetValue = _whatever;
-      // FigmaQmlSingleton.onSetValue("reggae", "ok");
-     }
 }

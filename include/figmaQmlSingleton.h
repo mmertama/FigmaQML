@@ -37,6 +37,9 @@ public:
         QObject::connect(&m_fqml, &FigmaQml::elementsChanged, this, &FigmaQmlSingleton::viewCountChanged);
         QObject::connect(&m_fqml, &FigmaQml::currentCanvasChanged, this, &FigmaQmlSingleton::currentViewChanged);
         QObject::connect(&m_fqml, &FigmaQml::currentElementChanged, this, &FigmaQmlSingleton::currentViewChanged);
+        QObject::connect(&m_fqml, &FigmaQml::currentElementChanged, this, [this]() {
+            applyExternalLoaders(m_fqml.property("flags").toUInt() & FigmaQml::LoaderPlaceHolders);
+        });
     }
 
     int viewCount() const {
@@ -48,9 +51,25 @@ public:
     }
 signals:
     void valueChanged(const QString& element, const QString& value);
-    void event(const QString& element, const QString& value);
+    void eventReceived(const QString& element, const QString& value);
     void viewCountChanged();
     void currentViewChanged();
+    void setSource(const QString& element, const QUrl& source);
+    void setSourceComponent(const QString& element, const QQmlComponent* sourceComponent);
+private:
+    // Propagates loader source change accross UI where loaders can than capture it
+
+    void applyExternalLoaders(bool usePlaceHolder) {
+        for(const auto& [bytes, name] : m_fqml.externalLoaders()) {
+            if(usePlaceHolder) {
+                emit setSource(name, QUrl("qrc:///LoaderPlaceHolder.qml"));
+            } else {
+                const auto component_name = FigmaQml::validFileName("placeholder_" + name + FIGMA_SUFFIX);
+                m_fqml.writeQmlFile(component_name, bytes, m_fqml.makeHeader());
+                emit setSource(name, component_name + ".qml");
+            }
+        }
+    }
 private:
      FigmaQml& m_fqml;
 };
