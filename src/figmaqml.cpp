@@ -614,6 +614,7 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
         return;
     cleanDir(m_qmlDir);
     m_imageFiles.clear();
+    m_externalLoaders.clear();
     m_uiDoc.reset();
     if(!restoreView)
         m_fontCache->clear();
@@ -890,6 +891,8 @@ bool FigmaQml::writeComponents(FigmaDocument& doc, const FigmaParser::Components
           //}
       }
 
+      m_externalLoaders.insert(component.externalLoaders());
+
 
       if(!writeQmlFile(c->name(), component.data(), header)) {
           emit error(toStr("Cannot write component", component.name()));
@@ -959,6 +962,8 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
                 componentNames.append(components[id]->name());
             }
 
+            m_externalLoaders.insert(element.externalLoaders());
+
             // this is bit confusing, the component owned sub componets are written before this function is called,
             // but as element owned has to be called elsewhere it happens here. Whole this when is written and parsed
             // what is confusing
@@ -975,6 +980,37 @@ bool FigmaQml::setDocument(FigmaDocument& doc,
         }
     }
     return true;
+}
+
+QByteArray FigmaQml::makeHeader() const {
+    const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
+    QByteArray header = QString(FileHeader).arg(versionNumber).toLatin1();
+    const auto keys =  m_imports.keys();
+    for(const auto& k : keys) {
+#ifdef QT5
+        const auto ver = QVersionNumber::fromString(m_imports[k].toString());
+        if(ver.isNull()) {
+            emit error(toStr("Invalid imports version", m_imports[k].toString(), "for", k));
+            return nullptr;
+        }
+        header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
+#else
+        header += QString("import %1\n").arg(k);
+#endif
+    }
+
+    /*    if(m_flags & GenerateAccess) {
+#ifdef QT5
+        header += QString("import FigmaQmlInterface 1.0\n");
+#else
+        header += QString("import FigmaQmlInterface\n");
+#endif
+    }
+*/
+    if((m_flags & GenerateAccess) && !(m_flags & QulMode))
+        header += QString("import FigmaQmlInterface\n");
+
+    return header;
 }
 
 bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
@@ -994,32 +1030,7 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
     if(!ensureDirExists(qmlTargetDir()))
        return false;
 
-    const auto versionNumber = QString(STRINGIFY(VERSION_NUMBER));
-    QByteArray header = QString(FileHeader).arg(versionNumber).toLatin1();
-    const auto keys =  m_imports.keys();
-    for(const auto& k : keys) {
-#ifdef QT5
-        const auto ver = QVersionNumber::fromString(m_imports[k].toString());
-        if(ver.isNull()) {
-            emit error(toStr("Invalid imports version", m_imports[k].toString(), "for", k));
-            return nullptr;
-        }
-        header += QString("import %1 %2\n").arg(k).arg(m_imports[k].toString());
-#else
-        header += QString("import %1\n").arg(k);
-#endif
-    }
 
-/*    if(m_flags & GenerateAccess) {
-#ifdef QT5
-        header += QString("import FigmaQmlInterface 1.0\n");
-#else
-        header += QString("import FigmaQmlInterface\n");
-#endif
-    }
-*/
-    if((m_flags & GenerateAccess) && !(m_flags & QulMode))
-        header += QString("import FigmaQmlInterface\n");
 
     const auto components = FigmaParser::components(json, *this);
 
@@ -1045,6 +1056,8 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
     const auto [i, r, n] = mProvider.cacheInfo();
     qDebug() << "loopers" << loopers << i << r << n;
     */
+
+     const auto header = makeHeader();
 
     if(!writeComponents(doc, *components, header)) {
         return false;
