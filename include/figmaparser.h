@@ -316,7 +316,6 @@ private:
     ComponentStreams m_componentStreams;
     static QByteArray fontWeight(double v);
     static std::optional<FigmaParser::ItemType> type(const QJsonObject& obj);
-    int m_counter = 0;
     ExternalLoaders m_externalLoaders;
 };
 

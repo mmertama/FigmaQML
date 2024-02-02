@@ -33,6 +33,7 @@ public:
     virtual QByteArray nodeData(const QString&) = 0;
     virtual QString fontInfo(const QString&) = 0;
     virtual QString qmlTargetDir() const = 0;
+    virtual unsigned unique_number() = 0;
 };
 
 

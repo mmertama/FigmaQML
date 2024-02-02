@@ -63,6 +63,7 @@ public:
      QByteArray imageData(const QString&, bool isRendering) override;
      QByteArray nodeData(const QString&) override;
      QString fontInfo(const QString&) override;
+     unsigned unique_number() override;
 public:
     FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvider& provider, QObject* parent = nullptr);
     ~FigmaQml();
@@ -118,8 +119,9 @@ public:
     Q_INVOKABLE void restore();
 #endif
     std::optional<QStringList> saveImages(const QString &folder, const QSet<QString>& filter = {}) const;
-    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {}) const;
+    bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {});
     QByteArray makeHeader() const;
+    bool testFileExists(const QString& filename, const QByteArray& data) const;
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
@@ -181,6 +183,7 @@ private:
     bool writeComponents(FigmaDocument& doc, const FigmaParser::Components& components, const QByteArray& header);
     bool setDocument(FigmaDocument& doc, const FigmaParser::Canvases& canvases, const FigmaParser::Components& components, const QByteArray& header);
     QString qmlTargetDir() const override;
+    std::optional<QString> uniqueFilename(const QString& filename, const QByteArray& data);
 private:
     const QString m_qmlDir;
     FigmaProvider& mProvider;
@@ -205,6 +208,8 @@ private:
     QHash<QString, QSet<QString>> m_imageContexts;
     FontInfo* m_fontInfo;
     FigmaParser::ExternalLoaders m_externalLoaders;
+    unsigned m_unique_number = 1;
+    QHash<QString, quint16> m_crcs;
 };
 
 

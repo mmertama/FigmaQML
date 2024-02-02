@@ -136,8 +136,10 @@ class FigmaFileDocument : public FigmaDocument {
             }
             bool bless(const QByteArray& data) {
                QFile f(m_data);
-               if(f.exists())
+                if(f.exists()) {
+                   qDebug() << "Not replace" << m_name;
                    return true;
+                }
                if(!f.open(QIODevice::WriteOnly))
                    return false;
                f.write(data);
@@ -238,11 +240,74 @@ public:
         return m_components.contains(name);
     }
 
+    static int remove_comments(const QByteArray& data, unsigned& begin, unsigned& end) {
+        if(data[end] != '/' || end + 1 == data.size())
+            return 0;
+        if(data[end + 1] == '/') {
+            ++end;
+            while(end < data.size() && data[++end] != '\n');
+            return 1;
+        } else if(data[end + 1] == '*') {
+            ++end;
+            int lines = 0;
+            while(end < data.size()) {
+                const auto c = data[end++];
+                if(c == '\n')
+                    ++lines;
+                if(c == '*' && end < data.size() && data[end] == '/') {
+                    ++end;
+                    return lines;
+                }
+            }
+        } else {
+            return 0;
+        }
+        return 0;
+    }
+
     void addComponent(const QString& name, const QJsonObject& obj, const QByteArray& data) override {
         Q_ASSERT(!name.isEmpty());
         Q_ASSERT(!data.isEmpty());
         if(m_components.contains(name)) {
-          //TODO  qDebug() << "warn:" << name << "already added" << ((qChecksum(data) == qChecksum(m_components[name].first)) ? "same" : "not");
+            if(qChecksum(data) == qChecksum(m_components[name].first)) {
+                return;
+            }
+            unsigned rbegin = 0;
+            unsigned cbegin = 0;
+            unsigned cend = 0;
+            unsigned rend = 0;
+            const auto& ref = m_components[name].first;
+            auto cline = 1;
+            auto rline = 1;
+            while(cend < data.size() && rend < ref.size()) {
+                const auto c = data[cend];
+                const auto r = ref[rend];
+                cline += remove_comments(data, cbegin, cend);
+                rline += remove_comments(ref, rbegin, rend);
+                if(c == '\n' && r != '\n')
+                    ++rend;
+                else if(c != '\n' && r == '\n')
+                    ++cend;
+                else if (c == '\n' || r == '\n') {
+                    auto c_slice= data.mid(cbegin, cend).simplified();
+                    auto r_slice= ref.mid(rbegin, rend).simplified();
+                    if(c_slice != r_slice) {
+                        qDebug() << "warn:" << name << "mismatch component" << cline << rline << data.mid(cbegin, cend) << "\n\n" << ref.mid(rbegin, rend);
+                        break;
+                    }
+                    ++rend;
+                    ++cend;
+                    cbegin = cend;
+                    rbegin = rend;
+                    ++rline;
+                    ++cline;
+                } else {
+                    ++rend;
+                    ++cend;
+                }
+            }
+            if(cend == data.size() || rend == ref.size())
+                qDebug() << "warn:" << name << "were close component";
         }
         m_components.insert(name, {data, QJsonDocument(obj).toJson()});
     }
