@@ -13,6 +13,7 @@
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QStandardPaths>
+#include <QFileInfo>
 #ifdef USE_NATIVE_FONT_DIALOG
 #include <QFontDialog>
 #include <QApplication>
@@ -155,14 +156,17 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
     for(const auto& c : *m_sourceDoc) {
         for(const auto& e : *c) {
             const auto sourceName = FigmaParser::makeFileName(c->name());
-            const auto fullname = QString("%1/%2_%3.qml").arg(d.absolutePath(), sourceName, e->name());
-            QSaveFile file(fullname);
+            const auto name = QString("%1/%2_%3.qml").arg(d.absolutePath(), sourceName, e->name());
+            const auto fullname = uniqueFilename(name, e->data());
+            if(!fullname) // that is already there
+                continue;
+            QSaveFile file(*fullname);
             if(!file.open(QIODevice::WriteOnly)) {
-                emit error(QString("Failed to write %1 %2 %3 %4").arg(file.errorString(), fullname, d.absolutePath(), e->name()));
+                emit error(QString("Failed to write %1 %2 %3 %4").arg(file.errorString(), *fullname, d.absolutePath(), e->name()));
                 return false;
             }
             if(e->data().length() == 0 || file.write(e->data()) < 0) {
-                emit error(QString("Failed to write %1 %2 %3 %4").arg(file.errorString(), fullname, d.absolutePath(), e->name()));
+                emit error(QString("Failed to write %1 %2 %3 %4").arg(file.errorString(), *fullname, d.absolutePath(), e->name()));
                 return false;
             }
             const auto elementComponents = m_sourceDoc->components(e->name());
@@ -173,10 +177,14 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
 
     for(const auto& componentName : componentNames) {
         Q_ASSERT(componentName.endsWith(FIGMA_SUFFIX));
-        const auto fullname = QString("%1/%2.qml").arg(d.absolutePath(), componentName);
-        QSaveFile file(fullname);
+        const auto name = QString("%1/%2.qml").arg(d.absolutePath(), componentName);
+        const auto cd = m_sourceDoc->component(componentName);
+        const auto fullname = uniqueFilename(name, cd);
+        if(!fullname)
+            continue;
+        QSaveFile file(*fullname);
         if(!file.open(QIODevice::WriteOnly)) {
-            emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
+            emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), *fullname, d.absolutePath(), componentName));
             return false;
         }
 
@@ -185,9 +193,8 @@ bool FigmaQml::saveAllQML(const QString& folderName) {
             return false;
         }
 
-        const auto cd = m_sourceDoc->component(componentName);
         if(cd.length() == 0 || file.write(cd) < 0) {
-            emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), fullname, d.absolutePath(), componentName));
+            emit error(QString("Failed to write \"%1\" \"%2\" \"%3\" \"%4\"").arg(file.errorString(), *fullname, d.absolutePath(), componentName));
             return false;
         }
         file.commit();
@@ -528,16 +535,19 @@ bool FigmaQml::addImageFileData(const QString& imageRef, const QByteArray& bytes
         ++count;
         }
     ensureDirExists(path);
-    const auto filename = path + imageName;
-    QSaveFile file(filename);
-    if(!file.open(QIODevice::WriteOnly)) {
-        emit warning("error when write:" + imageRef + " " +  filename + " " + file.errorString());
-        return false;
+    const auto iname = path + imageName;
+    const auto filename = uniqueFilename(iname, bytes);
+    if(filename) {
+        QSaveFile file(*filename);
+        if(!file.open(QIODevice::WriteOnly)) {
+            emit warning("error when write:" + imageRef + " " +  *filename + " " + file.errorString());
+            return false;
+        }
+        //qDebug() << "image saved" << imageRef << filename;
+        file.write(bytes);
+        file.commit();
+        m_imageFiles.insert(imageRef, {path, imageName});
     }
-    //qDebug() << "image saved" << imageRef << filename;
-    file.write(bytes);
-    file.commit();
-    m_imageFiles.insert(imageRef, {path, imageName});
     return true;
 }
 
@@ -826,24 +836,24 @@ QString FigmaQml::fontInfo(const QString& requestedFont) {
     return value;
 }
 
-bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder) const {
+bool FigmaQml::writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder) {
     Q_ASSERT(subFolder.isEmpty()); // this is for future thinking, it is very bad that components get overwritten!
     Q_ASSERT(component_name.endsWith(FIGMA_SUFFIX));
     Q_ASSERT(!element_data.isEmpty());
     Q_ASSERT(!header.isEmpty());
-    const QString filename = qmlTargetDir() + (!subFolder.isEmpty() ? subFolder + '/' : QString{}) + component_name + ".qml";
-    if(QFile::exists(filename)) {
-        //return true
-        //TODO qDebug() << "already there!" << filename;
+    const QString qname = qmlTargetDir() + (!subFolder.isEmpty() ? subFolder + '/' : QString{}) + component_name + ".qml";
+    const auto content = header + element_data;
+    const auto filename = uniqueFilename(qname, content);
+    if(filename) {
+        QDir().mkpath((QFileInfo(*filename).path()));
+        QSaveFile componentFile(*filename);
+        if(!componentFile.open(QIODevice::WriteOnly)) {
+            emit error(toStr("Cannot write", *filename, componentFile.errorString()));
+            return false;
+        }
+        componentFile.write(content);
+        componentFile.commit();
     }
-    QDir().mkpath((QFileInfo(filename).path()));
-    QSaveFile componentFile(filename);
-    if(!componentFile.open(QIODevice::WriteOnly)) {
-        emit error(toStr("Cannot write", filename, componentFile.errorString()));
-        return false;
-    }
-    componentFile.write(header + element_data);
-    componentFile.commit();
     return true;
 }
 
@@ -1134,3 +1144,56 @@ QByteArray FigmaQml::sourceCode(unsigned canvasIndex, unsigned elementIndex) con
     return (*eit)->data();
 }
 
+
+static auto checksum(const QString& filename) {
+    QFile f(filename);
+    f.open(QFile::ReadOnly);
+    return qChecksum(f.readAll());
+}
+
+
+template <typename T>
+const auto join(const T& vec, const QString& sep) {
+    QString s;
+    QTextStream t(&s);
+    auto it = vec.begin();
+    if(it == vec.end()) return s;
+    t << *it;
+    ++it;
+    for (; it != vec.end(); ++it) {
+        t << sep << *it;
+    }
+    return s;
+}
+
+std::optional<QString> FigmaQml::uniqueFilename(const QString& filename_proposal, const QByteArray& data) {
+    assert(data.size() > 1);
+    const auto data_crc = qChecksum(data);
+    auto filename = filename_proposal;
+    for(;;) {
+        const auto it = m_crcs.find(filename);
+        if(it == m_crcs.end())
+            break;
+        if(*it == data_crc) {
+            assert(QFile::exists(filename));
+            return std::nullopt; // CRC match its ok, but exists
+        }
+        const QFileInfo info(filename);
+        filename = QFileInfo(info.path(), info.baseName() + QString::number(unique_number()) + "." + info.completeSuffix()).filePath();
+    }
+    assert(!QFile::exists(filename));
+    m_crcs.insert(filename, data_crc);
+    return filename;
+}
+
+bool FigmaQml::testFileExists(const QString& filename, const QByteArray& data) const {
+    if(!QFile::exists(filename))
+        return false;
+    qDebug() << "File exists" << filename << "known:" << m_crcs.contains(filename) << "is same:" << (qChecksum(data) == checksum(filename)) << "is read:" << (m_crcs.contains(filename) ? (qChecksum(data) == m_crcs[filename] ? "Yes" : "No") : "N/A");
+    return true;
+}
+
+unsigned FigmaQml::unique_number() {
+    ++m_unique_number;
+    return m_unique_number;
+}

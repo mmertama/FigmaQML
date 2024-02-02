@@ -2380,7 +2380,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     }
 
     QString FigmaParser::makeFileName(const QJsonObject& obj, const QString& prefix) const {
-        const auto name = prefix + '_' + obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_counter) + FIGMA_SUFFIX;
+        const auto name = prefix + '_' + obj["name"].toString() + '_' + obj["id"].toString() + "_" + QString::number(m_data.unique_number()) + FIGMA_SUFFIX;
         const auto filename = makeFileName(name).toLatin1();
         return filename;
     }
@@ -2406,7 +2406,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             if(current_data.length() == child_item.length() && obj == current_obj && qChecksum(child_item) == qChecksum(current_data)) {
                 break; // equal
             }
-            ++m_counter;
         };
         m_componentStreams.insert(filename, std::make_tuple(obj, child_item)); // what to do for std::move ?
         return filename + ".qml";

@@ -678,6 +678,7 @@ void FigmaGet::getNode(const QString &id) {
 
     if(!m_nodes->isEmpty(id)) {
         emit nodeReady(m_nodes->data(id));
+        return;
     }
 
     if(m_nodes->setPending(id))

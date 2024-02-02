@@ -268,11 +268,15 @@ static
     bool writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, QStringList& qml_files, QSet<QString>& save_image_filter, std::pair<int, int> indices) {
 
     qml_files << qq(main_file_name);
-    QFile qml_out(path + '/' + FOLDER + main_file_name);
-    VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
+    const auto fullname = path + '/' + FOLDER + main_file_name;
 
     const auto bytes = figmaQml.sourceCode(indices.first, indices.second);
     VERIFY(!bytes.isEmpty(), "Cannot find data for " + main_file_name);
+
+    figmaQml.testFileExists(fullname, bytes);
+    QFile qml_out(fullname);
+    VERIFY(qml_out.open(QFile::WriteOnly), "Cannot write a QtQuick file");
+
     qml_out.write(bytes);
 
     qml_out.close();
@@ -280,6 +284,9 @@ static
     for(const auto& component_name : figmaQml.components(indices.first, indices.second)) {
         save_image_filter.insert(component_name);
         const auto file_name = QML_PREFIX + FigmaQml::validFileName(component_name) + QML_EXT;
+        const auto component_src = figmaQml.componentSourceCode(component_name);
+        Q_ASSERT(!component_src.isEmpty());
+        figmaQml.testFileExists(file_name, component_src);
         qml_files << qq(file_name);
 
         const auto target_path = path + '/' + FOLDER + file_name;
@@ -289,8 +296,7 @@ static
             QFile::remove(target_path);
         }
         VERIFY(component_out.open(QFile::WriteOnly), "Cannot write component " + file_name);
-        const auto component_src = figmaQml.componentSourceCode(component_name);
-        Q_ASSERT(!component_src.isEmpty());
+
         component_out.write(component_src);
         component_out.close();
     }
