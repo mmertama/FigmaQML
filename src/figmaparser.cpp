@@ -1002,7 +1002,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return out;
     }
 
-    QByteArray FigmaParser::makeSvgPath(int index, bool isFill, const QJsonObject& obj, int indents) {
+    QByteArray FigmaParser::makeSvgPath(int index, bool isFill, const QString& path_id, const QJsonObject& obj, int indents) {
         QByteArray out;
         const auto indent = tabs(indents);
         const auto indent1 = tabs(indents + 1);
@@ -1014,6 +1014,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         }
 
         out += indent + "PathSvg {\n";
+        if(!path_id.isEmpty())
+            out += indent1 + "id: " + path_id + "\n";
         out += indent1 + "path: \"" + path["path"].toString() + "\"\n";
         out += indent + "} \n";
         return out;
@@ -1144,14 +1146,25 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return isQul() ? makeImageMaskDataQul(imageRef, obj, indents) : makeImageMaskDataQt(imageRef, obj, indents);
     }
 
-     QByteArray FigmaParser::makeShapeFillData(const QJsonObject& obj, int shapeindents) {
+    /**
+     * @brief FigmaParser::makeShapeFillData
+     * @param obj
+     * @param shapeindents
+     * @param make_alias, this is not defined always, albeit very doable, but when there are multiple shapes (in mask) the qml? logic get tricky, and hence I doubt if anyone would need ... maybe later implemenation get complete...
+     * @return
+     */
+    QByteArray FigmaParser::makeShapeFillData(const QJsonObject& obj, int shapeindents, const std::function<QString (int i)>& make_alias) {
          QByteArray out;
          if(!obj["fillGeometry"].toArray().isEmpty()) {
-             for(int i = 0; i < obj["fillGeometry"].toArray().count(); i++)
-                 out += makeSvgPath(i, true, obj, shapeindents );
+             for(int i = 0; i < obj["fillGeometry"].toArray().count(); i++)  {
+                 const auto id = make_alias ? make_alias(i) : QString{};
+                 out += makeSvgPath(i, true, id, obj, shapeindents );
+             }
          } else if(!obj["strokeGeometry"].toArray().isEmpty()) {
-             for(int i = 0; i < obj["strokeGeometry"].toArray().count(); i++)
-                 out += makeSvgPath(i, false, obj, shapeindents);
+             for(int i = 0; i < obj["strokeGeometry"].toArray().count(); i++) {
+                 const auto id = make_alias ? make_alias(i) : QString{};
+                out += makeSvgPath(i, false, id, obj, shapeindents);
+             }
          }
          return out;
      }
@@ -1171,14 +1184,22 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          QByteArray out;
          APPENDERR(out, makeItem("Shape", obj, indents));
          out += makeExtents(obj, indents);
-     //    out += makeSvgPathProperty(obj, indents);
          const auto indent = tabs(indents);
+
+         QByteArray out2;
+         const auto make_alias = [&](int i){
+             const auto id = makeId(QString("path_%1_").arg(i), obj);
+             out2 += tabs(indents - 1) + QString("property alias source%1: %2.path\n").arg(i).arg(id);
+             return id;
+         };
+
          out += makeAntialising(indents);
          out += indent + "ShapePath {\n";
          out += makeShapeStroke(obj, indents + 1, StrokeType::Normal);
          out += makeShapeFill(obj, indents + 1);
-         out += makeShapeFillData(obj, indents + 1);
+         out += makeShapeFillData(obj, indents + 1, make_alias);
          out += indent + "}\n";
+         out += out2;
          out += tabs(indents - 1) + "}\n";
          return out;
      }
@@ -1193,16 +1214,23 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
         APPENDERR(out, makeImageMaskData(image, obj, indents));
 
+        QByteArray out2;
+        const auto make_alias = [&](int i){
+             const auto id = makeId(QString("path_%1_").arg(i), obj);
+             out2 += tabs(indents - 1) + QString("property alias source%1: %2.path\n").arg(i).arg(id);
+             return id;
+         };
+
          out += indent + "Shape {\n";
          out += indent1 + "anchors.fill: parent\n";
          out += makeAntialising(indents + 1);
          out += indent1 + "ShapePath {\n";
          out += makeShapeStroke(obj, indents + 2, StrokeType::Normal);
          out += makeShapeFill(obj, indents + 2);
-         out += makeShapeFillData(obj, indents + 2);
+         out += makeShapeFillData(obj, indents + 2, make_alias);
          out += indent1 + "}\n";
          out += indent + "}\n";
-
+         out += out2;
          out += tabs(indents - 1) + "} \n";
          return out;
      }

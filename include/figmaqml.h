@@ -122,6 +122,7 @@ public:
     bool writeQmlFile(const QString& component_name, const QByteArray& element_data, const QByteArray& header, const QString& subFolder = {});
     QByteArray makeHeader() const;
     bool testFileExists(const QString& filename, const QByteArray& data) const;
+    Q_INVOKABLE void reset(bool keepFonts, bool keepSources, bool keepImages, bool keepFetch);
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);

@@ -448,7 +448,7 @@ int main(int argc, char *argv[]) {
              figmaQml->createDocumentView(figmaGet->data(), false);
          });
 
-         QObject::connect(figmaQml.get(), &FigmaQml::refresh, [&figmaQml, &figmaGet](){
+         QObject::connect(figmaQml.get(), &FigmaQml::refresh, figmaGet.get(), [&figmaQml, &figmaGet](){
               figmaQml->createDocumentView(figmaGet->data(), true);
          });
 

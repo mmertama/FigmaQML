@@ -193,7 +193,7 @@ private:
     QByteArray makeShapeStroke(const QJsonObject& obj, int indents, StrokeType type = StrokeType::Normal);
     QByteArray makeShapeFill(const QJsonObject& obj, int indents);
     EByteArray makePlainItem(const QJsonObject& obj, int indents);
-    QByteArray makeSvgPath(int index, bool isFill, const QJsonObject& obj, int indents);
+    QByteArray makeSvgPath(int index, bool isFill, const QString& pathId, const QJsonObject& obj, int indents);
 
     EByteArray parse(const QJsonObject& obj, int indents);
 
@@ -202,7 +202,7 @@ private:
     std::optional<QString> imageFill(const QJsonObject& obj) const;
 
      EByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int indents);
-     QByteArray makeShapeFillData(const QJsonObject& obj, int shapeindents);
+     QByteArray makeShapeFillData(const QJsonObject& obj, int shapeindents, const std::function<QString (int i)>& make_alias = nullptr);
      QByteArray makeAntialising(int indents) const;
 
      /*

@@ -19,6 +19,7 @@ public:
     virtual void getRendering(const QString& figmaId) = 0;
     virtual void getNode(const QString& figmaId) = 0;
     virtual std::tuple<int, int, int> cacheInfo() const = 0;
+    virtual void reset() = 0;
 signals:
     void imageReady(const QString& imageRef, const QByteArray& bytes, int format);
     void renderingReady(const QString& figmaId, const QByteArray& bytes, int format);

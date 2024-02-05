@@ -45,7 +45,7 @@ public:
     bool isReady() override;
     std::tuple<int, int, int> cacheInfo() const override;
 public slots:
-    void reset();
+    void reset() override;
     void cancel();
     void documentCreated();
 signals:

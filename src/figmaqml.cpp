@@ -478,7 +478,7 @@ std::optional<QStringList> FigmaQml::saveImages(const QString &folder, const QSe
         }
         const QFileInfo file(i.first + i.second);
         if(!file.exists()) {
-            qDebug() << "invalid filename:" << file.absoluteFilePath() << "not found";
+            qDebug() << "invalid file name:" << file.absoluteFilePath() << "not found";
             emit error(QString("Invalid filename: %1 (not found)").arg(file.absoluteFilePath()));
             return std::nullopt;
         }
@@ -622,17 +622,8 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     const auto json = object(data);
     if(!json)
         return;
-    cleanDir(m_qmlDir);
-    m_imageFiles.clear();
-    m_externalLoaders.clear();
-    m_uiDoc.reset();
-    if(!restoreView)
-        m_fontCache->clear();
 
-    emit canvasCountChanged();
-    emit elementCountChanged();
-    emit documentNameChanged();
-
+    reset(restoreView, true, true, true);
     m_embedImages = true;
 
     const auto restoredCanvas = currentCanvas();
@@ -1198,4 +1189,35 @@ bool FigmaQml::testFileExists(const QString& filename, const QByteArray& data) c
 unsigned FigmaQml::unique_number() {
     ++m_unique_number;
     return m_unique_number;
+}
+
+Q_INVOKABLE void FigmaQml::reset(bool keepFonts, bool keepSources, bool keepImages, bool keepFetch) {
+    cleanDir(m_qmlDir);
+    m_imageFiles.clear();
+    m_externalLoaders.clear();
+    m_uiDoc.reset();
+    if(!keepSources) {
+        m_sourceDoc.reset();
+        m_externalLoaders.clear();
+    }
+    if(!keepFonts)
+        m_fontCache->clear();
+
+    if(!keepImages) {
+        m_imageFiles.clear();
+        m_crcs.clear();
+        m_imageContexts.clear();
+    }
+
+    if(!keepFonts && !keepSources && !keepImages && !keepFetch) {
+        m_imports = defaultImports();
+        m_filter.clear();
+        QDir(m_qmlDir).removeRecursively();
+        m_unique_number = 1;
+        mProvider.reset();
+    }
+
+    emit canvasCountChanged();
+    emit elementCountChanged();
+    emit documentNameChanged();
 }
