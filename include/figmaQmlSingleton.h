@@ -69,7 +69,7 @@ signals:
     void viewCountChanged();
     void currentViewChanged();
     void setSource(const QString& element, const QUrl& source);
-    void setSourceComponent(const QString& element, const QQmlComponent* sourceComponent);
+    void setSourceComponent(const QString& element, const QQmlComponent& sourceComponent);
     void sourceLoaded(const QString& element);
     void sourceError(const QString& element);
     void viewLoaded(const QString& view);

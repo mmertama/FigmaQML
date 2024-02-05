@@ -115,7 +115,6 @@ private:
     State m_connectionState = State::Loading;
     QMap<QNetworkReply*, std::tuple<std::shared_ptr<QByteArray>, FinishedFunction>> m_replies;
     std::function<void (const QString&)> m_lastError = nullptr;
-
 };
 
 #endif // FIGMAGET_H

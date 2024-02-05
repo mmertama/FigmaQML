@@ -21,26 +21,26 @@ public:
     bool isEmpty(const QString& key) const {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        return std::get<State>(m_data[key]) != State::Committed;
+        return m_data[key].state != State::Committed;
     }
 
     bool isError(const QString& key) const {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        return std::get<State>(m_data[key]) == State::Error;
+        return m_data[key].state == State::Error;
     }
 
     QByteArray data(const QString& key) const {
         MUTEX_LOCK(m_mutex);
-        Q_ASSERT(std::get<State>(m_data[key]) == State::Committed);
+        Q_ASSERT(m_data[key].state == State::Committed);
         Q_ASSERT(m_data.contains(key));
-        return std::get<QByteArray>(m_data[key]);
+        return m_data[key].data;
     }
 
     int format(const QString& key) const {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        return std::get<int>(m_data[key]);
+        return m_data[key].format;
     }
 
     void insert(const QString& key) {
@@ -52,49 +52,49 @@ public:
     void setUrl(const QString& key, const QString& url) {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        Q_ASSERT(std::get<QString>(m_data[key]).isEmpty());
-        Q_ASSERT(std::get<State>(m_data[key]) != State::Error);
-        std::get<QString>(m_data[key]) = url;
+        Q_ASSERT(m_data[key].url.isEmpty());
+        Q_ASSERT(m_data[key].state != State::Error);
+        m_data[key].url = url;
     }
 
     bool isPending(const QString& key) const {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        Q_ASSERT(std::get<State>(m_data[key]) != State::Error);
-        return std::get<State>(m_data[key]) == State::Pending;
+        Q_ASSERT(m_data[key].state != State::Error);
+        return m_data[key].state == State::Pending;
     }
 
     QString url(const QString& key) const {
          MUTEX_LOCK(m_mutex);
          Q_ASSERT(m_data.contains(key));
-         Q_ASSERT(!std::get<QString>(m_data[key]).isEmpty());
-         Q_ASSERT(std::get<State>(m_data[key]) != State::Error);
-         return  std::get<QString>(m_data[key]);
+         Q_ASSERT(!m_data[key].url.isEmpty());
+         Q_ASSERT(m_data[key].state != State::Error);
+         return m_data[key].url;
     }
     //Atomic get and set
     bool setPending(const QString& key) {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        const auto wasPending = std::get<State>(m_data[key]) == State::Pending;
+        const auto wasPending = m_data[key].state == State::Pending;
         if(wasPending)
             return false;
-        Q_ASSERT(std::get<State>(m_data[key]) == State::Empty);
-        std::get<State>(m_data[key]) = State::Pending;
+        Q_ASSERT(m_data[key].state == State::Empty);
+        m_data[key].state = State::Pending;
         return true;
     }
 
     void setError(const QString& key) {
         MUTEX_LOCK(m_mutex);
         Q_ASSERT(m_data.contains(key));
-        Q_ASSERT(std::get<State>(m_data[key]) != State::Committed);
-        std::get<State>(m_data[key]) = State::Error;
+        Q_ASSERT(m_data[key].state != State::Committed);
+        m_data[key].state = State::Error;
     }
 
     void setBytes(const QString& key, const QByteArray& bytes, int meta =  0) {
-        Q_ASSERT(std::get<State>(m_data[key]) == State::Pending);
-        std::get<QByteArray>(m_data[key]) = bytes;
-        std::get<int>(m_data[key]) = meta;
-        std::get<State>(m_data[key]) = State::Committed;
+        Q_ASSERT(m_data[key].state == State::Pending);
+        m_data[key].data = bytes;
+        m_data[key].format = meta;
+        m_data[key].state = State::Committed;
     }
     QStringList keys() const {
         MUTEX_LOCK(m_mutex);
@@ -104,9 +104,11 @@ public:
     void clean(bool clean_errors) {
         MUTEX_LOCK(m_mutex);
         for(auto& e : m_data)
-            if(std::get<State>(e) != State::Committed
-                    && (!clean_errors || std::get<State>(e) != State::Error))
-                std::get<State>(e) = State::Empty;
+            if(e.state != State::Committed
+                && (!clean_errors || e.state != State::Error)) {
+                e.state = State::Empty;
+            }
+
     }
 
     void clear(){
@@ -118,17 +120,17 @@ public:
     }
 
     void write(QDataStream& stream) const {
-        const int size = std::accumulate(m_data.begin(), m_data.end(), 0, [](const auto &a, const auto& c){return std::get<State>(c) != State::Committed ? a : a + 1;});
+        const int size = std::accumulate(m_data.begin(), m_data.end(), 0, [](const auto &a, const auto& c){return c.state != State::Committed ? a : a + 1;});
         stream << size;
         const auto keys = m_data.keys();
         for(const auto& key : keys) {
-            if(std::get<State>(m_data[key]) == State::Committed) {
+            if(m_data[key].state == State::Committed) {
                 stream
                         << key
-                        << std::get<0>(m_data[key])
-                        << std::get<1>(m_data[key])
-                        << std::get<2>(m_data[key])
-                        << std::get<3>(m_data[key]);
+                        << m_data[key].url
+                        << m_data[key].data
+                        << m_data[key].format
+                        << m_data[key].state;
             }
         }
     }
@@ -152,7 +154,13 @@ public:
         }
     }
 private:
-    QHash <QString, std::tuple<QString, QByteArray, int, State> > m_data;
+    struct Data {
+        QString url;
+        QByteArray data;
+        int format;
+        State state;
+    };
+    QHash <QString, Data > m_data;
     mutable QMutex m_mutex;
 };
 

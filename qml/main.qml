@@ -70,6 +70,7 @@ ApplicationWindow {
         }
         function onUpdateCompleted(isUpdated) {
             updater.updating = false;
+            updater.completed(isUpdated)
             if(isUpdated)
                 updater.stop(); // stop updating as its slow and annoyingly interferces app using, fix that if online-mode is a good idea
         }
@@ -77,6 +78,12 @@ ApplicationWindow {
 
     Connections {
         target: figmaQml
+
+        function onBusyChanged() {
+            if(figmaQml.isValid && !figmaQml.busy) {
+                updater.completed(true)
+            }
+        }
 
         function onFontLoaded(font) {
             fontDialog.currentFont = font
@@ -159,7 +166,23 @@ ApplicationWindow {
         interval: 1000 * 5
         repeat: true
         triggeredOnStart: true
-        property bool  updating: false
+        property bool updating: false
+        property int currentElement: 0
+        property int currentCanvas: 0
+        function completed(isUpdated) {
+            if(isUpdated) {
+                canvasSpinner.value = updater.currentCanvas;
+                elementSpinner.value = updater.currentElement;
+                console.log("Frestore", currentCanvas, currentElement)
+            }
+        }
+        onUpdatingChanged: {
+            if(updating) {
+                currentCanvas = canvasSpinner.value;
+                currentElement = elementSpinner.value
+                console.log("Save", currentCanvas, currentElement)
+            }
+        }
         onTriggered: {
             if(!updating && !figmaDownload.downloading && !figmaQml.busy) {
                 updating = true;
@@ -167,8 +190,9 @@ ApplicationWindow {
             }
         }
         onRunningChanged: {
-            if(!running)
+            if(!running) {
                 updating = false;
+            }
         }
     }
 
