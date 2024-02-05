@@ -370,6 +370,7 @@ ApplicationWindow {
                                     figmaQml.flags |= FigmaQml.QulMode
                                 else
                                     figmaQml.flags &= ~FigmaQml.QulMode
+                                figmaQml.reset(false, false, false, false); // on change keep nothing
                             }
                         }
                         QtCheckBox {

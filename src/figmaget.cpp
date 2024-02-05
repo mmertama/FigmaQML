@@ -56,9 +56,9 @@ FigmaGet::FigmaGet(QObject *parent) : FigmaProvider(parent),
 
      qmlRegisterUncreatableType<FigmaGet>("FigmaGet", 1, 0, "FigmaGet", "");
 
-     QObject::connect(this, &FigmaGet::projectTokenChanged, this, &FigmaGet::reset);
+    QObject::connect(this, &FigmaGet::projectTokenChanged, this, &FigmaGet::reset);
 
-     QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
+    QObject::connect(m_downloads, &Downloads::cancelled, this, [this]() {
          m_checksum = 0;
      });
 
@@ -258,10 +258,16 @@ bool FigmaGet::read(QDataStream& stream) {
 }
 
 void FigmaGet::reset() {
+    m_timeout->reset();
+    m_callTimer.stop();
     m_downloads->reset();
     m_images->clear();
     m_renderings->clear();
     m_nodes->clear();
+    m_callQueue.clear();
+    m_rendringQueue.clear();
+    m_replies.clear();
+    m_lastError = nullptr;
 }
 
 void FigmaGet::cancel() {
