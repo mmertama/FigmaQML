@@ -628,7 +628,7 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     m_uiDoc.reset();
     if(!restoreView)
         m_fontCache->clear();
-    emit isValidChanged();
+
     emit canvasCountChanged();
     emit elementCountChanged();
     emit documentNameChanged();
@@ -648,6 +648,8 @@ void FigmaQml::createDocumentView(const QByteArray &data, bool restoreView) {
     };
 
     createDocument<FigmaFileDocument>(*json);
+
+    emit isValidChanged();
 }
 
 
@@ -1017,8 +1019,8 @@ QByteArray FigmaQml::makeHeader() const {
 #endif
     }
 */
-    if( 0 == (m_flags & StaticCode) && !(m_flags & QulMode))
-        header += QString("import FigmaQmlInterface\n");
+//    if( 0 == (m_flags & StaticCode) && !(m_flags & QulMode))
+//        header += QString("import FigmaQmlInterface\n");
 
     return header;
 }

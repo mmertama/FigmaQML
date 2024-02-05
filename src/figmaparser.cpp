@@ -32,7 +32,6 @@ static auto& last_parse_error() {
     return last_error_string;
 }
 
-#define QUL_LOADER_WORKAROUND
 
 using EByteArray = FigmaParser::EByteArray;
 
@@ -1725,11 +1724,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto keys = children.keys();
          for(const auto& key : keys) {
              const auto id = componentName(key);
-#ifdef QUL_LOADER_WORKAROUND
+
             out += indent + QString("property alias %1: loader_%2.source\n").arg(delegateName(key), id);
-#else
-            out += indent + QString("property alias %1: loader_%2.sourceComponent\n").arg(delegateName(key), id);
-#endif
+
          }
 
          /**
@@ -1776,7 +1773,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              const auto children = parseChildrenItems(obj, indents);
              if(!children)
                  return std::nullopt;
-             if(isQul())
+            if(isQul())
                 out += parseQulComponent(*children, indents);
              else
                out += parseQtComponent(*children, indents);
@@ -2238,14 +2235,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 }
                 continue;
             }
-            const auto child_item = (*children)[*keyit];
-#ifdef QUL_LOADER_WORKAROUND
-            const auto sub_component =  addComponentStream(cchild, child_item);
-            Q_ASSERT(!sub_component.isEmpty());
-            out += indent + delegateName(id) + ": \"" + sub_component + "\"\n";
-#else
-            out += indent + delegateName(id) + ": " + child_item;
-#endif
+            const auto child_item = (*children)[*keyit];     
+
+            if(isQul()) {
+                const auto sub_component =  addComponentStream(cchild, child_item);
+                Q_ASSERT(!sub_component.isEmpty());
+                out += indent + delegateName(id) + ": \"" + sub_component + "\"\n";
+            } else {
+                out += indent + delegateName(id) + ": " + child_item;
+            }
+
         }
         return out;
     }
