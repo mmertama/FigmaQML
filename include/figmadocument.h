@@ -57,7 +57,7 @@ public:
         }
 
         QString name(int index) const {
-            return index >= 0 && m_elements.size() > index ? m_elements[index]->name() : QString();
+            return index >= 0 && static_cast<int>(m_elements.size()) > index ? m_elements[index]->name() : QString();
         }
     protected:
         const QString m_name;
@@ -240,7 +240,7 @@ public:
         return m_components.contains(name);
     }
 
-    static int remove_comments(const QByteArray& data, unsigned& begin, unsigned& end) {
+    static int remove_comments(const QByteArray& data, unsigned& end) {
         if(data[end] != '/' || end + 1 == data.size())
             return 0;
         if(data[end + 1] == '/') {
@@ -282,8 +282,8 @@ public:
             while(cend < data.size() && rend < ref.size()) {
                 const auto c = data[cend];
                 const auto r = ref[rend];
-                cline += remove_comments(data, cbegin, cend);
-                rline += remove_comments(ref, rbegin, rend);
+                cline += remove_comments(data, cend);
+                rline += remove_comments(ref, rend);
                 if(c == '\n' && r != '\n')
                     ++rend;
                 else if(c != '\n' && r == '\n')

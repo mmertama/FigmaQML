@@ -1078,7 +1078,7 @@ ApplicationWindow {
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
-            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(qtForMCUPopup.params, path, qtForMCUPopup.saveAsApp, qtForMCUPopup.elements());
+            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(path, qtForMCUPopup.saveAsApp, qtForMCUPopup.elements());
             if(!save_ok) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
@@ -1153,6 +1153,20 @@ ApplicationWindow {
                 id: textArea
                 color: "lightgrey"
                 background: Rectangle { color: "black"; }
+                property bool _at_end: true
+                function _last_line_start() {
+                    for(let i = textArea.length - 1; i > 0; --i)
+                        if(text[i] === '\n')
+                            return i + 1;
+                    return 0;
+                }
+                onCursorPositionChanged: {
+                    _at_end = cursorPosition >= _last_line_start();
+                }
+                onTextChanged: {
+                    if (_at_end) // move to end only if was not scrolled elsewhere
+                        textArea.cursorPosition = _last_line_start(); // to last
+                }
             }
         }
         standardButtons: Dialog.Close

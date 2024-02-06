@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QString>
 #include <QSerialPortInfo>
+#include <QHash>
 #include <memory>
 
 class FigmaQml;
