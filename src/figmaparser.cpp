@@ -1146,6 +1146,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return isQul() ? makeImageMaskDataQul(imageRef, obj, indents) : makeImageMaskDataQt(imageRef, obj, indents);
     }
 
+
+    std::tuple<QByteArray, QString> FigmaParser::makePathAlias (int pathIndex, const QJsonObject& obj, int indents) {
+        QByteArray out2;
+        const auto id = makeId(QString("path_%1_").arg(pathIndex), obj);
+        out2 += tabs(indents) + (pathIndex == 0 ?
+                                     QString("property alias path: %1.path\n").arg(id) :
+                                     QString("property alias path%1: %2.path\n").arg(pathIndex).arg(id));
+        return {out2, id};
+    };
+
     /**
      * @brief FigmaParser::makeShapeFillData
      * @param obj
@@ -1187,9 +1197,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          const auto indent = tabs(indents);
 
          QByteArray out2;
-         const auto make_alias = [&](int i){
-             const auto id = makeId(QString("path_%1_").arg(i), obj);
-             out2 += tabs(indents - 1) + QString("property alias source%1: %2.path\n").arg(i).arg(id);
+         const auto make_alias = [&](int i) {
+             QString id;
+             std::tie(out2, id) = makePathAlias(i, obj, indents - 1);
              return id;
          };
 
@@ -1215,11 +1225,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         APPENDERR(out, makeImageMaskData(image, obj, indents));
 
         QByteArray out2;
-        const auto make_alias = [&](int i){
-             const auto id = makeId(QString("path_%1_").arg(i), obj);
-             out2 += tabs(indents - 1) + QString("property alias source%1: %2.path\n").arg(i).arg(id);
-             return id;
-         };
+        const auto make_alias = [&](int i) {
+            QString id;
+            std::tie(out2, id) = makePathAlias(i, obj, indents - 1);
+            return id;
+        };
 
          out += indent + "Shape {\n";
          out += indent1 + "anchors.fill: parent\n";
@@ -1601,21 +1611,21 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         if(obj.contains("paragraphIndent")) {
             styles.insert("leftPadding", QString::number(obj["paragraphIndent"].toInt()));
         }
-        if(!isQul()) {
-            const QHash<QString,  QString> hAlign {
-                {"LEFT", "Text.AlignLeft"},
-                {"RIGHT", "Text.AlignRight"},
-                {"CENTER", "Text.AlignHCenter"},
-                {"JUSTIFIED", "Text.AlignJustify"}
-            };
-            styles.insert("horizontalAlignment", hAlign[obj["textAlignHorizontal"].toString()]);
-            const QHash<QString, QString> vAlign {
-                {"TOP", "Text.AlignTop"},
-                {"BOTTOM", "Text.AlignBottom"},
-                {"CENTER", "Text.AlignVCenter"}
-            };
-            styles.insert("verticalAlignment", vAlign[obj["textAlignVertical"].toString()]);
 
+        const QHash<QString,  QString> hAlign {
+            {"LEFT", "Text.AlignLeft"},
+            {"RIGHT", "Text.AlignRight"},
+            {"CENTER", "Text.AlignHCenter"},
+            {"JUSTIFIED", "Text.AlignJustify"}
+        };
+        styles.insert("horizontalAlignment", hAlign[obj["textAlignHorizontal"].toString()]);
+        const QHash<QString, QString> vAlign {
+            {"TOP", "Text.AlignTop"},
+            {"BOTTOM", "Text.AlignBottom"},
+            {"CENTER", "Text.AlignVCenter"}
+        };
+        styles.insert("verticalAlignment", vAlign[obj["textAlignVertical"].toString()]);
+        if(!isQul()) {
             styles.insert("font.letterSpacing", QString::number(obj["letterSpacing"].toDouble()));
         }
         return styles;

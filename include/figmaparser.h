@@ -275,6 +275,7 @@ private:
      EByteArray makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents);
      QString makeFileName(const QJsonObject& obj, const QString& prefix) const;
      ~FigmaParser();
+     std::tuple<QByteArray, QString> makePathAlias(int pathIndex, const QJsonObject& obj, int indents);
 private:
      struct Parent{
          const QJsonObject* obj;

@@ -117,7 +117,6 @@ if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")
 endif()
 
-
 if (APPLE)
     set_target_properties(FigmaQML PROPERTIES
             MACOSX_BUNDLE ON
