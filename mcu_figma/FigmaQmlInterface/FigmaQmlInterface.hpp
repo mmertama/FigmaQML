@@ -6,8 +6,9 @@
 #include <qul/signal.h>
 
 
-
+#ifndef BUG_199
 #define BUG_199 // There is some issue (bug?) in Qt for MCU and cmake definitions are not always working!
+#endif
 
 /// https://bugreports.qt.io/browse/QTMCU-199, until fixed
 #ifdef BUG_199
@@ -81,7 +82,7 @@ public:
      * @param index
      */
     bool setView(int index) {
-        if(index >= 0 && index < elements.size()) {
+        if(index >= 0 && index < static_cast<int>(elements.size())) {
             currentView.setValue(elements[index]);
             return true;
         }
@@ -93,7 +94,7 @@ public:
      * @param index
      * @return
      */
-    std::string view(int index) const {return index < elements.size() ? elements[index] : std::string{};}
+    std::string view(int index) const {return index < static_cast<int>(elements.size()) ? elements[index] : std::string{};}
 
     /**
      * Mediator functions - see https://doc.qt.io/QtForMCUs-2.5/qml-qtquick-loader.html

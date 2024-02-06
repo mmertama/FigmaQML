@@ -8,6 +8,7 @@
 #include <QProcess>
 #include <QProcessEnvironment>
 #include <QDir>
+#include <QEventLoop>
 #include <QRegularExpression>
 #include <QSerialPortInfo>
 #include <QSerialPort>
@@ -55,7 +56,14 @@ void debug_out (QProcess& process) {
         qDebug().noquote() << YELLOW << clean(process.readAllStandardError()) << NONE;
     else
         qDebug().noquote() << RED << clean(process.readAllStandardError()) << NONE;
-};
+}
+
+constexpr auto STM32 = "STM32";
+
+extern QStringList supportedQulHardware() {
+    return {STM32};
+}
+
 
 class QulInfo::Private {
 public:
@@ -303,13 +311,7 @@ static
     return true;
 }
 
-//TODO this function is run debug only - kind of unit test
-//[[maybe_unused]]
-//static bool verify_data_integrity(const FigmaQml& figmaQml, const std::vector<int>& elements) {
-//
-//}
-
-bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
 
     // I decided to remove all as if not done it causes problems
     if(QDir(path).exists()) {
@@ -358,11 +360,42 @@ bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml
 
     static const QRegularExpression re_images (R"((^\s*files:\s*\[\s*)(\s*(?:@[A-Z_]+@)?\s*\]))");
 
-    VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject.in", re_images, R"(\1)" + local_images.join(JOIN) + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
+    if(!local_images.isEmpty())
+        VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject.in", re_images, R"(\1)" + local_images.join(JOIN) + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
     static const QRegularExpression re_qml(R"(\/\*element_declarations\*\/)");
 
     VERIFY(replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.hpp", re_qml, qmlItemNames.join(","), {}, true), "Cannot update cpp file");
+
+    return true;
+}
+
+static void waitRun(QProcess& process) {
+    QEventLoop innerLoop;
+    QObject::connect(&process, &QProcess::finished,  &innerLoop, &QEventLoop::quit);
+    innerLoop.exec();
+    debug_out(process);
+}
+
+static bool flashSTM32(QProcess& flash_process, const QTemporaryDir& dir, const QVariantMap& parameters, QulInfo& qulInfo) {
+    const auto tools_path = parameters["platformTools"].toString();
+    VERIFY(tools_path.contains("STM32"), "Cannot find STM32 from path");
+
+    const auto programmer = findFile(tools_path, QRegularExpression(R"(STM32_Programmer\.sh)"));
+    VERIFY(!programmer.isEmpty(), "Cannot find flasher app");
+    const auto platform = parameters["qulPlatform"].toString();
+    const auto reg_string = ".*" + platform.left(15) + ".*" + R"(\.stldr$)";
+    const auto flash_param = findFile(tools_path, QRegularExpression(reg_string, QRegularExpression::CaseInsensitiveOption));
+    VERIFY(!flash_param.isEmpty(), "Cannot find flash configuration");
+    const auto binary = findFile(dir.path(), QRegularExpression(R"(mcu_figma\.hex)"));
+    VERIFY(!binary.isEmpty(), "Cannot find binary");
+
+    auto serial_port = getSerialPort("STM32 STLink");
+    VERIFY(!serial_port.isNull(), "Cannot find serial port connected to board")
+    VERIFY(qulInfo.connect(serial_port), "Cannot connect to serial port");
+
+    flash_process.setWorkingDirectory(dir.path());
+    flash_process.start("bash", { "run_STM32.sh", programmer, flash_param, binary});
 
     return true;
 }
@@ -372,10 +405,9 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, cons
     // create a monitor
     auto qulInfo = QulInfo::instance(figmaQml);
 
-
     QTemporaryDir dir;
     VERIFY(dir.isValid(), "Cannot create temp dir")
-    if(!writeQul(dir.path(), parameters, figmaQml, true, elements))
+    if(!writeQul(dir.path(), figmaQml, true, elements))
         return false;
 
     QProcess build_process;
@@ -400,44 +432,34 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, cons
         emit qulInfo->information(out, build_process.exitCode() == 0 ? 2 : 0);
     });
 
-    build_process.waitForFinished(-1);
-    debug_out(build_process);
+    waitRun(build_process);
+
+    const auto flash_failed = [&]() {showError("Flash failed binary!", "However Image shall be found in " + dir.path() + " as long as this note is open");};
+
     if(build_process.exitCode() == 0) {
-        const auto tools_path = parameters["platformTools"].toString();
-        if(tools_path.contains("STM32")) {
-            const auto programmer = findFile(tools_path, QRegularExpression(R"(STM32_Programmer\.sh)"));
-            VERIFY(!programmer.isEmpty(), "Cannot find flasher app");
-            const auto platform = parameters["qulPlatform"].toString();
-            const auto reg_string = ".*" + platform.left(15) + ".*" + R"(\.stldr$)";
-            const auto flash_param = findFile(tools_path, QRegularExpression(reg_string, QRegularExpression::CaseInsensitiveOption));
-            VERIFY(!flash_param.isEmpty(), "Cannot find flash configuration");
-            const auto binary = findFile(dir.path(), QRegularExpression(R"(mcu_figma\.hex)"));
-            VERIFY(!binary.isEmpty(), "Cannot find binary");
+        QProcess flash_process;
+        QObject::connect(&flash_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &flash_process]() {
+            const auto out = clean(flash_process.readAllStandardError());
+            qDebug() << (flash_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
+            emit qulInfo->information(out, flash_process.exitCode() == 0 ? 1 : 0);
+        });
 
-            auto serial_port = getSerialPort("STM32 STLink");
-            VERIFY(!serial_port.isNull(), "Cannot find serial port connected to board")
-            VERIFY(qulInfo->connect(serial_port), "Cannot connect to serial port");
+        QObject::connect(&flash_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &flash_process]() {
+            const auto out = clean(flash_process.readAllStandardOutput());
+            qDebug() << GREEN << out << NONE;
+            emit qulInfo->information(out, 2);
+        });
 
-            QProcess flash_process;
-            flash_process.setWorkingDirectory(dir.path());
-            flash_process.start("bash", {"run_STM32.sh", programmer, flash_param, binary});
+        const auto hardware = parameters["platformHardwareValue"].toString();
 
-            QObject::connect(&flash_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &flash_process]() {
-                const auto out = clean(flash_process.readAllStandardError());
-                qDebug() << (flash_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
-                emit qulInfo->information(out, flash_process.exitCode() == 0 ? 1 : 0);
-            });
-
-            QObject::connect(&flash_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &flash_process]() {
-                const auto out = clean(flash_process.readAllStandardOutput());
-                qDebug() << GREEN << out << NONE;
-                emit qulInfo->information(out, 2);
-            });
-
-            flash_process.waitForFinished(-1);
-            debug_out(flash_process);
+        if(hardware == STM32) {
+            if(!flashSTM32(flash_process, dir, parameters, *qulInfo)) {
+                flash_failed();
+                return false;
+            }
+            waitRun(flash_process);
         } else {
-            showError("Don't know how to flash the binary!", "Only the STM32 supported, but the image shall be found in " + dir.path() + " as long as this note is open");
+             flash_failed();
         }
     }
     return true;

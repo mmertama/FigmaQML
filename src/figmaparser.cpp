@@ -188,7 +188,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return map;
     }
 
-    std::optional<FigmaParser::Canvases> FigmaParser::canvases(const QJsonObject& project, FigmaParserData& data) {
+    std::optional<FigmaParser::Canvases> FigmaParser::canvases(const QJsonObject& project) {
         Canvases array;
 
         const auto doc = project["document"].toObject();
@@ -261,7 +261,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return name;
     }
 
-    FigmaParser::FigmaParser(unsigned flags, FigmaParserData& data, const Components* components) : m_flags(flags), m_data(data), m_components(components), m_parent{nullptr, nullptr} {}
+    FigmaParser::FigmaParser(unsigned flags, FigmaParserData& data, const Components* components) : m_flags(flags), m_data(data), m_components(components), m_parent{nullptr, nullptr, {}} {}
 
     FigmaParser::~FigmaParser() {
         while(m_parent.parent)      // this is NOT very rigid, but at least not leak :-/ (better would be assert here that all memory has freed (what push, its pop))
@@ -438,7 +438,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
       * https://doc.qt.io/QtForMCUs-2.5/qtul-known-issues.html#connection-known-issues
       */
 
-     QByteArray FigmaParser::makePropertyChangeHandler(const QJsonObject& obj, int indents) {
+     QByteArray FigmaParser::makePropertyChangeHandler(int indents) {
          QByteArray out;
          if(!m_aliases.isEmpty()) {
              const auto indent = tabs(indents);
@@ -840,7 +840,6 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto idt2 = tabs(indents + 2);
         const auto idt3 = tabs(indents + 3);
 
-        unsigned handle_pos = 0;
         const auto handle_positions = obj["gradientHandlePositions"].toArray();
         const auto gradients_stops = obj["gradientStops"].toArray();
 
@@ -1154,7 +1153,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                                      QString("property alias path: %1.path\n").arg(id) :
                                      QString("property alias path%1: %2.path\n").arg(pathIndex).arg(id));
         return {out2, id};
-    };
+    }
 
     /**
      * @brief FigmaParser::makeShapeFillData
@@ -2344,7 +2343,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
           // add alias set signal
 
           if(!m_parent.parent->parent && generateAccess()) {
-            out += makePropertyChangeHandler(obj, indents);
+            out += makePropertyChangeHandler(indents);
             }
           return out;
     }

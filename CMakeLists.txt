@@ -102,6 +102,7 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 qt_add_executable(FigmaQML ${SOURCES}
     todo.txt)
 
+target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 if(WIN32)
   #  Windows does not support dual mode, we pick cmd mode

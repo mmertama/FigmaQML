@@ -150,7 +150,7 @@ public:
     using EByteArray = std::optional<QByteArray>;
 public:
     static std::optional<Components> components(const QJsonObject& project,  FigmaParserData& data);
-    static std::optional<Canvases> canvases(const QJsonObject& project, FigmaParserData& data);
+    static std::optional<Canvases> canvases(const QJsonObject& project);
     static std::optional<Element> component(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static std::optional<Element> element(const QJsonObject& obj, unsigned flags,  FigmaParserData& data, const Components& components);
     static QString name(const QJsonObject& project);
@@ -271,7 +271,7 @@ private:
      EByteArray makeLoader(const QJsonObject& obj, int indents);
      QByteArray makeGradientToFlat(const QJsonObject& obj, int indents);
      QByteArray addComponentStream(const QJsonObject& obj,  const QByteArray& child_item);
-     QByteArray makePropertyChangeHandler(const QJsonObject& obj, int indents);
+     QByteArray makePropertyChangeHandler(int indents);
      EByteArray makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents);
      QString makeFileName(const QJsonObject& obj, const QString& prefix) const;
      ~FigmaParser();

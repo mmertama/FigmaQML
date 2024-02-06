@@ -6,7 +6,7 @@
 #include <limits>
 
 class FigmaProvider : public QObject {
-    Q_OBJECT;
+    Q_OBJECT
 public:
     FigmaProvider(QObject* parent = nullptr) : QObject(parent) {}
     virtual bool isReady() = 0;

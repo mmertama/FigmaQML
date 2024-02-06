@@ -39,6 +39,7 @@ class FigmaQml : public QObject, public FigmaParserData {
     Q_PROPERTY(QString fontFolder MEMBER m_fontFolder NOTIFY fontFolderChanged)
     Q_PROPERTY(QString documentsLocation READ documentsLocation CONSTANT)
     Q_PROPERTY(QVariantList elements READ elements NOTIFY elementsChanged)
+    Q_PROPERTY(QStringList supportedQulHardware READ supportedQulHardware CONSTANT)
 public:
     enum Flags { // WARNING these map values are (partly) same with figmaparser flags
         PrerenderShapes     = 0x2,
@@ -92,8 +93,9 @@ public:
     QString documentsLocation() const;
     QVariantList elements() const;
     const auto& externalLoaders() const {return m_externalLoaders;}
+    QStringList supportedQulHardware() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
-    Q_INVOKABLE bool saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
+    Q_INVOKABLE bool saveCurrentQML(const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;

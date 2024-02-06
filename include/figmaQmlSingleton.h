@@ -21,7 +21,7 @@ class FigmaQmlSingleton : public QObject {
     Q_OBJECT
 public:
     // The FigmaQML app does not contain that much view change logic - this is mostly just a suggestion
-    Q_PROPERTY(QString currentView READ currentView NOTIFY currentViewChanged FINAL);
+    Q_PROPERTY(QString currentView READ currentView NOTIFY currentViewChanged FINAL)
 
     Q_PROPERTY(int viewCount READ viewCount NOTIFY viewCountChanged)
 

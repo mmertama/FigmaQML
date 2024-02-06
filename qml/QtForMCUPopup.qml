@@ -35,7 +35,8 @@ Dialog {
         'qulVer': qulVer.text,
         'qulPlatform': qulPlatform.text,
         'qtLicense': qtLicense.text,
-        'platformTools': platformTools.text
+        'platformTools': platformTools.text,
+        'platformHardwareValue': hwSelection.currentText
     }
 
     Settings {
@@ -45,6 +46,7 @@ Dialog {
            property alias qulPlatformValue: qulPlatform.text
            property alias qtLicenseValue: qtLicense.text
            property alias platformToolsValue: platformTools.text
+           property alias platformHardwareValue: hwSelection.currentIndex
        }
 
     component Input : RowLayout {
@@ -123,6 +125,14 @@ Dialog {
             }
         }
 
+        Text {text: "Platfrom Hardware"; font.weight: Font.Medium}
+        ComboBox {
+            id: hwSelection
+            model: [qsTr("Not spesified")].concat(figmaQml.supportedQulHardware)
+            Layout.preferredWidth: parent.width
+        }
+
+
         Text {text: "Platform tools";font.weight: Font.Medium}
         Input {
             id: platformTools
@@ -160,6 +170,7 @@ Dialog {
         DialogButtonBox {
             Button {
                 text: qsTr("Execute...")
+                enabled: hwSelection.currentIndex != 0
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             }
 

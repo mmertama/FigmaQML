@@ -22,7 +22,8 @@
 
 #ifdef HAS_QUL
 extern void executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
-extern bool writeQul(const QString& path, const QVariantMap& parameters, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
+extern bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
+extern QStringList supportedQulHardware();
 #endif
 
 #include <QTime>
@@ -1070,7 +1071,7 @@ bool FigmaQml::doCreateDocument(FigmaDocument& doc, const QJsonObject& json) {
     TIMED_START(t4)
 
 
-    const auto canvases = FigmaParser::canvases(json, *this);
+    const auto canvases = FigmaParser::canvases(json);
     if(!canvases)
         return false;
 
@@ -1107,11 +1108,18 @@ void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>&
 #endif
 }
 
-bool FigmaQml::saveCurrentQML(const QVariantMap& parameters, const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
+QStringList FigmaQml::supportedQulHardware() const {
 #ifdef HAS_QUL
-    return writeQul(folderName, parameters, *this, writeAsApp, elements);
+    return ::supportedQulHardware();
 #else
-    (void) parameters;
+    return {};
+#endif
+}
+
+bool FigmaQml::saveCurrentQML(const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
+#ifdef HAS_QUL
+    return writeQul(folderName, *this, writeAsApp, elements);
+#else
     (void) elements;
     return true;
 #endif

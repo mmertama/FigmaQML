@@ -9,7 +9,7 @@ class FigmaGet;
 //using NodeProvider = std::function<QByteArray (const QString&)>;
 
 class ImageProvider : public QObject {
-    Q_OBJECT;
+    Q_OBJECT
 public:
     ImageProvider(FigmaGet& fg);
     void request(const QString& imageRef, const bool isRendering, const QSize& size, const QVariant& data);
@@ -18,7 +18,7 @@ signals:
 };
 
 class NodeProvider : public QObject {
-   Q_OBJECT;
+   Q_OBJECT
 public:
      NodeProvider(FigmaGet& fg);
 };
