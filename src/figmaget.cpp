@@ -38,7 +38,9 @@ QString asTimeoutId(const QString& id) {
     return id + "_timeout";
 }
 
-static QSet<QString> FuckingFooFailed;
+#ifdef QT_DEBUG
+static QSet<QString> FetchFailedDebug;
+#endif
 
 /*
 #define FOO  RAII_ r{[fn = __FUNCTION__](){qDebug() << "FOO Out - " << fn; }}; qDebug() << "FOO: In - " << __FUNCTION__
@@ -94,12 +96,14 @@ FigmaGet::FigmaGet(QObject *parent) : FigmaProvider(parent),
 }
 
 void FigmaGet::onRetrievedImage(const QString& imageRef) {
-    assert(FuckingFooFailed.find(imageRef) == FuckingFooFailed.end());
+    assert(FetchFailedDebug.find(imageRef) == FetchFailedDebug.end());
     if(m_images->contains(imageRef)) {
         if(!m_images->isEmpty(imageRef)) {
             emit imageReady(imageRef, m_images->data(imageRef), m_images->format(imageRef));
         } else {
-            FuckingFooFailed.insert(imageRef);
+#ifdef  QT_DEBUG
+            FetchFailedDebug.insert(imageRef);
+#endif
             m_images->setError(imageRef);
             emit error(QString("Image cannot be retrieved \"%1\"").arg(imageRef));
         }
@@ -142,7 +146,7 @@ void FigmaGet::doFinished(QNetworkReply* rep)
 }
 
 void FigmaGet::retrieveImage(const Id& id,  FigmaData* target, const QSize& maxSize) {
-    assert(FuckingFooFailed.find(id.id) == FuckingFooFailed.end());
+    assert(FetchFailedDebug.find(id.id) == FetchFailedDebug.end());
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     queueCall([this, id, target, maxSize]() {
         return doRetrieveImage(id, target, maxSize);
@@ -357,7 +361,7 @@ std::tuple<int, int, int> FigmaGet::cacheInfo() const {
 
 void FigmaGet::getImage(const QString& imageRef, const QSize& maxSize) {
 
-    assert(FuckingFooFailed.find(imageRef) == FuckingFooFailed.end());
+    assert(FetchFailedDebug.find(imageRef) == FetchFailedDebug.end());
 
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     Q_ASSERT(!imageRef.isEmpty());
@@ -395,7 +399,7 @@ void FigmaGet::getImage(const QString& imageRef, const QSize& maxSize) {
 
 
 QNetworkReply* FigmaGet::doRetrieveImage(const Id& id, FigmaData *target, const QSize &maxSize) {
-     assert(FuckingFooFailed.find(id.id) == FuckingFooFailed.end());
+    assert(FetchFailedDebug.find(id.id) == FetchFailedDebug.end());
     QNetworkRequest request;
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     request.setAttribute(QNetworkRequest::SynchronousRequestAttribute, false);
@@ -454,7 +458,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const Id& id, FigmaData *target, const 
             Q_ASSERT(format == "png" || format == "jpeg");
             target->setBytes(id.id, *bytes, format == "png" ? PNG : JPEG);
         }
-         assert(FuckingFooFailed.find(id.id) == FuckingFooFailed.end());
+        assert(FetchFailedDebug.find(id.id) == FetchFailedDebug.end());
         emit imageRetrieved(id.id);
     };
 
