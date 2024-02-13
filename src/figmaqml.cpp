@@ -26,6 +26,8 @@ extern bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAs
 extern QStringList supportedQulHardware();
 #endif
 
+extern bool executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
+
 #include <QTime>
 #define TIMED_START(s)  const auto s = QTime::currentTime();
 #define TIMED_END(s, p) if(m_flags & Timed ) {emit info(toStr("timed", p, s.msecsTo(QTime::currentTime())));}
@@ -1108,6 +1110,11 @@ void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>&
 #endif
 }
 
+void FigmaQml::executeApp(const QVariantMap& parameters, const std::vector<int>& elements) {
+    ::executeApp(parameters, *this, elements);
+}
+
+
 QStringList FigmaQml::supportedQulHardware() const {
 #ifdef HAS_QUL
     return ::supportedQulHardware();
@@ -1154,7 +1161,7 @@ static auto checksum(const QString& filename) {
 
 
 template <typename T>
-const auto join(const T& vec, const QString& sep) {
+auto join(const T& vec, const QString& sep) {
     QString s;
     QTextStream t(&s);
     auto it = vec.begin();

@@ -6,19 +6,16 @@
 #include <QSerialPortInfo>
 #include <QHash>
 #include <memory>
+#include "execute_utils.h"
 
-class FigmaQml;
-
-class QulInfo: public QObject {
+class QulInfo: public ExecuteInfo {
     Q_OBJECT
 public:
     static QulInfo* instance(const FigmaQml& figmaQml);
     bool connect(const QSerialPortInfo& info);
     ~QulInfo();
-signals:
-    void information(const QString& info, int level);
 private:
-    QulInfo(QObject* parent = nullptr);
+    QulInfo(const FigmaQml& figmaQml, QObject* parent = nullptr);
     class Private;
     friend class Private;
     std::unique_ptr<Private> m_private;

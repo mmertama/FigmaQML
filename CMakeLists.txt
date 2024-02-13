@@ -77,6 +77,8 @@ set(SOURCES
     src/fontinfo.cpp
     include/fontinfo.h
     src/fontinfo.cpp
+    src/executeApp.cpp
+    include/execute_utils.h
 )
 
 
@@ -99,7 +101,7 @@ set(VERSION_NUMBER "3.0.0")
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
 #add_executable(FigmaQML
-qt_add_executable(FigmaQML ${SOURCES}
+qt_add_executable(${PROJECT_NAME} ${SOURCES}
     todo.txt)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -119,17 +121,17 @@ if(UNIX)
 endif()
 
 if (APPLE)
-    set_target_properties(FigmaQML PROPERTIES
+    set_target_properties(${PROJECT_NAME} PROPERTIES
             MACOSX_BUNDLE ON
             )
 endif()
 
 include_directories(include)
 
-target_compile_definitions(FigmaQML PRIVATE ASSERT_NESTED=1)
+target_compile_definitions(${PROJECT_NAME} PRIVATE ASSERT_NESTED=1)
 
 if(NOT EMSCRIPTEN)
-target_compile_definitions(FigmaQML
+target_compile_definitions(${PROJECT_NAME}
   PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 endif()
 
@@ -137,8 +139,8 @@ option(QT6_CONCURRENT FALSE)
 option(QT6_SSL FALSE)
 
 if(Qt5_FOUND)
-    target_compile_definitions(FigmaQML PRIVATE -DQT5)
-    target_link_libraries(FigmaQML
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DQT5)
+    target_link_libraries(${PROJECT_NAME}
         PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
 elseif(EMSCRIPTEN)
     set(QT_WASM_INITIAL_MEMORY, "300MB")
@@ -162,8 +164,8 @@ elseif(EMSCRIPTEN)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         SET(EM_FLAGS -sASSERTIONS=2 -sRUNTIME_LOGGING=1 -sSAFE_HEAP=1)
     endif()
-    target_link_options(FigmaQML PUBLIC -sASYNCIFY -Os -sASYNCIFY_STACK_SIZE=65535 ${EM_FLAGS})
-    target_compile_definitions(FigmaQML PRIVATE
+    target_link_options(${PROJECT_NAME} PUBLIC -sASYNCIFY -Os -sASYNCIFY_STACK_SIZE=65535 ${EM_FLAGS})
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
         -DNO_CONCURRENT
         -DNO_SSL
         -DWASM_FILEDIALOGS)
@@ -174,7 +176,7 @@ elseif(EMSCRIPTEN)
         COMMAND ${CMAKE_COMMAND} -E copy favicon.ico $<CONFIG>/favicon.ico
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
-    target_link_libraries(FigmaQML
+    target_link_libraries(${PROJECT_NAME}
       PRIVATE QuaZip
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
@@ -185,16 +187,16 @@ else()
         message(WARNING "SSL version must be at least 3.0.0, your runtime have ${OPENSSL_VERSION}. Hint for QtCreator try add $\{QT_DIR\}/plugins/tls in Run settings (LD_LIBRARY_PATH in Linux)")
     endif()
     if(NOT QT6_CONCURRENT)
-        target_compile_definitions(FigmaQML PRIVATE -DNO_CONCURRENT)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE -DNO_CONCURRENT)
     endif()
     if(NOT QT6_SSL)
-        target_compile_definitions(FigmaQML PRIVATE -DNO_SSL)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE -DNO_SSL)
     endif()
 
     if(HAS_QUL)
-        target_compile_definitions(FigmaQML PRIVATE -DHAS_QUL)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
     endif()
 
-    target_link_libraries(FigmaQML
+    target_link_libraries(${PROJECT_NAME}
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 endif()
