@@ -6,7 +6,7 @@ import QtCore
 
 Dialog {
     id: dialog
-    title: "Qt For MCU Export"
+    title: "Qt Export"
 
     background: Rectangle {
             color: "lightgray"
@@ -31,28 +31,19 @@ Dialog {
     }
 
     readonly property var params: {
-        'qtDir': qtDir.text,
-        'qulVer': qulVer.text,
-        'qulPlatform': qulPlatform.text,
-        'qtLicense': qtLicense.text,
-        'platformTools': platformTools.text,
-        'platformHardwareValue': hwSelection.currentText
+        'qtDir': qtDir.text
     }
 
     Settings {
            id: settings
            property alias qtDirValue: qtDir.text
-           property alias qulVerValue: qulVer.text
-           property alias qulPlatformValue: qulPlatform.text
-           property alias qtLicenseValue: qtLicense.text
-           property alias platformToolsValue: platformTools.text
-           property alias platformHardwareValue: hwSelection.currentIndex
        }
 
     component Input : RowLayout {
         id: row
         property string text
         property string buttonText
+        property alias textRectWidth: rect.width
         signal clicked
         Layout.minimumWidth: rect.width + 10 + button.width + spacing
         Rectangle {
@@ -98,62 +89,14 @@ Dialog {
             }
         }
 
-        Text {
-            text: "Qul Version"
-        }
-        Input {
-            id: qulVer
-            text: "2.6.0"
-        }
-
-        Text {text: "Qul Platform";font.weight: Font.Medium}
-        Input {
-            id: qulPlatform
-            text: "STM32F769I-DISCOVERY-baremetal"
-        }
-
-        Text {text: "Qt License";font.weight: Font.Medium}
-        Input {
-            id: qtLicense
-            text: "./qt-license.txt"
-            buttonText: "Select..."
-            Layout.preferredWidth: parent.width
-            onClicked: {
-                fileDialog.title = "Select a Qt License file"
-                fileDialog.target = this
-                fileDialog.open()
-            }
-        }
-
-        Text {text: "Platfrom Hardware"; font.weight: Font.Medium}
-        ComboBox {
-            id: hwSelection
-            model: [qsTr("Not spesified")].concat(figmaQml.supportedQulHardware)
-            Layout.preferredWidth: parent.width
-        }
-
-
-        Text {text: "Platform tools";font.weight: Font.Medium}
-        Input {
-            id: platformTools
-            text: "         "
-            buttonText: "Select..."
-            Layout.preferredWidth: parent.width
-            onClicked: {
-                folderDialog.title = "Select platform tools folder"
-                folderDialog.target = this
-                folderDialog.open()
-            }
-        }
-
-
         Text {text: "Included views"; font.weight: Font.Medium}
         RowLayout {
             Layout.preferredWidth: parent.width
+            spacing: 10
             IncludeList {
                 id: included_views
                 Layout.preferredHeight: Math.max(contentHeight, 100)
-                Layout.preferredWidth: parent.width - 120
+                Layout.preferredWidth: qtDir.textRectWidth
             }
             Button {
                 Layout.alignment: Qt.AlignTop

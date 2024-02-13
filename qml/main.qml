@@ -217,18 +217,29 @@ ApplicationWindow {
                 enabled: !updater.running && !figmaDownload.downloading
                 text: "Tokens..."
                 onTriggered: tokens.open()
+                opacity: enabled ? 1 : 0.3
             }
-
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid
-                text: "Export all QMLs..."
-                onTriggered: saveAllQMLs();
+                visible: !(has_qul &&(figmaQml.flags & FigmaQml.QulMode))
+                text: "Export Qt Desktop..."
+                onTriggered: qtForDesktopPopup.open();
+                height: visible ? implicitHeight : 0
+                opacity: enabled ? 1 : 0.3
             }
             MenuItem {
-                enabled: figmaQml && figmaQml.isValid && (figmaQml.flags & FigmaQml.QulMode)
-                visible: has_qul
+                enabled: figmaQml && figmaQml.isValid
+                visible: has_qul && (figmaQml.flags & FigmaQml.QulMode)
                 text: "Export Qt for MCU..."
                 onTriggered: qtForMCUPopup.open();
+                height: visible ? implicitHeight : 0
+                opacity: enabled ? 1 : 0.3
+            }
+            MenuItem {
+                enabled: figmaQml && figmaQml.isValid
+                text: "Dump all QMLs..."
+                onTriggered: saveAllQMLs();
+                opacity: enabled ? 1 : 0.3
             }
             MenuItem {
                 text: "Edit imports..."
@@ -242,11 +253,13 @@ ApplicationWindow {
                 enabled: figmaQml && figmaQml.isValid
                 text: "Store..."
                 onTriggered: storeFile();
+                opacity: enabled ? 1 : 0.3
             }
             MenuItem {
                 enabled: figmaQml && figmaQml.isValid
                 text: "SendValue..."
                 onTriggered: send_set_value.open()
+                opacity: enabled ? 1 : 0.3
             }
             MenuItem {
                 text: "Restore..."
@@ -1129,6 +1142,13 @@ ApplicationWindow {
         onSaveRequest: saveCurrentQML(elements())
         onAccepted: figmaQml.executeQul(params, elements());
 
+    }
+
+    QtForDesktopPopup {
+        id: qtForDesktopPopup
+        anchors.centerIn: parent
+        onSaveRequest: saveCurrentQML(elements())
+        onAccepted: figmaQml.executeApp(params, elements());
     }
 
     Dialog {

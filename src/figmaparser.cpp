@@ -22,7 +22,7 @@
 #endif
 
 const auto QML_TAG = "qml?";
-const auto COMP_PARAM = "comp";
+//const auto COMP_PARAM = "comp";
 const auto ON_CLICK = "onClick";
 const auto AS_LOADER = "asLoader";
 const auto ID_PREFIX = "figma_";
@@ -53,7 +53,7 @@ struct Properties {
     QString obj_name;
     QString name;
     QStringList var;
-    bool is_comp;
+    //bool is_comp;
 };
 
 static std::optional<Properties> getProperties(const QJsonObject& obj) {
@@ -72,7 +72,7 @@ static std::optional<Properties> getProperties(const QJsonObject& obj) {
     }
     const auto name = obj_name.mid(param_end + 1, end - param_end - 1);  // signal identifier
     const auto var = obj_name.mid(end + 1);                      // property type
-    return Properties{obj_name, name, var.split('.'), params.contains(COMP_PARAM)};
+    return Properties{obj_name, name, var.split('.')};
 }
 
 
@@ -455,9 +455,9 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              for(const auto& alias : m_aliases) {
                  const auto properties = getProperties(alias.obj);
                  if(properties) {
-                     const auto& [obj_name, name, vars, is_comp] = properties.value();
+                     const auto& [obj_name, name, vars] = properties.value();
                      for(const auto& var : vars) {
-                         if(!isReservedName(var) && !is_comp) {
+                         if(!isReservedName(var)) {
                              const auto indent4 = tabs(indents + 3);
                              out += indent4 + "case '" + name + "': " + alias.id + '.' + var + " = value; break;\n";
                          }
@@ -492,11 +492,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             out += indent3 + "switch(element) {\n";
 
             const auto id_string = makeId(obj);
-            const auto& [obj_name, name, vars, is_comp] = properties.value();
+            const auto& [obj_name, name, vars] = properties.value();
             for(const auto& var : vars) {
                 if(!isReservedName(var)) {
-                    if(!is_comp) {
-                        ERR("Expected comp parameter in name (Figma name as 'qml?comp?')");
+                    if(var.isEmpty()) {
+                        ERR("Expected element property in name (Figma name as 'qml?element.property'), get '" + name + "'");
                     }
                     const auto indent4 = tabs(indents + 3);
                     out += indent4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
@@ -575,7 +575,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             const auto properties = getProperties(obj);
             if(properties) {
                 const auto indent2 = tabs(indents + 1);
-                const auto& [obj_name, name, var, is_comp] = properties.value();
+                const auto& [obj_name, name, var] = properties.value();
                 if(var.contains(ON_CLICK)) {
                     out += indent1 + "MouseArea {\n";
                     out += indent2 + "anchors.fill: parent\n";
@@ -2120,7 +2120,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
      EByteArray FigmaParser::makeLoader(const QJsonObject& obj, int indents) {
          const auto properties = getProperties(obj);
-         const auto& [obj_name, name, var, is_comp] = properties.value(); // already ok
+         const auto& [obj_name, name, var] = properties.value(); // already ok
          const auto loaderId = makeId("l_", obj);
          QByteArray out;
          const auto indent = tabs(indents );

@@ -12,5 +12,6 @@
         <file>QtForMCUPopup.qml</file>
         <file>IncludeList.qml</file>
         <file>LoaderPlaceHolder.qml</file>
+        <file>QtForDesktopPopup.qml</file>
     </qresource>
 </RCC>

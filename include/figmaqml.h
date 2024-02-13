@@ -108,6 +108,7 @@ public:
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
     Q_INVOKABLE void executeQul(const QVariantMap& parameters, const std::vector<int>& elements);
+    Q_INVOKABLE void executeApp(const QVariantMap& parameters, const std::vector<int>& elements);
     Q_INVOKABLE bool hasFontPathInfo() const;
     Q_INVOKABLE void findFontPath(const QString& fontFamilyName) const;
 #ifdef USE_NATIVE_FONT_DIALOG
