@@ -53,6 +53,10 @@ else()
     endif()
 endif()
 
+# dog food
+add_subdirectory(app_figma/FigmaQmlInterface)
+
+
 set(SOURCES
     src/main.cpp
     qml/qml.qrc
@@ -73,12 +77,14 @@ set(SOURCES
     include/utils.h
     include/functorslot.h
     include/figmaprovider.h
-    include/figmaQmlSingleton.h
     src/fontinfo.cpp
     include/fontinfo.h
     src/fontinfo.cpp
     src/executeApp.cpp
     include/execute_utils.h
+    #include/figmaQmlSingleton.h
+    app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
+    app_figma/app.qrc # files needed to build an app
 )
 
 
@@ -87,7 +93,7 @@ if(HAS_QUL)
         ${SOURCES}
         include/qulInfo.h
         src/executeQul.cpp
-        mcu_figma/mcu.qrc
+        mcu_figma/mcu.qrc # files needed to build an app
     )
 endif()
 
@@ -198,5 +204,5 @@ else()
     endif()
 
     target_link_libraries(${PROJECT_NAME}
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
+      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA} FigmaQmlInterface)
 endif()
