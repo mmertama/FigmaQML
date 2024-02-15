@@ -1,12 +1,14 @@
 #ifndef EXECUTE_UTILS_H
 #define EXECUTE_UTILS_H
 
+#include <optional>
 #include <QString>
 #include <QObject>
 #include <QProcess>
 #include <QRegularExpression>
 
 #define VERIFY(x, t) if(!x) {ExecuteUtils::showError(t); return false;}
+#define VERIFO(x, t) if(!x) {ExecuteUtils::showError(t); return std::nullopt;}
 
 constexpr auto RED = "\033[31m";
 constexpr auto NONE = "\033[0m";
@@ -57,12 +59,11 @@ namespace ExecuteUtils {
      * @param path
      * @param main_file_name
      * @param figmaQml
-     * @param qml_files
-     * @param save_image_filter
      * @param indices
      * @return
      */
-    bool writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, QStringList& qml_files, QSet<QString>& save_image_filter, std::pair<int, int> indices);
+    std::optional<std::tuple<QStringList, QSet<QString>>> writeElement(const QString& path, const QString& main_file_name, const FigmaQml& figmaQml, const std::pair<int, int>& indices);
+
 
     /**
      * @brief qq
@@ -70,6 +71,7 @@ namespace ExecuteUtils {
      * @return
      */
     QString qq(const QString& str); // todo replace std::quoted
+    QStringList qq(const QStringList& str); // todo replace std::quoted
 
     /**
     * @brief replaceInFile
@@ -77,7 +79,7 @@ namespace ExecuteUtils {
     * @param re
     * @param replacement
     * @param context
-    * @param force_context is a hack so I can use this for C++ files, sorry
+    * @param force_context is a hack so I can use this for non-json files, sorry
     * @return
     */
     bool replaceInFile(const QString& fname, const QRegularExpression& re, const QString& replacement, const QStringList context, bool force_context = false);
@@ -88,7 +90,18 @@ namespace ExecuteUtils {
      * @param regexp
      * @return
      */
-    QString findFile(const QString& path, const QRegularExpression& regexp);
+    enum Kind {Any = 0, Exe = 1};
+    QString findFile(const QString& path, const QRegularExpression& regexp, Kind kind);
+
+    /**
+     * @brief writeResources
+     * @param path
+     * @param figmaQml
+     * @param writeAsApp
+     * @param elements
+     * @return
+     */
+    std::optional<std::tuple<QStringList, QStringList, QStringList>> writeResources(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
 }
 
 class ExecuteInfo: public QObject {

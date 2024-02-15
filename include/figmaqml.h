@@ -95,7 +95,7 @@ public:
     const auto& externalLoaders() const {return m_externalLoaders;}
     QStringList supportedQulHardware() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
-    Q_INVOKABLE bool saveCurrentQML(const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
+    Q_INVOKABLE bool saveQML(bool asMcu, const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;

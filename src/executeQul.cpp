@@ -92,51 +92,20 @@ QSerialPortInfo getSerialPort(const QString& id) {
 }
 
 bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
-
-    // I decided to remove all as if not done it causes problems
-    if(QDir(path).exists()) {
-        VERIFY(QDir(path).removeRecursively(), "Cannot clean folder");
-    }
-
-    const auto abs_path = QFileInfo(path).absolutePath();
-    VERIFY(QDir().mkpath(path + '/' + FOLDER + QML_PREFIX), "Cannot create folder " + abs_path + FOLDER + QML_PREFIX)
-
-    if(!ExecuteUtils::copy_resources(path, "mcu", writeAsApp ? QStringList{} : QStringList{"FigmaQmlInterface"}))
+    const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
+    if(!res)
         return false;
 
-    QStringList qmlItemNames;
-
-    QSet<QString> save_image_filter {{figmaQml.elementName()}};
-    QStringList qml_files;
-    const auto file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
-    qmlItemNames.append(ExecuteUtils::qq(file_name));
-
-    if(!ExecuteUtils::writeElement(path, file_name, figmaQml, qml_files, save_image_filter, {figmaQml.currentCanvas(), figmaQml.currentElement()}))
-        return false; // it already tells what went wrong
-
-    const auto els = figmaQml.elements();
-    for(const auto& var : elements) {
-        const auto& map = els[var].toMap();
-        const auto element_name = map["element_name"].toString();
-        const auto canvas_index = map["canvas"].toInt();
-        const auto element_index = map["element"].toInt();
-        const auto file_name =  QML_PREFIX + FigmaQml::validFileName(element_name) + QML_EXT;
-        if(!ExecuteUtils::writeElement(path, file_name, figmaQml, qml_files, save_image_filter, {canvas_index, element_index}))
-            return false; // it already tells what went wrong
-        qmlItemNames.append(ExecuteUtils::qq(file_name));
-    }
-
-    const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
+    const auto& [qml_item_names, qml_files, images] = res.value();
 
     Q_ASSERT(!qml_files.isEmpty());
     static const QRegularExpression re_project (R"((^\s*files:\s*\[\s*"FigmaQmlUi.qml")(\s*(?:@[A-Z_]+@)?\s*\]))"); // note QML_FILES ! that is for a configure
     constexpr auto JOIN = ",\n            "; //make a genereted qmlproject.in more pretty
     // note a colon
-    VERIFY(ExecuteUtils::replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject.in", re_project, R"(\1,)" + qml_files.join(JOIN) + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
+    VERIFY(ExecuteUtils::replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject.in", re_project, R"(\1,)" + ExecuteUtils::qq(qml_files).join(JOIN) + R"(\2)", {"Project", "QmlFiles"}), "Cannot update qmlproject");
 
-    VERIFY(images, "Cannot save images" )
     QStringList local_images;
-    std::transform(images->begin(), images->end(), std::back_inserter(local_images), [](const auto& f){return ExecuteUtils::qq("images/" + QFileInfo(f).fileName());});
+    std::transform(images.begin(), images.end(), std::back_inserter(local_images), [](const auto& f){return ExecuteUtils::qq("images/" + QFileInfo(f).fileName());});
 
     static const QRegularExpression re_images (R"((^\s*files:\s*\[\s*)(\s*(?:@[A-Z_]+@)?\s*\]))");
 
@@ -144,8 +113,7 @@ bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, co
         VERIFY(ExecuteUtils::replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.qmlproject.in", re_images, R"(\1)" + local_images.join(JOIN) + R"(\2)", {"Project", "ImageFiles"}), "Cannot update qmlproject");
 
     static const QRegularExpression re_qml(R"(\/\*element_declarations\*\/)");
-
-    VERIFY(ExecuteUtils::replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.hpp", re_qml, qmlItemNames.join(","), {}, true), "Cannot update cpp file");
+    VERIFY(ExecuteUtils::replaceInFile(path + "/FigmaQmlInterface/FigmaQmlInterface.hpp", re_qml, ExecuteUtils::qq(qml_item_names).join(","), {}, true), "Cannot update cpp file");
 
     return true;
 }
@@ -154,13 +122,13 @@ static bool flashSTM32(QProcess& flash_process, const QTemporaryDir& dir, const 
     const auto tools_path = parameters["platformTools"].toString();
     VERIFY(tools_path.contains("STM32"), "Cannot find STM32 from path");
 
-    const auto programmer =  ExecuteUtils::findFile(tools_path, QRegularExpression(R"(STM32_Programmer\.sh)"));
+    const auto programmer =  ExecuteUtils::findFile(tools_path, QRegularExpression(R"(STM32_Programmer\.sh)"), ExecuteUtils::Any);
     VERIFY(!programmer.isEmpty(), "Cannot find flasher app");
     const auto platform = parameters["qulPlatform"].toString();
     const auto reg_string = ".*" + platform.left(15) + ".*" + R"(\.stldr$)";
-    const auto flash_param =  ExecuteUtils::findFile(tools_path, QRegularExpression(reg_string, QRegularExpression::CaseInsensitiveOption));
+    const auto flash_param =  ExecuteUtils::findFile(tools_path, QRegularExpression(reg_string, QRegularExpression::CaseInsensitiveOption), ExecuteUtils::Any);
     VERIFY(!flash_param.isEmpty(), "Cannot find flash configuration");
-    const auto binary =  ExecuteUtils::findFile(dir.path(), QRegularExpression(R"(mcu_figma\.hex)"));
+    const auto binary =  ExecuteUtils::findFile(dir.path(), QRegularExpression(R"(mcu_figma\.hex)"), ExecuteUtils::Any);
     VERIFY(!binary.isEmpty(), "Cannot find binary");
 
     auto serial_port = getSerialPort("STM32 STLink");
@@ -207,33 +175,38 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, cons
 
     ExecuteUtils::waitRun(build_process);
 
+    if(build_process.exitCode() != 0) {
+        ExecuteUtils::showError("Build of test application failed!");
+        return false;
+    }
+
     const auto flash_failed = [&]() {ExecuteUtils::showError("Flash failed binary!", "However Image shall be found in " + dir.path() + " as long as this note is open");};
 
-    if(build_process.exitCode() == 0) {
-        QProcess flash_process;
-        QObject::connect(&flash_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &flash_process]() {
-            const auto out = ExecuteUtils::clean(flash_process.readAllStandardError());
-            qDebug() << (flash_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
-            emit qulInfo->information(out, flash_process.exitCode() == 0 ? 1 : 0);
-        });
+    QProcess flash_process;
+    QObject::connect(&flash_process, &QProcess::readyReadStandardError, qulInfo, [qulInfo, &flash_process]() {
+        const auto out = ExecuteUtils::clean(flash_process.readAllStandardError());
+        qDebug() << (flash_process.exitCode() == 0 ? YELLOW : RED) << out << NONE;
+        emit qulInfo->information(out, flash_process.exitCode() == 0 ? 1 : 0);
+    });
 
-        QObject::connect(&flash_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &flash_process]() {
-            const auto out = ExecuteUtils::clean(flash_process.readAllStandardOutput());
-            qDebug() << GREEN << out << NONE;
-            emit qulInfo->information(out, 2);
-        });
+    QObject::connect(&flash_process, &QProcess::readyReadStandardOutput, qulInfo, [qulInfo, &flash_process]() {
+        const auto out = ExecuteUtils::clean(flash_process.readAllStandardOutput());
+        qDebug() << GREEN << out << NONE;
+        emit qulInfo->information(out, 2);
+    });
 
-        const auto hardware = parameters["platformHardwareValue"].toString();
+    const auto hardware = parameters["platformHardwareValue"].toString();
 
-        if(hardware == STM32) {
-            if(!flashSTM32(flash_process, dir, parameters, *qulInfo)) {
-                flash_failed();
-                return false;
-            }
-            ExecuteUtils::waitRun(flash_process);
-        } else {
-             flash_failed();
+    if(hardware == STM32) {
+        if(!flashSTM32(flash_process, dir, parameters, *qulInfo)) {
+            flash_failed();
+            return false;
         }
+        ExecuteUtils::waitRun(flash_process);
+    } else {
+        flash_failed();
+        return false;
     }
+
     return true;
 }

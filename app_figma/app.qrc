@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/app">
+        <file>qml/main.qml</file>
+        <file>src/main.cpp</file>
+        <file>CMakeLists.txt</file>
+        <file>build.sh</file>
+        <file>qml.qrc</file>
+        <file>FigmaQmlInterface/CMakeLists.txt</file>
+        <file>FigmaQmlInterface/FigmaQmlInterface.hpp</file>
+        <file>FigmaQmlInterface/FigmaQmlUi.qml</file>
+    </qresource>
+</RCC>

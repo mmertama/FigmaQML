@@ -16,7 +16,8 @@
 #include <QTextStream>
 #include <QRegularExpression>
 #include <QFont>
-#include "figmaQmlSingleton.h"
+#include "app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp"
+//#include "figmaQmlSingleton.h"
 
 
 #ifndef NO_SSL
@@ -346,7 +347,7 @@ int main(int argc, char *argv[]) {
          });
 
 
-         QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state, &onDataChange]() {
+         QObject::connect(figmaQml.get(), &FigmaQml::sourceCodeChanged, [&figmaQml, &figmaGet, output, &app, state/*, &onDataChange*/]() {
              int excode = 0;
              QEventLoop loop;
              QTimer exit;
@@ -496,8 +497,9 @@ int main(int argc, char *argv[]) {
 
 
     QQmlApplicationEngine engine;
-    FigmaQmlSingleton figmaQmlSingleton{*figmaQml};
-    engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaQmlSingleton); // emulates Qt for MCU kind singletons signals
+    REGISTER_FIGMAQML_SINGLETON;
+    //FigmaQmlSingleton figmaQmlSingleton{*figmaQml};
+    //engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaQmlSingleton); // emulates Qt for MCU kind singletons signals
 
      if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {
@@ -526,9 +528,9 @@ int main(int argc, char *argv[]) {
                 });
         }
 
-        qmlRegisterSingletonType(QUrl("qrc:///FigmaQmlSingleton.qml"), "FigmaQmlInterface", 1, 0, "FigmaQmlSingleton");
+        //qmlRegisterSingletonType(QUrl("qrc:///FigmaQmlSingleton.qml"), "FigmaQmlInterface", 1, 0, "FigmaQmlSingleton");
 
-         //engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaAccess);
+        // //engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaAccess);
          engine.rootContext()->setContextProperty("clipboard", &clipboard);
          engine.rootContext()->setContextProperty("figmaGet", figmaGet.get());
          engine.rootContext()->setContextProperty("figmaQml", figmaQml.get());

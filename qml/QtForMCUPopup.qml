@@ -15,6 +15,7 @@ Dialog {
     property color textBgBorder: "gray"
 
     property alias saveAsApp : saveAsApp.checked
+    property list<int> views
 
     signal saveRequest;
 
@@ -22,14 +23,13 @@ Dialog {
         figmaQml.qulInfoStop();
     }
 
-    function elements() {
+    function _elements() : list<int> {
         let els = []
         for(let i = 1; i < included_views.count; ++i) {  // starting from 1, 0 is current
             els.push(included_views.getIndex(i));
         }
         return els;
     }
-
     readonly property var params: {
         'qtDir': qtDir.text,
         'qulVer': qulVer.text,
@@ -184,11 +184,18 @@ Dialog {
 
             Button {
                 text: qsTr("Save...")
-                onClicked: dialog.saveRequest();
+                onClicked: {
+                    dialog.views = dialog._elements();
+                    dialog.saveRequest();
+                }
             }
 
 
-            onAccepted: dialog.done(Dialog.Accepted)
+            onAccepted: {
+                dialog.views = dialog._elements();
+                dialog.done(Dialog.Accepted)
+            }
+
             onRejected: dialog.done(Dialog.Rejected)
 
             }

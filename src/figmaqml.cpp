@@ -27,6 +27,7 @@ extern QStringList supportedQulHardware();
 #endif
 
 extern bool executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
+extern bool writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
 
 #include <QTime>
 #define TIMED_START(s)  const auto s = QTime::currentTime();
@@ -1013,8 +1014,10 @@ QByteArray FigmaQml::makeHeader() const {
 #endif
     }
 */
-//    if( 0 == (m_flags & StaticCode) && !(m_flags & QulMode))
-//        header += QString("import FigmaQmlInterface\n");
+
+    // Whereas Qul not likes, desktop needs FigmaQmlInterface
+    if( 0 == (m_flags & StaticCode) && !(m_flags & QulMode))
+        header += QString("import FigmaQmlInterface\n");
 
     return header;
 }
@@ -1123,13 +1126,16 @@ QStringList FigmaQml::supportedQulHardware() const {
 #endif
 }
 
-bool FigmaQml::saveCurrentQML(const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
-#ifdef HAS_QUL
-    return writeQul(folderName, *this, writeAsApp, elements);
-#else
-    (void) elements;
-    return true;
-#endif
+bool FigmaQml::saveQML(bool isMcu, const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
+    if(isMcu) {
+    #ifdef HAS_QUL
+        return writeQul(folderName, *this, writeAsApp, elements);
+    #else
+        return false;
+    #endif
+    } else {
+        return writeApp(folderName, *this, writeAsApp, elements);
+    }
 }
 
 bool FigmaQml::hasFontPathInfo() const {

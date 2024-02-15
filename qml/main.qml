@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import FigmaQml
 import FigmaGet
 import QtQuick.Dialogs
-//import FigmaQmlInterface
+import FigmaQmlInterface
 
 
 ApplicationWindow {
@@ -321,7 +321,7 @@ ApplicationWindow {
                     horizontalAlignment: Qt.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
                     text: connectButton.text
-                    font.strikeout: !connectButton.enabled // is this working? in UI sense?
+                    opacity: connectButton.enabled ? 1.0 : 0.3// is this working? in UI sense?
                 }
             }
             RowButton {
@@ -1068,30 +1068,33 @@ ApplicationWindow {
         }
     }
 
-    function saveCurrentQML() {
+    function saveCurrentQML(asMcu, asApp, elements) {
         if(isWebAssembly) {
             //if(!figmaQml.saveCurrentQMLZipped(
             //            figmaQml.validFileName(documentName),
             //            figmaQml.validFileName(canvasName)))
             errorNote.text = "QML save failed";
         } else {
-            fileSaveDialog.saveCurrent();
+            fileSaveDialog.saveCurrent(asMcu, asApp, elements);
         }
     }
 
 
     FolderDialog {
         id: fileSaveDialog
-        title: isSaveAll ? qsTr("Save All QMLs into") : qsTr("Save Current QML into")
+        title: isSaveAll ? qsTr("Save All QMLs into") : qsTr("Save QML into")
         currentFolder: figmaQml.documentsLocation
-        acceptLabel: "Save All"
+        acceptLabel: isSaveAll ? "Save All" : "Save"
         property bool isSaveAll: false
+        property list<int> elements
+        property bool asApp: false
+        property bool asMcu: false
         onAccepted: {
             let path = currentFolder.toString();
             path = path.replace(/^(file:\/\/)/,"");
             path = path.replace(/^(\/(c|C):\/)/, "C:/");
             path += "/" + figmaQml.validFileName(documentName) + "/" + figmaQml.validFileName(canvasName)
-            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveCurrentQML(path, qtForMCUPopup.saveAsApp, qtForMCUPopup.elements());
+            let save_ok = isSaveAll ? figmaQml.saveAllQML(path) : figmaQml.saveQML(asMcu, path, asApp, elements);
             if(!save_ok) {
                 errorNote.text = "Cannot save to \"" + path + "\""
             }
@@ -1100,8 +1103,11 @@ ApplicationWindow {
             isSaveAll = true
             open();
         }
-        function saveCurrent() {
-            isSaveAll = false
+        function saveCurrent(amcu, aapp, aelements) {
+            asMcu = amcu;
+            asApp = aapp;
+            elements = aelements;
+            isSaveAll = false;
             open();
         }
     }
@@ -1139,16 +1145,16 @@ ApplicationWindow {
     QtForMCUPopup {
         id: qtForMCUPopup
         anchors.centerIn: parent
-        onSaveRequest: saveCurrentQML(elements())
-        onAccepted: figmaQml.executeQul(params, elements());
+        onSaveRequest: saveCurrentQML(true, saveAsApp, views)
+        onAccepted: figmaQml.executeQul(params, views);
 
     }
 
     QtForDesktopPopup {
         id: qtForDesktopPopup
         anchors.centerIn: parent
-        onSaveRequest: saveCurrentQML(elements())
-        onAccepted: figmaQml.executeApp(params, elements());
+        onSaveRequest: saveCurrentQML(false, saveAsApp, views)
+        onAccepted: figmaQml.executeApp(params, views);
     }
 
     Dialog {

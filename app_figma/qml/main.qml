@@ -1,9 +1,13 @@
 import QtQuick
 import QtQuick.Window
+import FigmaQmlInterface
 
 Window {
-    width: 640
-    height: 480
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Figma UI")
+    width: figma.implicitWidth
+    height: figma.implicitHeight
+    FigmaQmlUi {
+        id: figma
+    }
 }
