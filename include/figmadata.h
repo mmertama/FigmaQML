@@ -65,11 +65,10 @@ public:
     }
 
     QString url(const QString& key) const {
-         MUTEX_LOCK(m_mutex);
-         Q_ASSERT(m_data.contains(key));
-         Q_ASSERT(!m_data[key].url.isEmpty());
-         Q_ASSERT(m_data[key].state != State::Error);
-         return m_data[key].url;
+        MUTEX_LOCK(m_mutex);
+        Q_ASSERT(m_data.contains(key));
+        Q_ASSERT(m_data[key].state != State::Error);
+        return m_data[key].url;
     }
     //Atomic get and set
     bool setPending(const QString& key) {
@@ -104,8 +103,7 @@ public:
     void clean(bool clean_errors) {
         MUTEX_LOCK(m_mutex);
         for(auto& e : m_data)
-            if(e.state != State::Committed
-                && (!clean_errors || e.state != State::Error)) {
+            if(e.state != State::Committed && (clean_errors || e.state != State::Error)) {
                 e.state = State::Empty;
             }
 

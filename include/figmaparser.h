@@ -144,7 +144,8 @@ public:
         AntializeShapes = 0x800,
         QulMode         = 0x1000,
         StaticCode      = 0x2000,
-        LoaderPlaceHolders  = 0x100000,
+        LoaderPlaceHolders          = 0x100000,
+        RenderLoaderPlaceHolders    = 0x200000,
 
     };
     using EByteArray = std::optional<QByteArray>;

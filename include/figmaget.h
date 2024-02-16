@@ -50,7 +50,7 @@ public slots:
     void documentCreated();
 signals:
     void dataChanged();
-    void fetchingChanged(bool fetching);
+    //void fetchingChanged(bool fetching);
     void error(const QString& errorString);
     void intervalChanged(int interval);
     void imagesPopulated();

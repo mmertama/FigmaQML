@@ -408,7 +408,7 @@ QNetworkReply* FigmaGet::doRetrieveImage(const Id& id, FigmaData *target, const 
     qDebug() << "doRetrieveImage" << enumToString(id.type) << id.id << id.isEmpty() << uri;
 
     if(!uri.isValid()) {
-        setError(id, "%1 %2" + QString("Url not valid \"%1\"").arg(uri.toString()));
+        setError(id, "%1 %2" + QString(" Url not valid \"%1\"").arg(uri.toString()));
         return nullptr;
     }
 
@@ -554,7 +554,8 @@ void FigmaGet::getRendering(const QString& imageId) {
         return;
     }
 
-    if(!m_renderings->setPending(imageId)) {
+    // skip if rendering has occured. TODO if there should be some retries
+    if(m_renderings->isError(imageId) || !m_renderings->setPending(imageId)) {
         return; // already waiting for a fetch
     }
 

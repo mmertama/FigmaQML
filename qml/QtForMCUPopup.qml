@@ -49,44 +49,16 @@ Dialog {
            property alias platformHardwareValue: hwSelection.currentIndex
        }
 
-    component Input : RowLayout {
-        id: row
-        property string text
-        property string buttonText
-        signal clicked
-        Layout.minimumWidth: rect.width + 10 + button.width + spacing
-        Rectangle {
-            id: rect
-            color: dialog.textBg
-            border.color: dialog.textBgBorder
-            Layout.preferredWidth: input.width + 10
-            Layout.preferredHeight: button.height - border.width * 2
-            TextInput {
-                id: input
-                anchors.centerIn: parent
-                text: row.text
-                width: metrics.width
-            }
-
-            TextMetrics {
-                id:     metrics
-                font:   input.font
-                text:   input.text
-            }
-        }
-        Button {
-            id: button
-            Layout.alignment: Qt.AlignRight
-            visible: row.buttonText.length > 0
-            text: row.buttonText
-            onClicked: row.clicked()
-        }
+    component MyInput : Input {
+        color: dialog.textBg
+        borderColor: dialog.textBgBorder
+        minTextWidth: 300
     }
 
     ColumnLayout {
 
         Text {text: "Qt DIR";font.weight: Font.Medium}
-        Input {
+        MyInput {
             id: qtDir
             text: "/opt/Qt"
             buttonText: "Select..."
@@ -101,19 +73,19 @@ Dialog {
         Text {
             text: "Qul Version"
         }
-        Input {
+        MyInput {
             id: qulVer
             text: "2.6.0"
         }
 
         Text {text: "Qul Platform";font.weight: Font.Medium}
-        Input {
+        MyInput {
             id: qulPlatform
             text: "STM32F769I-DISCOVERY-baremetal"
         }
 
         Text {text: "Qt License";font.weight: Font.Medium}
-        Input {
+        MyInput {
             id: qtLicense
             text: "./qt-license.txt"
             buttonText: "Select..."
@@ -134,7 +106,7 @@ Dialog {
 
 
         Text {text: "Platform tools";font.weight: Font.Medium}
-        Input {
+        MyInput {
             id: platformTools
             text: "         "
             buttonText: "Select..."

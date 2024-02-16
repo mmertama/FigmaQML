@@ -45,7 +45,8 @@ FigmaQML support both Desktop and Qt for MCU development.
     * Generates QML code and related images into the given directory.
     * Do not use for Qt for MCU.
 * **Export Qt for MCU**
-    * Open view to manage and export Qt for MCU content.  
+    * Open view to manage and export Qt for MCU content.
+    * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
 * **Edit Imports...** edit a QML "imports" statement.
 * **Fonts...**
     * See and map how the current Figma design fonts are mapped with the local fonts. You don't have to install missing fonts, therefore you set an additional font file search folder.
@@ -98,7 +99,8 @@ FigmaQML support both Desktop and Qt for MCU development.
     * Do not use with Qt for MCU
     
  * **Qt for MCU**
-    * The generated code is targeted for Qt for MCU. 
+    * The generated code is targeted for Qt for MCU.
+    * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
  * **Static QML**
     * Turn off all dynamic code creation.
  * **Cyan background**
@@ -234,12 +236,13 @@ Store generated files in your application folder.
 1. qmlproject file
     * Add import path to FigmaQmlInterface (the path is in the generated code, and depends Figma naming)
     ```json
-    importPaths: ["path_to/FigmaQmlInterface] 
+    importPaths: ["path_to/FigmaQmlInterface"] 
     ```
     * Apply Spark [See Qt doc](https://doc.qt.io/QtForMCUs-2.6/qtul-fonts.html)    
 
 1. In your application QML file
-    * Import FigmaQmlInterface and add FigmaQmlUi   
+    * Import FigmaQmlInterface and add FigmaQmlUi
+    
     ```js
    import FigmaQmlInterface
 

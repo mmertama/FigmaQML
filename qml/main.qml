@@ -428,6 +428,17 @@ ApplicationWindow {
                                     figmaQml.flags &= ~FigmaQml.LoaderPlaceHolders
                             }
                         }
+                        QtCheckBox {
+                            text: "Render placeholders"
+                            visible: has_qul
+                            checked: figmaQml.flags & FigmaQml.RenderLoaderPlaceHolders
+                            onCheckedChanged: {
+                                if(checked)
+                                    figmaQml.flags |= FigmaQml.RenderLoaderPlaceHolders
+                                else
+                                    figmaQml.flags &= ~FigmaQml.RenderLoaderPlaceHolders
+                            }
+                        }
                         Repeater {
                             model:  [
                                /* {"Shapes":  FigmaQml.PrerenderShapes},

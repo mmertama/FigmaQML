@@ -15,6 +15,7 @@ class FigmaFileDocument;
 class FigmaDataDocument;
 class FontCache;
 class FontInfo;
+class FigmaQmlSingleton;
 
 
 class FigmaQml : public QObject, public FigmaParserData {
@@ -42,21 +43,22 @@ class FigmaQml : public QObject, public FigmaParserData {
     Q_PROPERTY(QStringList supportedQulHardware READ supportedQulHardware CONSTANT)
 public:
     enum Flags { // WARNING these map values are (partly) same with figmaparser flags
-        PrerenderShapes     = 0x2,
-        PrerenderGroups     = 0x4,
-        PrerenderComponets  = 0x8,
-        PrerenderFrames     = 0x10,
-        PrerenderInstances  = 0x20,
-        NoGradients         = 0x40,
-        BreakBooleans       = 0x400,
-        AntializeShapes     = 0x800,
-        QulMode             = 0x1000,
-        StaticCode          = 0x2000,
-        EmbedImages         = 0x10000,
-        Timed               = 0x20000,
-        AltFontMatch        = 0x40000,
-        KeepFigmaFontName   = 0x80000,
-        LoaderPlaceHolders  = 0x100000,
+        PrerenderShapes             = 0x2,
+        PrerenderGroups             = 0x4,
+        PrerenderComponets          = 0x8,
+        PrerenderFrames             = 0x10,
+        PrerenderInstances          = 0x20,
+        NoGradients                 = 0x40,
+        BreakBooleans               = 0x400,
+        AntializeShapes             = 0x800,
+        QulMode                     = 0x1000,
+        StaticCode                  = 0x2000,
+        EmbedImages                 = 0x10000,
+        Timed                       = 0x20000,
+        AltFontMatch                = 0x40000,
+        KeepFigmaFontName           = 0x80000,
+        LoaderPlaceHolders          = 0x100000,
+        RenderLoaderPlaceHolders    = 0x200000,
     };
     Q_ENUM(Flags)
 public:
@@ -163,6 +165,7 @@ signals:
     void fontPathFound(const QString& fontPath);
     void fontPathError(const QString& error);
     void elementsChanged();
+    void externalLoadersApplied(const QString& name, const QString& source);
 #ifdef USE_NATIVE_FONT_DIALOG
     void fontAdded(const QString& fontFamilyName);
 #endif
@@ -173,6 +176,7 @@ signals:
 private slots:
     void doCancel();
     void updateDefaultImports();
+    void applyExternalLoaders();
 private:
     void addImageFile(const QString& imageRef, bool isRendering);
     bool addImageFileData(const QString& imageRef, const QByteArray& bytes, int mime);

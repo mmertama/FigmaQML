@@ -572,7 +572,11 @@ int main(int argc, char *argv[]) {
              }
          });
 
-         engine.load(qml_source);
+        // This should also do:
+        // auto* singleton = engine->singletonInstance<FigmaQmlInstance*>("FigmaQmlInterface", "FigmaQmlSingleton");
+        QObject::connect(figmaQml.get(), &FigmaQml::externalLoadersApplied, &_sc, &FigmaQmlSingleton::setSource);
+
+        engine.load(qml_source);
 
      }
 
