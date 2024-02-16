@@ -75,6 +75,7 @@ ListView {
         width: included_views.width
         ComboBox {
             id: included_views_add_combox
+            width: parent.width * 0.9
             textRole: 'content'
             ListModel {
                 id: included_list_add_items
@@ -90,13 +91,15 @@ ListView {
             for(let i = 0; i < figmaQml.elements.length; ++i) {
                 const line = included_views._format_included_view(i);
                 for(let j = 0; j < included_list_items.count; ++j) {
-                    if(line !== included_list_items.get(i))
+                    let item = included_list_items.get(i);
+                    if(!item || line.content !== item.content) {
                         included_list_add_items.append(line)
+                    }
                 }
             }
         }
         onAccepted: {
-            included_views.add_view(included_views_add_combox.currentIndex)
+            included_views.add_view(included_views_add_combox.currentValue.index)
         }
     }
 }

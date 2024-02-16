@@ -35,50 +35,20 @@ Dialog {
         'qtDir': qtDir.text
     }
 
+    component MyInput : Input {
+        color: dialog.textBg
+        borderColor: dialog.textBgBorder
+        minTextWidth: 300
+    }
+
     Settings {
            id: settings
            property alias qtDirValue: qtDir.text
        }
 
-    component Input : RowLayout {
-        id: row
-        property string text
-        property string buttonText
-        property alias textRectWidth: rect.width
-        signal clicked
-        Layout.minimumWidth: rect.width + 10 + button.width + spacing
-        Rectangle {
-            id: rect
-            color: dialog.textBg
-            border.color: dialog.textBgBorder
-            Layout.preferredWidth: input.width + 10
-            Layout.preferredHeight: button.height - border.width * 2
-            TextInput {
-                id: input
-                anchors.centerIn: parent
-                text: row.text
-                width: metrics.width
-            }
-
-            TextMetrics {
-                id:     metrics
-                font:   input.font
-                text:   input.text
-            }
-        }
-        Button {
-            id: button
-            Layout.alignment: Qt.AlignRight
-            visible: row.buttonText.length > 0
-            text: row.buttonText
-            onClicked: row.clicked()
-        }
-    }
-
     ColumnLayout {
-
         Text {text: "Qt DIR";font.weight: Font.Medium}
-        Input {
+        MyInput {
             id: qtDir
             text: "/opt/Qt"
             buttonText: "Select..."
@@ -151,7 +121,7 @@ Dialog {
         id: fileDialog
         property var target
         onAccepted: {
-            target.text = selectedFile.toString().substring(7)
+            target.text = selectedFile.toString().substring(7) // 7 == "qrc.. blaablaa
         }
     }
 

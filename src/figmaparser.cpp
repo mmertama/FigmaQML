@@ -1046,10 +1046,11 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             ERR(QString("Non supported object type:\"%1\"").arg(type))
         }
 
-        if(isRendering(obj))
+        if(isRendering(obj)) {
             return parseContainer(obj, Content::Rendered, indents);
+        }
 
-        if(generateAccess()) {
+        if(generateAccess() && (m_flags & RenderLoaderPlaceHolders || m_flags & LoaderPlaceHolders)) {
             if(const auto properties = getProperties(obj); properties && properties.value().var.contains(AS_LOADER)) {
                 return parseContainer(obj, Content::Loader, indents);
             }
@@ -2154,10 +2155,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += indent + "}\n";
 
          QByteArray rendered;
-         if(! (m_flags & Flags::LoaderPlaceHolders)) {
-            const auto image = makeRendered(obj, indents);
-            if(!image) return std::nullopt; // could be warning / place holder as is assumed to be only for FigmaQML UI placeholder
-            rendered = image.value();
+         if((m_flags & Flags::RenderLoaderPlaceHolders)) {
+             const auto image = makeRendered(obj, indents);
+             if(!image) return std::nullopt; // could be warning / place holder as is assumed to be only for FigmaQML UI placeholder
+             rendered = image.value();
          }
 
          m_externalLoaders.insert(loaderId, std::make_tuple(rendered, name));

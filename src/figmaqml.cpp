@@ -319,6 +319,22 @@ FigmaQml::FigmaQml(const QString& qmlDir, const QString& fontFolder, FigmaProvid
     QObject::connect(this, &FigmaQml::elementCountChanged, this, &FigmaQml::elementsChanged);
     QObject::connect(this, &FigmaQml::sourceCodeChanged, this, &FigmaQml::elementsChanged);
 
+    // apply checkers pattern
+    QObject::connect(this, &FigmaQml::currentElementChanged, this, &FigmaQml::applyExternalLoaders);
+    QObject::connect(this, &FigmaQml::documentCreated, this, &FigmaQml::applyExternalLoaders);
+
+}
+
+void FigmaQml::applyExternalLoaders() {
+    for(const auto& [bytes, name] :externalLoaders()) {
+        if( m_flags & FigmaQml::LoaderPlaceHolders) {
+            emit externalLoadersApplied(name, "qrc:///LoaderPlaceHolder.qml");
+        } else {
+            const auto component_name = FigmaQml::validFileName("placeholder_" + name + FIGMA_SUFFIX);
+            writeQmlFile(component_name, bytes, makeHeader());
+            emit externalLoadersApplied(name, component_name + ".qml");
+        }
+    }
 }
 
 
@@ -510,6 +526,7 @@ std::optional<QStringList> FigmaQml::saveImages(const QString &folder, const QSe
 void FigmaQml::addImageFile(const QString& imageRef, bool isRendering) {
     if(isRendering){
         mProvider.getRendering(imageRef);
+        // TODO why not use renderingReady here??
         QObject::connect(&mProvider, &FigmaProvider::imageReady, this, [this](const QString& imageRef, const QByteArray& bytes, int format) {
             addImageFileData(imageRef, bytes, format);
     });

@@ -5,9 +5,16 @@
 #include <QEventLoop>
 #include <QDirIterator>
 #include <QXmlStreamReader>
+#include <QSet>
 #include "figmaqml.h"
 #include "execute_utils.h"
 
+
+
+[[maybe_unused]]
+static bool has_duplicates(const QStringList& lst) {
+    return lst.size() > QSet(lst.begin(), lst.end()).size();
+}
 
 
 void ExecuteUtils::showError(const QString& errorNote, const QString& infoNote) {
@@ -279,7 +286,6 @@ static bool addInXml(const QString& filename, const QStringList& values, const Q
     return true;
 }
 
-
 bool writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
     if(!res)
@@ -322,19 +328,19 @@ std::optional<std::tuple<QStringList, QStringList, QStringList>> ExecuteUtils::w
     // these are images needed
     QSet<QString> save_image_filter {{figmaQml.elementName()}};
     // these are all qml files needed
-    QStringList qml_files;
+    QSet<QString> qml_files;
 
 
     const auto file_name =  QML_PREFIX + FigmaQml::validFileName(figmaQml.elementName()) + QML_EXT;
     //qml_files.append(file_name);
     qml_view_names.append(file_name);
 
-    const auto wo = ExecuteUtils::writeElement(path, file_name, figmaQml, {figmaQml.currentCanvas(), figmaQml.currentElement()});
-    if(!wo)
+    const auto mwo = ExecuteUtils::writeElement(path, file_name, figmaQml, {figmaQml.currentCanvas(), figmaQml.currentElement()});
+    if(!mwo)
         return std::nullopt; // it already tells what went wrong
-    const auto& [components, filter] = wo.value();
-    save_image_filter.unite(filter);
-    qml_files.append(components);
+    const auto& [mcomponents, mfilter] = mwo.value();
+    save_image_filter.unite(mfilter);
+    std::copy(mcomponents.begin(), mcomponents.end(), std::inserter(qml_files, qml_files.begin()));
 
     const auto els = figmaQml.elements();
     for(const auto& var : elements) {
@@ -343,11 +349,11 @@ std::optional<std::tuple<QStringList, QStringList, QStringList>> ExecuteUtils::w
         const auto canvas_index = map["canvas"].toInt();
         const auto element_index = map["element"].toInt();
         const auto file_name =  QML_PREFIX + FigmaQml::validFileName(element_name) + QML_EXT;
-        ExecuteUtils::writeElement(path, file_name, figmaQml, {canvas_index, element_index});
+        const auto wo = ExecuteUtils::writeElement(path, file_name, figmaQml, {canvas_index, element_index});
         if(!wo)
             return std::nullopt; // it already tells what went wrong
         const auto& [components, filter] = wo.value();
-        qml_files.append(components);
+        std::copy(components.begin(), components.end(), std::inserter(qml_files, qml_files.begin()));
         qml_view_names.append(file_name);
         save_image_filter.unite(filter);
         }
@@ -355,7 +361,10 @@ std::optional<std::tuple<QStringList, QStringList, QStringList>> ExecuteUtils::w
         const auto images = figmaQml.saveImages(path + '/' + FOLDER + IMAGE_PREFIX, save_image_filter);
         VERIFO(images, "Cannot save images");
 
-        return std::make_tuple(qml_view_names, qml_files, *images);
+        Q_ASSERT(!has_duplicates(qml_view_names));
+        Q_ASSERT(!has_duplicates(QStringList(qml_files.begin(), qml_files.end())));
+        Q_ASSERT(!has_duplicates(*images));
+        return std::make_tuple(qml_view_names, QStringList(qml_files.begin(), qml_files.end()), *images);
 }
 
 static bool runApp(QProcess& run_process, const QTemporaryDir& dir) {
