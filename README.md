@@ -3,12 +3,12 @@
 FigmaQML is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
 from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-6/qtquick-index.html) 
 applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
-design using UI code. Omitting that tedious, reduntant step, will dramatically decrease development effort.
+design using UI code. Omitting that tedious, redundant step, will dramatically decrease development effort.
 FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality. You can inject
-tags in you Figma Design that enables seamlessly assing functionality so that there is no need to implement any
+tags in you Figma Design that enables seamlessly assingn functionality so that there is no need to implement any
 QML UI code.
 
-FigmaQML support both Desktop and Qt for MCU development.
+FigmaQML supports both Desktop and Qt for MCU development.
 
 * Version 3.0.0
 * License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
@@ -16,14 +16,14 @@ FigmaQML support both Desktop and Qt for MCU development.
 ## Run ##
 
  * FigmaQML can be run either in command line or as a gui application.
-    * Command line suppot for Qt for MCU is under construction.
+    * Command line support for Qt for MCU is under construction.
     * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
  * Gui application is interactive to see visuals and source code before saving.
  * Command line is for processing Figma documents to QML. 
  * Basic Command line format is <code> $figmaqml &lt;options&gt; TOKEN PROJECT QML_DIRECTORY </code>
     * For options see --help
     * For MacOSX the commandline refers inside of application bundle: i.e. <code>$ FigmaQML.app/Contents/MacOS/FigmaQML</code>
-* FigmaQML can be run as a Web Assembly application.
+* FigmaQML can be run as a WebAssembly application.
    * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app! - [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
    * Qt for MCU support is under construction.  
 
@@ -84,8 +84,8 @@ FigmaQML support both Desktop and Qt for MCU development.
   * **Embed images**
     * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
     * Do not use with Qt for MCU
-  * **Antialize shapes**
-    * Whether "antialized: true" property is set on each shape.
+  * **Antialiaze shapes**
+    * Whether "antialiazed: true" property is set on each shape.
     * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
         
     ```cpp
@@ -104,16 +104,23 @@ FigmaQML support both Desktop and Qt for MCU development.
  * **Static QML**
     * Turn off all dynamic code creation.
  * **Cyan background**
-    * Change FigmQML background to an alternative color.
+    * Change FigmaQML background to an alternative color.
+    * Does not affect to the exported code.
  * **No Gradients**
     * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
  * **Loader placeholders**
     * Show dynamic loader placeholder instead of rendered components.
-* **Render view** Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
-    * Only for debugging and verifiation. Figma server may have hiccups if there are too much to render. 
+    * Does not affect to the exported code.
+ * **Render placeholders** 
+     * Show placeholder components as rendered images.
+     * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
+     * Does not affect to the exported code.
+ * **Render view** 
+    * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
+    * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
 
 ## Components ##
-* Displayd only when the source code tab is activated.
+* Displayed only when the source code tab is activated.
     * Show a source code of the component or item selected.
 * **Scaling**
     * Let the user to zoom in and out the current rendering. 
@@ -190,7 +197,7 @@ Besides of those methods you can include multiple views in your application, and
 ```js
 FigmaQmlSingleton.setView(1);
 ```
-This feature is currently supported only Qt for MCU, but I looking ways to bring it on dektop - TODO.
+This feature is currently supported only Qt for MCU, but I looking ways to bring it on desktop - TODO.
 
 ## Qt for MCU ##
 
@@ -206,13 +213,13 @@ connected MCU device.
 * *Qul Version*
     * Qt for MCU version, e.g, "2.6.0"
 * *Qul Platform*
-    * Target platfrom e.g. "STM32F769I-DISCOVERY-baremetal"
+    * Target platform e.g. "STM32F769I-DISCOVERY-baremetal"
 * *Qt License*
     * Qt for MCU requires Qt commerical license. 
     * License file, can be downloaded from your Qt account.
 * *Platform Hardware*
     * Supported "Execute" platform - currently only STM32 is available.
-* *Plaform tools*
+* *Platform tools*
     * Path to MCU tooling e.g. "/home/user/STM32_MCU" 
     
 #### Save
@@ -282,10 +289,10 @@ Store generated files in your application folder.
     * linux_build.sh
 
 #### Testing
-There are few scripts in the [test]() folder that are used for testing. Since the test data itself is under personal Figma account, there are no automated tests provided along the FigmaQML sources. However if you have a good set of Figma documents available you can execute tests using next example:
+There are few scripts in the [test]() folder that are used for testing. Since the test data itself is under a personal Figma account, there are no automated tests provided along the FigmaQML sources. However if you have a good set of Figma documents available you can execute tests using next example:
  <pre>
  export IMAGE_COMPARE="python ../figmaQML/test/imagecomp.py"
- export IMAGE_TRESHOLD="0.90"
+ export IMAGE_THRESHOLD="0.90"
  token=123456-aaaabbbbb-cccc-dddd-8888-1234567890
  echo "Test time: $(date)" >> test_log.txt 
  {
@@ -314,21 +321,21 @@ There are few scripts in the [test]() folder that are used for testing. Since th
  * Parameter after that is a test project token.
  * Optional third parameter is a Canvas-view to be tested (default is 1-1)
  * runtest.sh fetch data from Figma server and runs basic QML generation test on that
- * runtest_image let run additional image tests on data without furher data retrive. (Figma service has data quota)
+ * runtest_image let run additional image tests on data without further data retrive. (Figma service has data quota)
  * image test compares Figma rendered Canvas-view and FigmaQML rendered canvas view (see IMAGE_COMPARE above) and provides fuzzy match value between 0 and 1.
  * Here I have been using value 0.9, "90% same"), (see IMAGE_TRESHOLD above) to pass the test.
  * Note: You may have to install SSIM_PIL from https://github.com/mmertama/SSIM-PIL.git until my change is accepted in.
  
  #### Changes
  * 1.0.1 
-    * Qt5 may not build anymore, Qt 6.3 had some issues and maintaing those also on Qt 5.15 was too much work. The support for Qt6 is a bit half hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
-    But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat until eternity or the issue changes.
+    * Qt5 may not build anymore, Qt 6.3 had some issues and maintaining those also on Qt 5.15 was too much work. The support for Qt6 is a bit half hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
+    But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat untill eternity or the issue changes.
     * On OSX Checkbox was not working correctly so I did a quick styling to fix it.
     * Some minor fixes to get rid of warnings.
     * Build script and README updates.   
  * 2.0.0
     * WebAssembly support
-    * Lot of fixes and refactoring code for the Web assembly 
+    * Lot of fixes and refactoring code for the WebAssembly 
 * 3.0.0
     * Qt for MCU support
     * Dynamic code support

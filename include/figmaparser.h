@@ -141,7 +141,7 @@ public:
         NoGradients         = 0x40,
         ParseComponent  = 0x200,
         BreakBooleans   = 0x400,
-        AntializeShapes = 0x800,
+        AntialiazeShapes = 0x800,
         QulMode         = 0x1000,
         StaticCode      = 0x2000,
         LoaderPlaceHolders          = 0x100000,
@@ -204,7 +204,7 @@ private:
 
      EByteArray makeImageMaskData(const QString& imageRef, const QJsonObject& obj, int indents);
      QByteArray makeShapeFillData(const QJsonObject& obj, int shapeindents, const std::function<QString (int i)>& make_alias = nullptr);
-     QByteArray makeAntialising(int indents) const;
+     QByteArray makeAntialiasing(int indents) const;
 
      /*
       * makeVectorxxxxxFill functions are redundant in purpose - but I ended up
