@@ -11,6 +11,7 @@
 
 class FigmaDocument {
 public:
+    virtual ~FigmaDocument() = default;
     class Canvas {
     public:
         class Element {
@@ -59,6 +60,7 @@ public:
         QString name(int index) const {
             return index >= 0 && static_cast<int>(m_elements.size()) > index ? m_elements[index]->name() : QString();
         }
+
     protected:
         const QString m_name;
         int m_current = 0;

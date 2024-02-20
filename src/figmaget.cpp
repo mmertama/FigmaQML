@@ -608,7 +608,7 @@ QNetworkReply* FigmaGet::doRequestRendering(const Id& id) {
         if(err.error != QJsonParseError::NoError) {
            setError(id, "%1 \"%2\"" + QString("Error on rendering - JSON: %1 at %2")
                     .arg(err.errorString(), err.offset));
-            qDebug() << "JSON - size:" << bytes->size() << "dump: " << (bytes ? *bytes : "N/A");
+            // this has bug in MSVC qDebug() << "JSON - size:" << bytes->size() << "dump: " << (bytes ? *bytes : "N/A");
             return;
         }
         const auto obj = doc.object();

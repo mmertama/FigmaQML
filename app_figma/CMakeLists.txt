@@ -24,7 +24,9 @@ qt_add_executable(${PROJECT_NAME}
     ${SOURCES}
     qml.qrc)
     
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(NOT WIN32)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
 
 if (APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES

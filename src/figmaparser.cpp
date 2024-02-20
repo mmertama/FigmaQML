@@ -1203,7 +1203,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              return id;
          };
 
-         out += makeAntialising(indents);
+         out += makeAntialiasing(indents);
          out += indent + "ShapePath {\n";
          out += makeShapeStroke(obj, indents + 1, StrokeType::Normal);
          out += makeShapeFill(obj, indents + 1);
@@ -1233,7 +1233,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
          out += indent + "Shape {\n";
          out += indent1 + "anchors.fill: parent\n";
-         out += makeAntialising(indents + 1);
+         out += makeAntialiasing(indents + 1);
          out += indent1 + "ShapePath {\n";
          out += makeShapeStroke(obj, indents + 2, StrokeType::Normal);
          out += makeShapeFill(obj, indents + 2);
@@ -1264,7 +1264,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "id:" + borderSourceId + "\n";
 
         out += indent1 + "anchors.fill: parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "visible: false\n";
         out += indent1 + "ShapePath {\n";
         out += makeShapeStroke(obj, indents + 2, StrokeType::Double);
@@ -1279,7 +1279,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "Shape {\n";
         out += indent1 + "id: " + borderMaskId + "\n";
         out += indent1 + "anchors.fill:parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "layer.enabled: true\n"; //we drawn out of bounds
         out += indent1 + "visible: false\n";
 
@@ -1323,14 +1323,14 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "Item {\n";
         out += indent1 + "id:" + borderSourceId + "\n";
         out += indent1 + "anchors.fill: parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "visible: false\n";
 
         APPENDERR(out, makeImageMaskData(image, obj, indents + 1));
 
         out += indent1 + "Shape {\n";
         out += indent2 + "anchors.fill: parent\n";
-        out += makeAntialising(indents + 2);
+        out += makeAntialiasing(indents + 2);
 
         out += indent2 + "ShapePath {\n";
         out += makeShapeStroke(obj, indents + 3, StrokeType::Double);
@@ -1344,7 +1344,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "Shape {\n";
         out += indent1 + "id: " + borderMaskId + "\n";
         out += indent1 + "anchors.fill:parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "layer.enabled: true\n"; //we drawn out of bounds
         out += indent1 + "visible: false\n";
 
@@ -1397,7 +1397,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "x: " + QString::number(borderWidth) + "\n";
         out += indent1 + "y: " + QString::number(borderWidth) + "\n";
         out += makeSize(obj, indents + 1);
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "ShapePath {\n";
         out += makeShapeFill(obj, indents + 2);
         out += makeShapeFillData(obj, indents + 2);
@@ -1415,7 +1415,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "anchors.fill:parent\n";
         out += indent1 + "visible: false\n";
         out += indent1 + "Shape {\n";
-        out += makeAntialising(indents + 2);
+        out += makeAntialiasing(indents + 2);
         out += indent2 + "x: " + QString::number(borderWidth) + "\n";
         out += indent2 + "y: " + QString::number(borderWidth) + "\n";
         out += makeSize(obj, indents + 2);
@@ -1434,7 +1434,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "Item {\n";
         out += indent1 + "id: " + borderMaskId + "\n";
         out += indent1 + "anchors.fill:parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "visible: false\n";
         out += indent1 + "Shape {\n";
         out += indent2 + "x: " + QString::number(borderWidth) + "\n";
@@ -1485,13 +1485,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "x: " + QString::number(borderWidth) + "\n";
         out += indent1 + "y: " + QString::number(borderWidth) + "\n";
         out += makeSize(obj, indents + 1);
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
 
         APPENDERR(out, makeImageMaskData(image, obj, indents + 1));
 
         out += indent1 + "Shape {\n";
         out += indent2 + "anchors.fill: parent\n";
-        out += makeAntialising(indents + 2);
+        out += makeAntialiasing(indents + 2);
         out += indent2 + "ShapePath {\n";
         out += indent3 + "strokeColor: \"transparent\"\n";
         out += indent3 + "strokeWidth: 0\n";
@@ -1508,7 +1508,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent1 + "anchors.fill:parent\n";
         out += indent1 + "visible: false\n";
         out += indent1 + "Shape {\n";
-        out += makeAntialising(indents + 2);
+        out += makeAntialiasing(indents + 2);
         out += indent2 + "x: " + QString::number(borderWidth) + "\n";
         out += indent2 + "y: " + QString::number(borderWidth) + "\n";
         out += makeSize(obj, indents + 2);
@@ -1526,7 +1526,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "Item {\n";
         out += indent1 + "id: " + borderMaskId + "\n";
         out += indent1 + "anchors.fill:parent\n";
-        out += makeAntialising(indents + 1);
+        out += makeAntialiasing(indents + 1);
         out += indent1 + "visible: false\n";
         out += indent1 + "Shape {\n";
         out += indent2 + "x: " + QString::number(borderWidth) + "\n";

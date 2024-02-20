@@ -109,11 +109,12 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 #add_executable(FigmaQML
 qt_add_executable(${PROJECT_NAME} ${SOURCES}
     todo.txt
-    .github/figmaqml.yml)
+    .github/workflows/figmaqml.yml)
 
+
+if(NOT WIN32)
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
-
-if(WIN32)
+else()
   #  Windows does not support dual mode, we pick cmd mode
   #  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
   #  set (EXTRA PUBLIC Qt5::WinMain)
