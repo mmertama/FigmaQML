@@ -1,0 +1,257 @@
+name: CMake Build Matrix
+
+on:
+  push:
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "Windows Latest MSVC"
+            artifact: "FigmaQML-Windows-MSVC.tar.xz"
+            os: windows-latest
+            cc: "cl"
+            cxx: "cl"
+            environment_script: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+            generators: "Visual Studio 17 2022"
+            arch: "win64_msvc2019_64"
+            host: "windows"
+            libs: 'qt5compat'
+        #  - name: "Windows Latest MinGW"
+        #    artifact: "FigmaQML-Windows-MinGW.tar.xz"
+        #    os: windows-latest
+        #    cc: "gcc"
+        #    cxx: "g++"
+        #    generators: "Ninja"
+        #    arch: 'win64_mingw'
+        #    host: "windows"
+        #    libs: 'qt5compat'
+          - name: "Ubuntu Latest GCC"
+            artifact: "FigmaQML-Linux.tar.xz"
+            os: ubuntu-latest
+            cc: "gcc"
+            cxx: "g++"
+            generators: "Ninja"
+            arch: 'gcc_64'
+            host: "linux"
+            libs: 'qt5compat qtserialport'
+          - name: "macOS Latest Clang"
+            artifact: "FigmaQML-macOS.tar.xz"
+            os: macos-latest
+            cc: "clang"
+            cxx: "clang++"
+            generators: "Ninja"
+            arch: 'clang_64'
+            host: "mac"
+            libs: 'qt5compat'
+        #  - name: "Wasm"
+        #    artifact: "FigmaQML-wasm.tar.xz"
+        #    os: ubuntu-latest
+        #    cc: "clang"
+        #    cxx: "clang++"
+        #    generators: "Ninja"
+        #    arch: 'wasm_singlethread'
+        #    host: "linux"
+        #    libs: 'qt5compat'
+
+    steps:
+      - name: Install dependencies on windows
+        if: startsWith(matrix.config.os, 'windows')
+        run: |
+          choco install ninja cmake
+          ninja --version
+          cmake --version
+
+      - name: Install dependencies on ubuntu
+        if: startsWith(matrix.config.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install ninja-build cmake
+          ninja --version
+          cmake --version
+          gcc --version
+
+      - name: Install dependencies on macos
+        if: startsWith(matrix.config.os, 'macos')
+        run: |
+          brew install cmake ninja
+          ninja --version
+          cmake --version
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3.3.0
+        with:
+          aqtversion: '>=3.1.*'
+          version: '6.6.1'
+          host: ${{ matrix.config.host }}
+          target: 'desktop'
+          arch:  ${{ matrix.config.arch }}
+          install-deps: 'true'
+          modules: ${{ matrix.config.libs }}
+          tools: 'tools_ninja tools_cmake'
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure
+        shell: cmake -P {0}
+        run: |
+          set(ENV{Qt6_DIR} "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}")
+          set(ENV{CC} ${{ matrix.config.cc }})
+          set(ENV{CXX} ${{ matrix.config.cxx }})
+
+          message("Currently: ${CMAKE_CURRENT_SOURCE_DIR}, ${CMAKE_CURRENT_LIST_DIR}, $ENV{Qt6_DIR}, $ENV{QT_ROOT_DIR}, $ENV{PATH}")
+
+          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            execute_process(
+              COMMAND "${{ matrix.config.environment_script }}" && set
+              OUTPUT_FILE environment_script_output.txt
+            )
+            file(STRINGS environment_script_output.txt output_lines)
+            foreach(line IN LISTS output_lines)
+              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+              endif()
+            endforeach()
+          endif()
+
+          execute_process(
+                  COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
+                  RESULT_VARIABLE result
+                  )
+
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "Bad exit status")
+          endif()
+
+      - name: Build
+        shell: cmake -P {0}
+        run: |
+          set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
+
+          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            file(STRINGS environment_script_output.txt output_lines)
+            foreach(line IN LISTS output_lines)
+              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+              endif()
+            endforeach()
+          endif()
+
+          execute_process(
+            COMMAND cmake --build build --config Release
+            RESULT_VARIABLE result
+            OUTPUT_VARIABLE build_out
+            ERROR_VARIABLE build_out
+          )
+
+          message("build out: ${build_out}")
+
+          if (NOT result EQUAL 0)
+            message(FATAL_ERROR "Bad exit status")
+          endif()
+
+      - name: List this folder
+        shell: bash
+        run: pwd && ls -R
+
+      - name: QtDeploy (U)
+        if: startsWith(matrix.config.os, 'ubuntu')
+        working-directory: build
+        run: |
+            pwd & ls -la
+            sudo apt-get install fuse libfuse2
+            wget --no-verbose "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+            wget --no-verbose "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
+            chmod +x linuxdeploy*.AppImage
+            export EXTRA_QT_PLUGINS=svg
+            ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=FigmaQML.AppImage --verbosity=3
+
+      - name: QtDeploy (M)
+        if: startsWith(matrix.config.os, 'macos')
+        working-directory: build
+        run: |
+            $Qt6_DIR/bin/macdeployqt FigmaQML.app -qmldir=../qml
+
+      - name: QtDeploy (W)
+        if: startsWith(matrix.config.os, 'windows')
+        working-directory: build
+        run: |
+            Get-ChildItem -Force
+            $qt6Dir = $Env:Qt6_DIR
+            $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
+            & $windeployqtPath --qmldir ../qml --compiler-runtime FigmaQML.exe
+            copy ..\OpenSSL_win\*.dll Release
+
+
+
+      - name: Pack
+        working-directory: build
+        run: cmake -E tar cJfv ../${{ matrix.config.artifact }} .
+
+      - name: Upload
+        uses: actions/upload-artifact@v1
+        with:
+          path: ./${{ matrix.config.artifact }}
+          name: ${{ matrix.config.artifact }}
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Create Release
+        uses: ncipollo/release-action@v1.12.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          allowUpdates: true
+
+      - name: Store Release url
+        run: |
+          echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
+
+      - uses: actions/upload-artifact@v1
+        with:
+          path: ./upload_url
+          name: upload_url
+
+  publish:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "Windows Latest MSVC"
+            artifact: "Gempyre-Windows-MSVC.tar.xz"
+            os: ubuntu-latest
+          - name: "Windows Latest MinGW"
+            artifact: "Gempyre-Windows-MinGW.tar.xz"
+            os: ubuntu-latest
+          - name: "Ubuntu Latest GCC"
+            artifact: "Gempyre-Linux.tar.xz"
+            os: ubuntu-latest
+          - name: "macOS Latest Clang"
+            artifact: "Gempyre-macOS.tar.xz"
+            os: ubuntu-latest
+          - name: "Wasm"
+            artifact: "FigmaQML-wasm.tar.xz"
+            os: ubuntu-latest
+    needs: release
+
+    steps:
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v2.1.1
+        with:
+          name: ${{ matrix.config.artifact }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ matrix.config.artifact }}
