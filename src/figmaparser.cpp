@@ -1180,8 +1180,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      }
 
 
-     QByteArray FigmaParser::makeAntialising(int indents) const {
-         return !isQul() && (m_flags & AntializeShapes) ? // antialiazing is not supported
+     QByteArray FigmaParser::makeAntialiasing(int indents) const {
+         return !isQul() && (m_flags & AntialiazeShapes) ? // antialiazing is not supported
             (tabs(indents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 

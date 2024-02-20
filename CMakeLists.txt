@@ -108,7 +108,8 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
 #add_executable(FigmaQML
 qt_add_executable(${PROJECT_NAME} ${SOURCES}
-    todo.txt)
+    todo.txt
+    .github/figmaqml.yml)
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
