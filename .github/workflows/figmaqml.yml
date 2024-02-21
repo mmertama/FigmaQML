@@ -231,18 +231,18 @@ jobs:
           - name: "Windows Latest MSVC"
             artifact: "Gempyre-Windows-MSVC.tar.xz"
             os: ubuntu-latest
-          - name: "Windows Latest MinGW"
-            artifact: "Gempyre-Windows-MinGW.tar.xz"
-            os: ubuntu-latest
+          #- name: "Windows Latest MinGW"
+          #  artifact: "Gempyre-Windows-MinGW.tar.xz"
+          #  os: ubuntu-latest
           - name: "Ubuntu Latest GCC"
             artifact: "Gempyre-Linux.tar.xz"
             os: ubuntu-latest
           - name: "macOS Latest Clang"
             artifact: "Gempyre-macOS.tar.xz"
             os: ubuntu-latest
-          - name: "Wasm"
-            artifact: "FigmaQML-wasm.tar.xz"
-            os: ubuntu-latest
+          #- name: "Wasm"
+          #  artifact: "FigmaQML-wasm.tar.xz"
+          #  os: ubuntu-latest
     needs: release
 
     steps:
