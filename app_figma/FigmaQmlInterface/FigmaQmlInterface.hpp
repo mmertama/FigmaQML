@@ -2,8 +2,7 @@
 
 #include <QObject>
 #include <QQmlComponent>
-
-#define REGISTER_FIGMAQML_SINGLETON FigmaQmlSingleton _sc; qmlRegisterSingletonInstance("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", &_sc);
+#include <QQmlApplicationEngine>
 
 class FigmaQmlSingleton : public QObject {
     Q_OBJECT
@@ -104,4 +103,13 @@ private:
     const std::vector<QString> m_elements {/*element_declarations*/};
     QString m_currentView;
 };
+
+
+inline
+void registerFigmaQmlSingleton(QQmlApplicationEngine& engine) {
+    qmlRegisterSingletonType<FigmaQmlSingleton>("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", [](QQmlEngine *, QJSEngine *) {
+        return new FigmaQmlSingleton();
+    });
+    engine.addImportPath(":/");
+}
 

@@ -41,12 +41,14 @@ FigmaQML supports both Desktop and Qt for MCU development.
   * To get project token open your Figma Document on the browser and see the URL: The token after file.
   * For example: if the URL is "https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…", the requested token is
   "bPWNMoKnXkXgf71S9cFX7G"  (without quotes)
-* **Export all QMLs**
-    * Generates QML code and related images into the given directory.
-    * Do not use for Qt for MCU.
+* **Export Qt for Desktop**
+    * Export appliaction QMLs     
 * **Export Qt for MCU**
     * Open view to manage and export Qt for MCU content.
     * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
+* **Export all QMLs**
+    * Generates QML code and related images into the given directory.
+    * Do not use for Qt for MCU.
 * **Edit Imports...** edit a QML "imports" statement.
 * **Fonts...**
     * See and map how the current Figma design fonts are mapped with the local fonts. You don't have to install missing fonts, therefore you set an additional font file search folder.
@@ -140,8 +142,6 @@ FigmaQmlUi {
 ```
 
 
-
-
 That code renders the UI on the parent space, that is typically the full screen rectangle. 
 
 Displaying is only part of the UI: Any useful applications would be able to change its content and interact with user.
@@ -177,7 +177,8 @@ the name identifies the element in QML and command tells what to do:
     * Since all UI content just cannot be visualize beforehand, this powerful feature injects any QML content 
      into UI to replace the tagged element.
     * In Qt for MCU the QML file has to be injected in the FigmaQML module - therefore some steps are needed.
-    * *FigmaQml_AddQml* cmake funtion let you inject QML and header files into UI codes.
+        * *FigmaQml_AddQml* cmake funtion let you inject QML and header files into UI codes.
+        * in Desktop that is not needed. 
     
     ```cmake 
     # include helpers  
@@ -197,9 +198,26 @@ Besides of those methods you can include multiple views in your application, and
 ```js
 FigmaQmlSingleton.setView(1);
 ```
-This feature is currently supported only Qt for MCU, but I looking ways to bring it on desktop - TODO.
 
-## Qt for MCU ##
+## Export Qt for Desktop
+
+#### Execute
+* Application UI built and executed
+* For debug and verfication
+* Available only for Linux
+
+#### Save
+Store generated files in your application folder.    
+
+* *Included views*
+    * By default a only a current view is exported, to add more views add them into list.
+    * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
+* *Save as app*
+    * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
+
+
+## Export Qt for MCU ## 
+(available only on Linux)
 
 [Qt for MCU dialog](doc/qtformcu.png)
 
@@ -232,7 +250,46 @@ Store generated files in your application folder.
 * *Save as app*
     * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
 
-## Integrate
+## Integrate for Desktop project
+1. Add FigmaInterface into target_link_libraries
+    ```cmake
+    target_link_libraries(${PROJECT_NAME} PRIVATE` FigmaQmlInterface)
+    ```
+1. In your application QML file
+    * Import FigmaQmlInterface and add FigmaQmlUi
+    
+    ```js
+   import FigmaQmlInterface
+
+   ...
+
+    FigmaQmlUi {
+        anchors.fill: parent
+    }    
+    ```
+
+1. Register singleton
+    
+    Call `registerFigmaQmlSingleton` before laoding your UI.
+    
+    ```cpp
+    
+    #include <QtGui>
+    #include <QtQml>
+    
+    #include "FigmaQmlInterface/FigmaQmlInterface.hpp"
+    
+    int main(int argc, char** argv) {
+        QGuiApplication app(argc, argv);
+        QQmlApplicationEngine engine;
+        registerFigmaQmlSingleton(engine);
+        engine.load("qrc:/qml/main.qml");
+        return app.exec();
+    }
+    
+    ```
+
+## Integrate for MCU project
 
 1. CMake
     * See also injecting source for loader above
@@ -260,6 +317,7 @@ Store generated files in your application folder.
     }    
 
     ```
+
 
 ## Other Info
 

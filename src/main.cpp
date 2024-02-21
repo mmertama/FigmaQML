@@ -470,7 +470,7 @@ int main(int argc, char *argv[]) {
 
 
 
-     if(!snapFile.isEmpty()) {
+    if(!snapFile.isEmpty()) {
          QObject::connect(figmaQml.get(), &FigmaQml::snapped, [&app]() {
               QTimer::singleShot(0, [&app](){app.quit();});
          });
@@ -493,15 +493,13 @@ int main(int argc, char *argv[]) {
              };
              figmaGet->update();
          }
-     }
+    }
 
 
     QQmlApplicationEngine engine;
-    REGISTER_FIGMAQML_SINGLETON;
-    //FigmaQmlSingleton figmaQmlSingleton{*figmaQml};
-    //engine.rootContext()->setContextProperty("FigmaQmlSingleton", &figmaQmlSingleton); // emulates Qt for MCU kind singletons signals
+    registerFigmaQmlSingleton(engine);
 
-     if(!(state & CmdLine)) {
+    if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {
                       figmaQml->createDocumentView(figmaGet->data(), true);
                   };
@@ -557,6 +555,13 @@ int main(int argc, char *argv[]) {
                                                   false);
 #endif
 
+         engine.rootContext()->setContextProperty("has_execute",
+#ifdef HAS_EXECUTE
+                                                  true);
+#else
+                                                  false);
+#endif
+
          QObject::connect(figmaQml.get(), &FigmaQml::elementChanged, [&engine](){
              engine.clearComponentCache();
          });
@@ -572,9 +577,8 @@ int main(int argc, char *argv[]) {
              }
          });
 
-        // This should also do:
-        // auto* singleton = engine->singletonInstance<FigmaQmlInstance*>("FigmaQmlInterface", "FigmaQmlSingleton");
-        QObject::connect(figmaQml.get(), &FigmaQml::externalLoadersApplied, &_sc, &FigmaQmlSingleton::setSource);
+        auto* singleton = engine.singletonInstance<FigmaQmlSingleton*>("FigmaQmlInterface", "FigmaQmlSingleton");
+        QObject::connect(figmaQml.get(), &FigmaQml::externalLoadersApplied, singleton, &FigmaQmlSingleton::setSource);
 
         engine.load(qml_source);
 

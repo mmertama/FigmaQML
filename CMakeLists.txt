@@ -16,6 +16,7 @@ option(HAS_QUL "Build Qt for MCU support" TRUE)
 
 if(NOT LINUX)
     set(HAS_QUL FALSE)
+    set(HAS_EXECUTE FALSE)
 endif()
 
 
@@ -102,7 +103,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.0.0")
+set(VERSION_NUMBER "3.0.1")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
@@ -204,6 +205,11 @@ else()
     if(HAS_QUL)
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
     endif()
+
+    if(HAS_EXECUTE)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_EXECUTE)
+    endif()
+
 
     target_link_libraries(${PROJECT_NAME}
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA} FigmaQmlInterface)

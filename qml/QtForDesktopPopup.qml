@@ -47,6 +47,7 @@ Dialog {
        }
 
     ColumnLayout {
+        // I doubt if setting this has any meaning if setExecute is false ... but it wont hurt :-D
         Text {text: "Qt DIR";font.weight: Font.Medium}
         MyInput {
             id: qtDir
@@ -86,6 +87,7 @@ Dialog {
         DialogButtonBox {
             Button {
                 text: qsTr("Execute...")
+                visible: has_execute
                 DialogButtonBox.buttonRole: DialogButtonBox.AcceptRole
             }
 

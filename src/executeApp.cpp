@@ -235,16 +235,17 @@ bool ExecuteUtils::replaceInFile(const QString& fname, const QRegularExpression&
 
 QString ExecuteUtils::findFile(const QString& path, const QRegularExpression& regexp, Kind kind) {
     QDir dir(path, {}, QDir::Type, QDir::NoDotAndDotDot | QDir::Dirs | QDir::Files);
-    Q_ASSERT(dir.exists());
-    for(const auto& entry : dir.entryInfoList()) {
-        if(entry.isFile()) {
-            const auto match = regexp.match(entry.fileName());
-            if(match.hasMatch() && (kind == Kind::Any || (kind == Kind::Exe && entry.isExecutable())))
-                return entry.absoluteFilePath();
-        } else if(entry.isDir()) {
-            const auto sub = findFile(entry.absoluteFilePath(), regexp, kind);
-            if(!sub.isEmpty())
-                return sub;
+    if(dir.exists()) {
+        for(const auto& entry : dir.entryInfoList()) {
+            if(entry.isFile()) {
+                const auto match = regexp.match(entry.fileName());
+                if(match.hasMatch() && (kind == Kind::Any || (kind == Kind::Exe && entry.isExecutable())))
+                    return entry.absoluteFilePath();
+            } else if(entry.isDir()) {
+                const auto sub = findFile(entry.absoluteFilePath(), regexp, kind);
+                if(!sub.isEmpty())
+                    return sub;
+            }
         }
     }
     return {};
@@ -388,6 +389,7 @@ bool executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const s
     QProcess build_process;
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
     const auto qt_dir = parameters["qtDir"].toString();
+    VERIFY(QDir(qt_dir).exists(), "Directory " + qt_dir + " not found!");
     env.insert("QT_DIR", qt_dir);
     const auto builder = ExecuteUtils::findFile(qt_dir, QRegularExpression(R"(qt-cmake.*)"), ExecuteUtils::Exe);
     VERIFY(!builder.isEmpty(), "Cannot find qt-cmake");
