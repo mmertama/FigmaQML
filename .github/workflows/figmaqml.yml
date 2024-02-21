@@ -11,16 +11,16 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        #  - name: "Windows Latest MSVC"
-        #    artifact: "FigmaQML-Windows-MSVC.tar.xz"
-        #    os: windows-latest
-        #    cc: "cl"
-        #    cxx: "cl"
-        #    environment_script: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
-        #    generators: "Visual Studio 17 2022"
-        #    arch: "win64_msvc2019_64"
-        #    host: "windows"
-        #    libs: 'qt5compat'
+          - name: "Windows Latest MSVC"
+            artifact: "FigmaQML-Windows-MSVC.tar.xz"
+            os: windows-latest
+            cc: "cl"
+            cxx: "cl"
+            environment_script: "C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Auxiliary/Build/vcvars64.bat"
+            generators: "Visual Studio 17 2022"
+            arch: "win64_msvc2019_64"
+            host: "windows"
+            libs: 'qt5compat qtshadertools'
         #  - name: "Windows Latest MinGW"
         #    artifact: "FigmaQML-Windows-MinGW.tar.xz"
         #    os: windows-latest
@@ -29,7 +29,7 @@ jobs:
         #    generators: "Ninja"
         #    arch: 'win64_mingw'
         #    host: "windows"
-        #    libs: 'qt5compat'
+        #    libs: 'qt5compat qtshadertools'
           - name: "Ubuntu Latest GCC"
             artifact: "FigmaQML-Linux.tar.xz"
             os: ubuntu-latest
