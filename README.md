@@ -322,29 +322,22 @@ Store generated files in your application folder.
 ## Other Info
 
 ### Build and deploy
-* Qt6
+* Qt6.2 or newer
 * Python 3.8 (or later)
-* CMake 3.16 (or later)
+* CMake 3.20 (or later)
 * For WebAssembly see [Qt 6.4 WebAssembly](https://doc-snapshots.qt.io/qt6-6.4/wasm.html)
-* For Windows 10: 
-    * Git Bash
+    * Qt5 compatibility library    
+* For Windows 10:
+    * Qt5 compatibility library 
     * MSVC 19
+    * MinGW TBC
     * OpenSSL binaries (prebuilt version within Qt)
-    * msvc_build.bat in x64 Native Tools Command Prompt
-    * If the batch files refuses to work, please look the following sequence:
-      ```
-      echo Expected to be executed in x64 Native Tools Command Prompt for VS 2019
-      set QT_DIR=C:\Qt\6.3.1\msvc2019_64
-      set CMAKE_PREFIX_PATH=%QT_DIR%\lib\cmake
-      mkdir build
-      pushd build
-      cmake ..
-      cmake --build . --config Release
-      ```
-* For Mac OSX
-    * osx_build.sh
-* For Linux
-    * linux_build.sh
+* Mac OSX
+    * Qt5 compatibility library
+* Linux
+    * Qt Serial port
+    * Qt5 compatibility library
+
 
 #### Testing
 There are few scripts in the [test]() folder that are used for testing. Since the test data itself is under a personal Figma account, there are no automated tests provided along the FigmaQML sources. However if you have a good set of Figma documents available you can execute tests using next example:

@@ -107,10 +107,17 @@ set(VERSION_NUMBER "3.0.1")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
-#add_executable(FigmaQML
-qt_add_executable(${PROJECT_NAME} ${SOURCES}
+set(NON_SOURCE
     todo.txt
-    .github/workflows/figmaqml.yml)
+    README.md
+    .github/workflows/figmaqml.yml
+)
+
+#add_executable(FigmaQML
+qt_add_executable(${PROJECT_NAME}
+    ${SOURCES}
+    ${NON_SOURCE}
+)
 
 
 if(NOT WIN32)
@@ -189,11 +196,13 @@ elseif(EMSCRIPTEN)
       PRIVATE QuaZip
       PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
 else()
-    find_package(OpenSSL REQUIRED)
-    string(REPLACE "." ";" VERSION_LIST OPENSSL_VERSION)
-    list(GET VERSION_LIST 0 SSL_MAJOR)
-    if(${SSL_MAJOR} LESS 3 )
-        message(WARNING "SSL version must be at least 3.0.0, your runtime have ${OPENSSL_VERSION}. Hint for QtCreator try add $\{QT_DIR\}/plugins/tls in Run settings (LD_LIBRARY_PATH in Linux)")
+    if(NOT WIN32) # windows finds internal?
+        find_package(OpenSSL REQUIRED)
+        string(REPLACE "." ";" VERSION_LIST OPENSSL_VERSION)
+        list(GET VERSION_LIST 0 SSL_MAJOR)
+        if(${SSL_MAJOR} LESS 3 )
+            message(WARNING "SSL version must be at least 3.0.0, your runtime have ${OPENSSL_VERSION}. Hint for QtCreator try add $\{QT_DIR\}/plugins/tls in Run settings (LD_LIBRARY_PATH in Linux)")
+        endif()
     endif()
     if(NOT QT6_CONCURRENT)
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DNO_CONCURRENT)
