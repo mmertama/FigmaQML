@@ -122,7 +122,7 @@ jobs:
         shell: cmake -P {0}
         run: |
             file(TO_CMAKE_PATH "${{ github.workspace }}" WS_PATH)
-            set(ENV{Qt6_DIR} ${WS_PATH}/../Qt/6.6.1/${{ matrix.config.arch }}")
+            set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.1/${{ matrix.config.arch }}")
             set(ENV{CC} ${{ matrix.config.cc }})
             set(ENV{CXX} ${{ matrix.config.cxx }})
 
