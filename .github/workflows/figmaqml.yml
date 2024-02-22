@@ -131,10 +131,12 @@ jobs:
                 set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1)
 
                 execute_process(COMMAND $ENV{Qt6_DIR}/bin/qt-cmake build -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
-                RESULT_VARIABLE result)
+                RESULT_VARIABLE result
+                ECHO_ERROR_VARIABLE
+                )
 
                 if (NOT result EQUAL 0)
-                    message(FATAL_ERROR "Bad exit status")
+                    message(FATAL_ERROR "Bad exit status ${result}")
                 endif()
 
                 execute_process(
@@ -152,7 +154,7 @@ jobs:
             endif()
 
             if (NOT result EQUAL 0)
-                message(FATAL_ERROR "Bad exit status")
+                message(FATAL_ERROR "Bad exit status ${result}")
             endif()
 
       - name: Build
