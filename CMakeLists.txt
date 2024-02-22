@@ -24,7 +24,7 @@ if(EMSCRIPTEN)
     if(NOT DEFINED ENV{WF_QT_ROOT}) # for github actions
         set(QT_HOST_PATH $ENV{WF_QT_ROOT}/gcc_64)
     endif()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick)
     if(Qt6_FOUND)
         message("Project is Qt6 Emscripten")
     else()
