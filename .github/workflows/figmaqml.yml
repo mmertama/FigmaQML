@@ -12,7 +12,7 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "FigmaQML.tar.xz"
+            artifact: "FigmaQML-win.tar.xz"
             os: windows-latest
             cc: "cl"
             cxx: "cl"
@@ -31,7 +31,7 @@ jobs:
         #    host: "windows"
         #    libs: 'qt5compat qtshadertools'
           - name: "Ubuntu Latest GCC"
-            artifact: "FigmaQML.AppImage.xz"
+            artifact: "FigmaQML-nix.AppImage.xz"
             os: ubuntu-latest
             cc: "gcc"
             cxx: "g++"
@@ -40,7 +40,7 @@ jobs:
             host: "linux"
             libs: 'qt5compat qtserialport'
           - name: "macOS Latest Clang"
-            artifact: "FigmaQML.app.tar.xz"
+            artifact: "FigmaQML-mac.app.tar.xz"
             os: macos-latest
             cc: "clang"
             cxx: "clang++"
@@ -48,15 +48,15 @@ jobs:
             arch: 'clang_64'
             host: "mac"
             libs: 'qt5compat'
-        #  - name: "Wasm"
-        #    artifact: "FigmaQML-wasm.tar.xz"
-        #    os: ubuntu-latest
-        #    cc: "clang"
-        #    cxx: "clang++"
-        #    generators: "Ninja"
-        #    arch: 'wasm_singlethread'
-        #    host: "linux"
-        #    libs: 'qt5compat'
+          - name: "Wasm"
+            artifact: "FigmaQML-wasm.tar.gz"
+            os: ubuntu-latest
+            cc: "clang"
+            cxx: "clang++"
+            generators: "Ninja"
+            arch: 'wasm_singlethread'
+            host: "linux"
+            libs: 'qt5compat'
 
     steps:
       - name: Install dependencies on windows
@@ -160,7 +160,7 @@ jobs:
         run: pwd && ls -R
 
       - name: QtDeploy (U)
-        if: startsWith(matrix.config.os, 'ubuntu')
+        if: startsWith(matrix.config.arch, 'gcc_64')
         working-directory: build
         run: |
             pwd & ls -la
@@ -171,6 +171,18 @@ jobs:
             export EXTRA_QT_PLUGINS=svg
             ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=FigmaQML.AppImage --verbosity=3
             cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.AppImage
+
+      - name: QtDeploy (A)
+        if: startsWith(matrix.config.arch, 'wasm')
+        working-directory: build
+        run: |
+          pwd & ls -la
+          mkdir release
+          cp favicon.ico release
+          cp FigmaQML.html release
+          cp qtloader.js release
+          cp qtlogo.svg
+          cmake -E tar czvf ../${{ matrix.config.artifact }} release
 
       - name: QtDeploy (M)
         if: startsWith(matrix.config.os, 'macos')
@@ -239,20 +251,20 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "FigmaQML.tar.xz"
+            artifact: "FigmaQML-win.tar.xz"
             os: ubuntu-latest
           #- name: "Windows Latest MinGW"
           #  artifact: "Gempyre-Windows-MinGW.tar.xz"
           #  os: ubuntu-latest
           - name: "Ubuntu Latest GCC"
-            artifact: "FigmaQML.AppImage.xz"
+            artifact: "FigmaQML-nix.AppImage.xz"
             os: ubuntu-latest
           - name: "macOS Latest Clang"
-            artifact: "FigmaQML.app.tar.xz"
+            artifact: "FigmaQML-mac.app.tar.xz"
             os: ubuntu-latest
-          #- name: "Wasm"
-          #  artifact: "FigmaQML-wasm.tar.xz"
-          #  os: ubuntu-latest
+         - name: "Wasm"
+            artifact: "FigmaQML-wasm.tar.gz"
+            os: ubuntu-latest
     needs: release
 
     steps:
@@ -265,3 +277,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ matrix.config.artifact }}
+
+      - name: Publish
+        if: startsWith(matrix.config.artifact, 'FigmaQML-wasm')
+        uses: actions/deploy-pages@v4
+        with:
+            artifact_name: ${{ matrix.config.artifact }}
