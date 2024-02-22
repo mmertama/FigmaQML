@@ -114,7 +114,7 @@ jobs:
         if: startsWith(matrix.config.arch, 'wasm')
         shell: bash
         run: |
-            chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
+            # chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
             ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
 
       - name: Quack
