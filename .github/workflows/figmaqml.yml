@@ -130,7 +130,7 @@ jobs:
 
                 find_program(QTCMAKE NAME qt-cmake PATH $ENV{Qt6_DIR}/bin)
 
-                if(QTCMAKE-NOTFOUND)
+                if(NOT ${QTCMAKE})
                     message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
                 endif()
 
