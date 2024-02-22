@@ -50,12 +50,12 @@ jobs:
             libs: 'qt5compat'
           - name: "Wasm"
             artifact: "FigmaQML-wasm.tar.gz"
-            os: ubuntu-latest
+            os: windows-latest
             cc: "em"
             cxx: "em++"
             generators: "Ninja"
             arch: 'wasm_singlethread'
-            host: "linux"
+            host: "windows"
             libs: 'qt5compat'
 
     steps:
