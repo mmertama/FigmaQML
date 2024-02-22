@@ -91,7 +91,7 @@ jobs:
         uses: jurplel/install-qt-action@v3.3.0
         with:
             aqtversion: '>=3.1.*'
-            version: '6.6.1'
+            version: '6.6.2'
             host: linux
             target: 'desktop'
             arch: gcc_64
@@ -102,7 +102,7 @@ jobs:
         uses: jurplel/install-qt-action@v3.3.0
         with:
           aqtversion: '>=3.1.*'
-          version: '6.6.1'
+          version: '6.6.2'
           host: ${{ matrix.config.host }}
           target: 'desktop'
           arch:  ${{ matrix.config.arch }}
