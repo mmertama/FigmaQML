@@ -100,7 +100,7 @@ jobs:
 
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
-        run: ls -la "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
+        run: ls -laR "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
 
       - name: Checkout
         uses: actions/checkout@v3
