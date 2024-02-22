@@ -82,6 +82,10 @@ jobs:
           ninja --version
           cmake --version
 
+      - name: Install dependencies for wasm
+        if: startsWith(matrix.config.arch, 'wasm')
+        uses: lovasoa/setup-emscripten@master
+
       - name: Install Qt
         uses: jurplel/install-qt-action@v3.3.0
         with:
