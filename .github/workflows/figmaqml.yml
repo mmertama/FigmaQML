@@ -179,17 +179,28 @@ jobs:
             $Qt6_DIR/bin/macdeployqt FigmaQML.app -qmldir=../qml
             cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.app
 
+          #- name: QtDeploy (W)
+          #  if: startsWith(matrix.config.os, 'windows')
+          #  working-directory: build
+          #  run: |
+          #      New-Item -ItemType Directory -Path FigmaQml
+          #      Copy-Item "FigmaQML.exe" -Destination "FigmaQml"
+          #      $qt6Dir = $Env:Qt6_DIR
+          #      $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
+          #      & $windeployqtPath --qmldir ../qml --compiler-runtime "FigmaQml\FigmaQML.exe"
+          #      copy ..\OpenSSL_win\*.dll FigmaQml
+          #      cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
+          #      Get-ChildItem -Force
+
       - name: QtDeploy (W)
         if: startsWith(matrix.config.os, 'windows')
         working-directory: build
+        shell: bash
         run: |
-            New-Item -ItemType Directory -Path FigmaQml
-            Copy-Item "FigmaQML.exe" -Destination "FigmaQml"
-            Get-ChildItem -Force
-            $qt6Dir = $Env:Qt6_DIR
-            $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
-            & $windeployqtPath --qmldir ../qml --compiler-runtime "FigmaQml\FigmaQML.exe"
-            copy ..\OpenSSL_win\*.dll FigmaQml
+            mkdir FigmaQml
+            cp FigmaQML.exe FigmaQml/
+            $Qt6_DIR/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "FigmaQml/FigmaQML.exe"
+            cp ../OpenSSL_win/*.dll FigmaQml/
             cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
 
       - name: Upload
@@ -197,7 +208,9 @@ jobs:
         with:
           path: ./${{ matrix.config.artifact }}
           name: ${{ matrix.config.artifact }}
-
+  push:
+    tags:
+      - 'test_release*'
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
@@ -228,16 +241,16 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "Gempyre-Windows-MSVC.tar.xz"
+            artifact: "FigmaQML.tar.xz"
             os: ubuntu-latest
           #- name: "Windows Latest MinGW"
           #  artifact: "Gempyre-Windows-MinGW.tar.xz"
           #  os: ubuntu-latest
           - name: "Ubuntu Latest GCC"
-            artifact: "Gempyre-Linux.tar.xz"
+            artifact: "FigmaQML.AppImage.xz"
             os: ubuntu-latest
           - name: "macOS Latest Clang"
-            artifact: "Gempyre-macOS.tar.xz"
+            artifact: "FigmaQML.app.tar.xz"
             os: ubuntu-latest
           #- name: "Wasm"
           #  artifact: "FigmaQML-wasm.tar.xz"
