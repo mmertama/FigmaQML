@@ -152,10 +152,11 @@ jobs:
 
             if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
 
-                find_program(QTCMAKE NAMES qt-cmake qt-cmake.exe qt-cmake.bat PATH $ENV{Qt6_DIR}/bin)
+                find_program(QTCMAKE qt-cmake PATHS $ENV{Qt6_DIR}/bin)
 
                 if(NOT ${QTCMAKE})
-                    message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
+                    find_file(QTCMAKE_FILE qt-cmake PATHS $ENV{Qt6_DIR}/bin)
+                    message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin (${QTCMAKE_FILE})")
                 endif()
 
                 execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.2
