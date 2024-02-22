@@ -104,7 +104,7 @@ jobs:
       - name: Configure
         shell: cmake -P {0}
         run: |
-          set(ENV{WF_QT_ROOT} "${{ github.workspace }}/../Qt/6.6.1/)
+          set(ENV{WF_QT_ROOT} "${{ github.workspace }}/../Qt/6.6.1/")
           set(ENV{Qt6_DIR} "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}")
           set(ENV{CC} ${{ matrix.config.cc }})
           set(ENV{CXX} ${{ matrix.config.cxx }})

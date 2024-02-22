@@ -20,16 +20,8 @@ if(NOT LINUX)
 endif()
 
 
-if(LET_QT5)
-    message(FATAL_ERROR "Qt5 is not supported anymore, doable, but beyond my testing effort")
-    find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
-    if(Qt5_FOUND)
-        message("Project is Qt5")
-    else()
-        message(FATAL_ERROR "Qt5 is not found!")
-    endif()
-elseif(EMSCRIPTEN)
-    if(NOT DEFINED ENV{WF_QT_ROOT})
+if(EMSCRIPTEN)
+    if(NOT DEFINED ENV{WF_QT_ROOT}) # for github actions
         set(QT_HOST_PATH $ENV{WF_QT_ROOT}/gcc_64)
     endif()
     find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat)
