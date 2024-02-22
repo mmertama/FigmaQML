@@ -113,7 +113,7 @@ jobs:
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
         run: |
-            ls -laR "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
+            ls -laR "${{ github.workspace }}/../Qt/6.6.2/${{ matrix.config.arch }}"
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -122,7 +122,7 @@ jobs:
         shell: cmake -P {0}
         run: |
             set(WS_PATH "${{ github.workspace }}")
-            set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.1/${{ matrix.config.arch }}")
+            set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.2/${{ matrix.config.arch }}")
             set(ENV{CC} ${{ matrix.config.cc }})
             set(ENV{CXX} ${{ matrix.config.cxx }})
 
@@ -152,7 +152,7 @@ jobs:
                     message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
                 endif()
 
-                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.1
+                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.2
                 RESULT_VARIABLE result
                 ECHO_ERROR_VARIABLE
                 )
