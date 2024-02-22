@@ -140,7 +140,7 @@ jobs:
                 )
 
                 if (NOT result EQUAL 0)
-                    message(FATAL_ERROR "Bad exit status ${result}")
+                    message(FATAL_ERROR "Bad exit status for ${QTCMAKE} as ${result}")
                 endif()
 
             else()
