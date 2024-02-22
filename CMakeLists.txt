@@ -22,8 +22,8 @@ endif()
 
 if(EMSCRIPTEN)
     if(NOT DEFINED QT_HOST_PATH) # for github actions
-         message("Host path not defined, use: ${HOST_ROOT}")
-        set(QT_HOST_PATH ${HOST_ROOT}/gcc_64)
+        message("Host path not defined, use: ${HOST_ROOT}")
+        set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
     endif()
     message("Host path: ${QT_HOST_PATH}")
     find_package(Qt6 CONFIG COMPONENTS Core Quick)
