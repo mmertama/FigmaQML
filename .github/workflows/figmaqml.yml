@@ -124,7 +124,7 @@ jobs:
             endforeach()
           endif()
 
-          if ("${{ runner.arch }} STREQUAL "wasm_singlethread")
+          if ("${{ runner.arch }}" STREQUAL "wasm_singlethread")
             set(EXTRA_CMAKE_DEF "-DEMSCRIPTEN=TRUE")
           endif()
 
