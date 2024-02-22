@@ -121,7 +121,8 @@ jobs:
       - name: Configure
         shell: cmake -P {0}
         run: |
-            set(ENV{Qt6_DIR} "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}")
+            file(TO_CMAKE_PATH ""${{ github.workspace }}" WS_PATH)
+            set(ENV{Qt6_DIR} ${WS_PATH}/../Qt/6.6.1/${{ matrix.config.arch }}")
             set(ENV{CC} ${{ matrix.config.cc }})
             set(ENV{CXX} ${{ matrix.config.cxx }})
 
@@ -151,7 +152,7 @@ jobs:
                     message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
                 endif()
 
-                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1
+                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.1
                 RESULT_VARIABLE result
                 ECHO_ERROR_VARIABLE
                 )
