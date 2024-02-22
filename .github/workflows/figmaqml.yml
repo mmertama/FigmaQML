@@ -114,7 +114,7 @@ jobs:
         if: startsWith(matrix.config.arch, 'wasm')
         shell: bash
         run: |
-            # chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
+            chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
             ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
 
       - name: Quack
@@ -157,7 +157,8 @@ jobs:
 
                 if(NOT ${QTCMAKE})
                     find_file(QTCMAKE_FILE qt-cmake PATHS $ENV{Qt6_DIR}/bin)
-                    message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin (${QTCMAKE_FILE})")
+                    message("qt-cmake not found in  $ENV{Qt6_DIR}/bin (${QTCMAKE_FILE})")
+                    set(QTCMAKE "${QTCMAKE_FILE}")
                 endif()
 
                 execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.2
