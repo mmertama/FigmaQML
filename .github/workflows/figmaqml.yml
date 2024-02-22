@@ -124,8 +124,12 @@ jobs:
             endforeach()
           endif()
 
+          if ("${{ runner.arch }} STREQUAL "wasm_singlethread")
+            set(EXTRA_CMAKE_DEF "-DEMSCRIPTEN=TRUE")
+          endif()
+
           execute_process(
-                  COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
+                  COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
                   RESULT_VARIABLE result
                   )
 
