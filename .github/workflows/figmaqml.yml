@@ -127,7 +127,7 @@ jobs:
           endif()
 
           if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
-            set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT="${{ github.workspace }}/../Qt/6.6.1")
+            set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1)
           endif()
 
           execute_process(
