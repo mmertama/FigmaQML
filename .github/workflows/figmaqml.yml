@@ -128,15 +128,13 @@ jobs:
 
             if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
 
-                set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1)
-
                 find_program(QTCMAKE NAME qt-cmake PATH $ENV{Qt6_DIR}/bin)
 
                 if(QTCMAKE-NOTFOUND)
                     message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
                 endif()
 
-                execute_process(COMMAND ${QTCMAKE} build -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1
                 RESULT_VARIABLE result
                 ECHO_ERROR_VARIABLE
                 )
@@ -145,15 +143,10 @@ jobs:
                     message(FATAL_ERROR "Bad exit status ${result}")
                 endif()
 
-                execute_process(
-                    COMMAND -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
-                    RESULT_VARIABLE result
-                    )
-
             else()
 
                 execute_process(
-                    COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+                    COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
                         RESULT_VARIABLE result
                     )
 
