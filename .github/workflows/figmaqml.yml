@@ -262,7 +262,7 @@ jobs:
           - name: "macOS Latest Clang"
             artifact: "FigmaQML-mac.app.tar.xz"
             os: ubuntu-latest
-         - name: "Wasm"
+          - name: "Wasm"
             artifact: "FigmaQML-wasm.tar.gz"
             os: ubuntu-latest
     needs: release
