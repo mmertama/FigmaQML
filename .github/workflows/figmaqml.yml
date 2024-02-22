@@ -51,8 +51,8 @@ jobs:
           - name: "Wasm"
             artifact: "FigmaQML-wasm.tar.gz"
             os: ubuntu-latest
-            cc: "clang"
-            cxx: "clang++"
+            cc: "em"
+            cxx: "em++"
             generators: "Ninja"
             arch: 'wasm_singlethread'
             host: "linux"
@@ -180,8 +180,9 @@ jobs:
           mkdir release
           cp favicon.ico release
           cp FigmaQML.html release
-          cp qtloader.js release
-          cp qtlogo.svg
+          cp *.js release
+          cp qtlogo.svg release
+          cp *.wasm release
           cmake -E tar czvf ../${{ matrix.config.artifact }} release
 
       - name: QtDeploy (M)
