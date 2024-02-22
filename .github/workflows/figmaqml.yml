@@ -110,6 +110,12 @@ jobs:
           modules: ${{ matrix.config.libs }}
           tools: 'tools_ninja tools_cmake'
 
+      - name: What is this crap?
+        if: startsWith(matrix.config.arch, 'wasm')
+        shell: bash
+        run: |
+            chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
+
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
         run: |
