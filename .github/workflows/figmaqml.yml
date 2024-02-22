@@ -130,7 +130,13 @@ jobs:
 
                 set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1)
 
-                execute_process(COMMAND $ENV{Qt6_DIR}/bin/qt-cmake build -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+                find_program(QTCMAKE NAME qt-cmake PATH $ENV{Qt6_DIR}/bin)
+
+                if(QTCMAKE-NOTFOUND)
+                    message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
+                endif()
+
+                execute_process(COMMAND ${QTCMAKE} build -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
                 RESULT_VARIABLE result
                 ECHO_ERROR_VARIABLE
                 )
