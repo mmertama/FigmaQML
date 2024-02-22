@@ -1,6 +1,11 @@
 #ifndef QULINFO_H
 #define QULINFO_H
 
+#ifdef Q_OS_WASM
+#error Not supported
+#endif
+
+
 #include <QObject>
 #include <QString>
 #include <QSerialPortInfo>

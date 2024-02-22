@@ -11,47 +11,32 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+message("Compiling for ${CMAKE_PREFIX_PATH}")
+message("Compiling pre ${CMAKE_PROJECT_INCLUDE_BEFORE}")
+message("Compiling tcn ${CMAKE_TOOLCHAIN_FILE}")
 
 option(HAS_QUL "Build Qt for MCU support" TRUE)
 
-if(NOT LINUX)
-    set(HAS_QUL FALSE)
-    set(HAS_EXECUTE FALSE)
-endif()
-
-
-if(LET_QT5)
-    message(FATAL_ERROR "Qt5 is not supported anymore, doable, but beyond my testing effort")
-    find_package(Qt5 QUIET COMPONENTS Core Quick Network Widgets Concurrent)
-    if(Qt5_FOUND)
-        message("Project is Qt5")
-    else()
-        message(FATAL_ERROR "Qt5 is not found!")
+if(EMSCRIPTEN)
+    if(NOT DEFINED QT_HOST_PATH) # for github actions
+        message("Host path not defined, use: ${HOST_ROOT}")
+        set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
     endif()
-elseif(EMSCRIPTEN)
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat)
-    if(Qt6_FOUND)
-        message("Project is Qt6 Emscripten")
-    else()
-         message(FATAL_ERROR "Qt6 Emscripten is not found!")
-     endif()
+    message("Host path: ${QT_HOST_PATH}")
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat ShaderTools REQUIRED)
 else()
-    if(HAS_QUL)
-        set(EXTRA
-            ${EXTRA}
+    if(LINUX)
+        set(HAS_EXECUTE TRUE)
+    endif()
+    if(HAS_QUL AND HAS_EXECUTE)
+        set(EXTRA ${EXTRA}
             Qt6::SerialPort
         )
-        set(EXTRA_PACKAGES
-            ${EXTRA_PACKAGES}
+        set(EXTRA_PACKAGES ${EXTRA_PACKAGES}
             SerialPort
         )
     endif()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ${EXTRA_PACKAGES})
-    if(Qt6_FOUND)
-        message("Project is Qt6")
-    else()
-         message(FATAL_ERROR "Qt6 or extra stuff are not found!")
-    endif()
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ShaderTools ${EXTRA_PACKAGES} REQUIRED)
 endif()
 
 # dog food
@@ -81,21 +66,34 @@ set(SOURCES
     src/fontinfo.cpp
     include/fontinfo.h
     src/fontinfo.cpp
-    src/executeApp.cpp
+    src/appwrite.cpp
+    include/appwrite.h
     include/execute_utils.h
-    #include/figmaQmlSingleton.h
+    src/execute_utils.cpp
     app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
     app_figma/app.qrc # files needed to build an app
 )
 
+if(HAS_EXECUTE)
+    if(DEFINED EMSCRIPTEN)
+        message(FATAL_ERROR "Building & running is not supported in WASM")
+    endif()
+    set(SOURCES ${SOURCES}
+        src/executeApp.cpp
+    )
+endif()
 
 if(HAS_QUL)
-    set(SOURCES
-        ${SOURCES}
-        include/qulInfo.h
-        src/executeQul.cpp
+    set(SOURCES ${SOURCES}
+        src/qulwrite.cpp
         mcu_figma/mcu.qrc # files needed to build an app
     )
+    if(HAS_EXECUTE)
+        set(SOURCES ${SOURCES}
+            include/qulInfo.h
+            src/executeQul.cpp
+        )
+    endif()
 endif()
 
 if(EMSCRIPTEN)
@@ -103,7 +101,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.0.1")
+set(VERSION_NUMBER "3.0.2")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
@@ -154,11 +152,22 @@ endif()
 option(QT6_CONCURRENT FALSE)
 option(QT6_SSL FALSE)
 
-if(Qt5_FOUND)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE -DQT5)
-    target_link_libraries(${PROJECT_NAME}
-        PRIVATE Qt5::Core Qt5::Quick Qt5::Network Qt5::Widgets Qt5::Concurrent ${EXTRA})
-elseif(EMSCRIPTEN)
+
+if(HAS_QUL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
+endif()
+
+set(COMMON_LIBS
+    Qt6::Core
+    Qt6::Quick
+    Qt6::Network
+    Qt6::Widgets
+    Qt6::Core5Compat
+    Qt6::ShaderTools
+    FigmaQmlInterface
+    ${EXTRA})
+
+if(EMSCRIPTEN)
     set(QT_WASM_INITIAL_MEMORY, "300MB")
     subdirs(modules/zlib)
     add_custom_target(zlib_target DEPENDS zlibstatic)
@@ -170,13 +179,12 @@ elseif(EMSCRIPTEN)
     add_custom_target(quazip DEPENDS QuaZip)
     add_dependencies(quazip zlib_target)
     include_directories(${CMAKE_SOURCE_DIR}/modules/quazip ${ZLIB_INCLUDE} ${ZCONF_INCLUDE})
-    string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+"
-        ver_p ${out_p})
-    if(NOT ${ver_p} STREQUAL "3.1.14")
-        message(FATAL_ERROR "emsdk 3.1.14 expected now!, you have ${ver_p}")
-    endif()
+    string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+" ver_p "${out_p}")
+    #if(NOT ${ver_p} STREQUAL "3.1.14")
+    #    message(FATAL_ERROR "emsdk 3.1.14 expected now!, you have ${ver_p}")
+    #endif()
     message("emsdk ${ver_p}")
-    configure_file(favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
+    configure_file(res/favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
         SET(EM_FLAGS -sASSERTIONS=2 -sRUNTIME_LOGGING=1 -sSAFE_HEAP=1)
     endif()
@@ -194,7 +202,7 @@ elseif(EMSCRIPTEN)
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
     target_link_libraries(${PROJECT_NAME}
       PRIVATE QuaZip
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
+      PRIVATE ${COMMON_LIBS})
 else()
     if(NOT WIN32) # windows finds internal?
         find_package(OpenSSL REQUIRED)
@@ -211,15 +219,11 @@ else()
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DNO_SSL)
     endif()
 
-    if(HAS_QUL)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
-    endif()
-
     if(HAS_EXECUTE)
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_EXECUTE)
     endif()
 
 
     target_link_libraries(${PROJECT_NAME}
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA} FigmaQmlInterface)
+      PRIVATE ${COMMON_LIBS} )
 endif()

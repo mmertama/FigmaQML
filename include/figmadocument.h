@@ -243,20 +243,20 @@ public:
     }
 
     static int remove_comments(const QByteArray& data, unsigned& end) {
-        if(data[end] != '/' || end + 1 == data.size())
+        if(data[end] != '/' || (end + 1 == static_cast<unsigned>(data.size())))
             return 0;
         if(data[end + 1] == '/') {
             ++end;
-            while(end < data.size() && data[++end] != '\n');
+            while((end < static_cast<unsigned>(data.size())) && data[++end] != '\n');
             return 1;
         } else if(data[end + 1] == '*') {
             ++end;
             int lines = 0;
-            while(end < data.size()) {
+            while(end < static_cast<unsigned>(data.size())) {
                 const auto c = data[end++];
                 if(c == '\n')
                     ++lines;
-                if(c == '*' && end < data.size() && data[end] == '/') {
+                if(c == '*' && (end < static_cast<unsigned>(data.size())) && data[end] == '/') {
                     ++end;
                     return lines;
                 }
@@ -281,7 +281,7 @@ public:
             const auto& ref = m_components[name].first;
             auto cline = 1;
             auto rline = 1;
-            while(cend < data.size() && rend < ref.size()) {
+            while((cend < static_cast<unsigned>(data.size())) && (rend < static_cast<unsigned>(ref.size()))) {
                 const auto c = data[cend];
                 const auto r = ref[rend];
                 cline += remove_comments(data, cend);
@@ -308,7 +308,7 @@ public:
                     ++cend;
                 }
             }
-            if(cend == data.size() || rend == ref.size())
+            if((cend == static_cast<unsigned>(data.size())) || (rend == static_cast<unsigned>(ref.size())))
                 qDebug() << "warn:" << name << "were close component";
         }
         m_components.insert(name, {data, QJsonDocument(obj).toJson()});

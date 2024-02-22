@@ -4,6 +4,7 @@
 #include "fontcache.h"
 #include "fontinfo.h"
 #include "utils.h"
+#include "appwrite.h"
 #include <QVersionNumber>
 #include <QTimer>
 #include <QSaveFile>
@@ -19,15 +20,6 @@
 #include <QApplication>
 #endif
 
-
-#ifdef HAS_QUL
-extern void executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
-extern bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
-extern QStringList supportedQulHardware();
-#endif
-
-extern bool executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
-extern bool writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
 
 #include <QTime>
 #define TIMED_START(s)  const auto s = QTime::currentTime();
@@ -1122,8 +1114,8 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 
 
 void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>& elements) {
-#ifdef HAS_QUL
-    executeQulApp(parameters, *this, elements);
+#if defined(HAS_QUL) && defined(HAS_EXECUTE)
+    AppWrite::executeQulApp(parameters, *this, elements);
 #else
     (void) parameters;
     (void) elements;
@@ -1131,13 +1123,18 @@ void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>&
 }
 
 void FigmaQml::executeApp(const QVariantMap& parameters, const std::vector<int>& elements) {
-    ::executeApp(parameters, *this, elements);
+#ifdef HAS_EXECUTE
+    AppWrite::executeApp(parameters, *this, elements);
+#else
+    (void) parameters;
+    (void) elements;
+#endif
 }
 
 
 QStringList FigmaQml::supportedQulHardware() const {
 #ifdef HAS_QUL
-    return ::supportedQulHardware();
+    return AppWrite::supportedQulHardware();
 #else
     return {};
 #endif
@@ -1146,12 +1143,12 @@ QStringList FigmaQml::supportedQulHardware() const {
 bool FigmaQml::saveQML(bool isMcu, const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
     if(isMcu) {
     #ifdef HAS_QUL
-        return writeQul(folderName, *this, writeAsApp, elements);
+        return  AppWrite::writeQul(folderName, *this, writeAsApp, elements);
     #else
         return false;
     #endif
     } else {
-        return writeApp(folderName, *this, writeAsApp, elements);
+        return AppWrite::writeApp(folderName, *this, writeAsApp, elements);
     }
 }
 

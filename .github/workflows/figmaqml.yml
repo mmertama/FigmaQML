@@ -12,7 +12,7 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "FigmaQML-Windows-MSVC.tar.xz"
+            target_name: "FigmaQML"
             os: windows-latest
             cc: "cl"
             cxx: "cl"
@@ -31,32 +31,32 @@ jobs:
         #    host: "windows"
         #    libs: 'qt5compat qtshadertools'
           - name: "Ubuntu Latest GCC"
-            artifact: "FigmaQML-Linux.tar.xz"
+            target_name: "FigmaQML.AppImage"
             os: ubuntu-latest
             cc: "gcc"
             cxx: "g++"
             generators: "Ninja"
             arch: 'gcc_64'
             host: "linux"
-            libs: 'qt5compat qtserialport'
+            libs: 'qt5compat qtshadertools qtserialport'
           - name: "macOS Latest Clang"
-            artifact: "FigmaQML-macOS.tar.xz"
+            target_name: "FigmaQML.app"
             os: macos-latest
             cc: "clang"
             cxx: "clang++"
             generators: "Ninja"
             arch: 'clang_64'
             host: "mac"
-            libs: 'qt5compat'
-        #  - name: "Wasm"
-        #    artifact: "FigmaQML-wasm.tar.xz"
-        #    os: ubuntu-latest
-        #    cc: "clang"
-        #    cxx: "clang++"
-        #    generators: "Ninja"
-        #    arch: 'wasm_singlethread'
-        #    host: "linux"
-        #    libs: 'qt5compat'
+            libs: 'qt5compat qtshadertools'
+          - name: "Wasm"
+            target_name: "FigmaQML.wapp"
+            os: ubuntu-latest
+            cc: "em"
+            cxx: "em++"
+            generators: "Ninja"
+            arch: 'wasm_singlethread'
+            host: "linux"
+            libs: 'qt5compat qtshadertools'
 
     steps:
       - name: Install dependencies on windows
@@ -82,11 +82,31 @@ jobs:
           ninja --version
           cmake --version
 
-      - name: Install Qt
+      - name: Install dependencies for wasm
+        if: startsWith(matrix.config.arch, 'wasm')
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+            version: 3.1.37
+
+      - name: Install Qt desktop for wasm (unlike documentation says host is not installed)
+        if: startsWith(matrix.config.arch, 'wasm')
         uses: jurplel/install-qt-action@v3.3.0
         with:
-          aqtversion: '>=3.1.*'
-          version: '6.6.1'
+            aqtversion: '>=3.1.*'
+            version: '6.6.2'
+            host: linux
+            target: 'desktop'
+            arch: gcc_64
+            install-deps: 'true'
+            # WASM wont work unless host has shaders as well
+            modules: ${{ matrix.config.libs }}
+            tools: 'tools_ninja tools_cmake'
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          aqtversion: '>=3.1.7'
+          version: '6.6.2'
           host: ${{ matrix.config.host }}
           target: 'desktop'
           arch:  ${{ matrix.config.arch }}
@@ -94,41 +114,81 @@ jobs:
           modules: ${{ matrix.config.libs }}
           tools: 'tools_ninja tools_cmake'
 
+
+        #- name: What is this crap?
+        #if: startsWith(matrix.config.arch, 'wasm')
+        #shell: bash
+        #run: |
+        #    chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
+        #    ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
+
+      - name: Quack
+        if: startsWith(matrix.config.arch, 'wasm')
+        run: |
+            # ls -laR ${{ github.workspace }}/..
+            emcc -v
+            which emcc
+            echo emscripten
+            find ${{ github.workspace }}/../.. -name emscripten
+            echo wasm_singlethread
+            find ${{ github.workspace }}/.. -name wasm_singlethread
+            echo qt.toolchain.cmake
+            find ${{ github.workspace }}/.. -name qt.toolchain.cmake
+            echo look for Qt archs installed
+            find ${{ github.workspace }}/.. -name qmake
+            echo look for Qt archs installed
+            find ${{ github.workspace }}/.. -name *shadertools*cmake
+
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+            submodules: true
+
+      - name: Make WASM
+        if: startsWith(matrix.config.arch, 'wasm')
+        shell: bash
+        run: |
+            ./wasm_build.sh "${{ github.workspace }}/../Qt/6.6.2"
+            exit $!
 
       - name: Configure
+        if: '!startsWith(matrix.config.arch, ''wasm'')'
         shell: cmake -P {0}
         run: |
-          set(ENV{Qt6_DIR} "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}")
-          set(ENV{CC} ${{ matrix.config.cc }})
-          set(ENV{CXX} ${{ matrix.config.cxx }})
+            file(TO_CMAKE_PATH "${{ github.workspace }}" WS_PATH)
+            set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.2/${{ matrix.config.arch }}")
+            set(ENV{CC} ${{ matrix.config.cc }})
+            set(ENV{CXX} ${{ matrix.config.cxx }})
 
-          message("Currently: ${CMAKE_CURRENT_SOURCE_DIR}, ${CMAKE_CURRENT_LIST_DIR}, $ENV{Qt6_DIR}, $ENV{QT_ROOT_DIR}, $ENV{PATH}")
+            message("CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
+            message("CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR}")
+            message("Qt6_DIR $ENV{Qt6_DIR}")
+            message("QT_ROOT_DIR $ENV{QT_ROOT_DIR}")
 
-          if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+            if ("${{ runner.os }}" STREQUAL "Windows" AND NOT "x${{ matrix.config.environment_script }}" STREQUAL "x")
+                execute_process(
+                    COMMAND "${{ matrix.config.environment_script }}" && set
+                    OUTPUT_FILE environment_script_output.txt
+                )
+                file(STRINGS environment_script_output.txt output_lines)
+                foreach(line IN LISTS output_lines)
+                    if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
+                        set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
+                    endif()
+                endforeach()
+            endif()
+
             execute_process(
-              COMMAND "${{ matrix.config.environment_script }}" && set
-              OUTPUT_FILE environment_script_output.txt
-            )
-            file(STRINGS environment_script_output.txt output_lines)
-            foreach(line IN LISTS output_lines)
-              if (line MATCHES "^([a-zA-Z0-9_-]+)=(.*)$")
-                set(ENV{${CMAKE_MATCH_1}} "${CMAKE_MATCH_2}")
-              endif()
-            endforeach()
-          endif()
+                    COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
+                        RESULT_VARIABLE result
+                    )
 
-          execute_process(
-                  COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
-                  RESULT_VARIABLE result
-                  )
-
-          if (NOT result EQUAL 0)
-            message(FATAL_ERROR "Bad exit status")
-          endif()
+            if (NOT result EQUAL 0)
+                message(FATAL_ERROR "Bad exit status ${result}")
+            endif()
 
       - name: Build
+        if: '!startsWith(matrix.config.arch, ''wasm'')'
         shell: cmake -P {0}
         run: |
           set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
@@ -155,12 +215,8 @@ jobs:
             message(FATAL_ERROR "Bad exit status")
           endif()
 
-      - name: List this folder
-        shell: bash
-        run: pwd && ls -R
-
       - name: QtDeploy (U)
-        if: startsWith(matrix.config.os, 'ubuntu')
+        if: startsWith(matrix.config.arch, 'gcc_64')
         working-directory: build
         run: |
             pwd & ls -la
@@ -169,35 +225,60 @@ jobs:
             wget --no-verbose "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
             chmod +x linuxdeploy*.AppImage
             export EXTRA_QT_PLUGINS=svg
-            ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=FigmaQML.AppImage --verbosity=3
+            ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=${{ matrix.config.target_name }} --verbosity=3
+ 
+      - name: QtDeploy (A)
+        if: startsWith(matrix.config.arch, 'wasm')
+        working-directory: build
+        run: |
+          pwd & ls -la
+          mkdir ${{ matrix.config.target_name }}
+          cp favicon.ico ${{ matrix.config.target_name }}
+          cp FigmaQML.html ${{ matrix.config.target_name }}
+          cp *.js ${{ matrix.config.target_name }}
+          cp qtlogo.svg ${{ matrix.config.target_name }}
+          cp *.wasm ${{ matrix.config.target_name }}
+          ls -l ${{ matrix.config.target_name }}
+  
 
       - name: QtDeploy (M)
         if: startsWith(matrix.config.os, 'macos')
         working-directory: build
         run: |
-            $Qt6_DIR/bin/macdeployqt FigmaQML.app -qmldir=../qml
+            $Qt6_DIR/bin/macdeployqt ${{ matrix.config.target_name }} -qmldir=../qml
+
+          #- name: QtDeploy (W)
+          #  if: startsWith(matrix.config.os, 'windows')
+          #  working-directory: build
+          #  run: |
+          #      New-Item -ItemType Directory -Path FigmaQml
+          #      Copy-Item "FigmaQML.exe" -Destination "FigmaQml"
+          #      $qt6Dir = $Env:Qt6_DIR
+          #      $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
+          #      & $windeployqtPath --qmldir ../qml --compiler-runtime "FigmaQml\FigmaQML.exe"
+          #      copy ..\OpenSSL_win\*.dll FigmaQml
+          #      cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
+          #      Get-ChildItem -Force
 
       - name: QtDeploy (W)
         if: startsWith(matrix.config.os, 'windows')
         working-directory: build
+        shell: bash
         run: |
-            Get-ChildItem -Force
-            $qt6Dir = $Env:Qt6_DIR
-            $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
-            & $windeployqtPath --qmldir ../qml --compiler-runtime FigmaQML.exe
-            copy ..\OpenSSL_win\*.dll Release
+            mkdir ${{ matrix.config.target_name }}
+            cp FigmaQML.exe ${{ matrix.config.target_name }}/
+            $Qt6_DIR/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "${{ matrix.config.target_name }}/FigmaQML.exe"
+            cp ../OpenSSL_win/*.dll ${{ matrix.config.target_name }}/
 
-
-
-      - name: Pack
-        working-directory: build
-        run: cmake -E tar cJfv ../${{ matrix.config.artifact }} .
+      - name: Set env
+        shell: bash
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Upload
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
-          path: ./${{ matrix.config.artifact }}
-          name: ${{ matrix.config.artifact }}
+          path: ./build/${{ matrix.config.target_name }}
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -212,46 +293,54 @@ jobs:
         with:
           allowUpdates: true
 
-      - name: Store Release url
-        run: |
-          echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
-
-      - uses: actions/upload-artifact@v1
-        with:
-          path: ./upload_url
-          name: upload_url
-
   publish:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ${{ matrix.config.os }}
+    needs: release
     strategy:
       fail-fast: false
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "Gempyre-Windows-MSVC.tar.xz"
+            target_name: "FigmaQML"
+            arch: "win64_msvc2019_64"
             os: ubuntu-latest
-          #- name: "Windows Latest MinGW"
-          #  artifact: "Gempyre-Windows-MinGW.tar.xz"
-          #  os: ubuntu-latest
           - name: "Ubuntu Latest GCC"
-            artifact: "Gempyre-Linux.tar.xz"
+            target_name: "FigmaQML.AppImage"
+            arch: 'gcc_64'
             os: ubuntu-latest
           - name: "macOS Latest Clang"
-            artifact: "Gempyre-macOS.tar.xz"
+            target_name: "FigmaQML.app"
+            arch: 'clang_64'
             os: ubuntu-latest
-          #- name: "Wasm"
-          #  artifact: "FigmaQML-wasm.tar.xz"
-          #  os: ubuntu-latest
-    needs: release
+          - name: "Wasm"
+            target_name: "FigmaQML.wapp"
+            arch: 'wasm_singlethread'
+            os: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}    
 
     steps:
-      - name: Download a Build Artifact
-        uses: actions/download-artifact@v2.1.1
-        with:
-          name: ${{ matrix.config.artifact }}
+      - name: Set env
+        shell: bash
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v4
         with:
-          files: ${{ matrix.config.artifact }}
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
+
+      - name: Deploy WASM
+        if: startsWith(matrix.config.arch, 'wasm')
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"    
+
+      
