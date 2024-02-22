@@ -127,17 +127,33 @@ jobs:
           endif()
 
           if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
+
             set(EXTRA_CMAKE_DEF -DEMSCRIPTEN=TRUE -DHOST_ROOT=${{ github.workspace }}/../Qt/6.6.1)
-          endif()
 
-          execute_process(
-                  COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
-                  RESULT_VARIABLE result
-                  )
+            execute_process(COMMAND $ENV{Qt6_DIR}/bin/qt-cmake build -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+            RESULT_VARIABLE result)
 
-          if (NOT result EQUAL 0)
+            if (NOT result EQUAL 0)
+                message(FATAL_ERROR "Bad exit status")
+            endif()
+
+            execute_process(
+                COMMAND -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+                RESULT_VARIABLE result
+                )
+
+        else()
+
+            execute_process(
+                COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE ${EXTRA_CMAKE_DEF}
+                    RESULT_VARIABLE result
+                )
+
+        endif()
+
+        if (NOT result EQUAL 0)
             message(FATAL_ERROR "Bad exit status")
-          endif()
+        endif()
 
       - name: Build
         shell: cmake -P {0}
