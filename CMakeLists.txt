@@ -21,14 +21,15 @@ endif()
 
 
 if(EMSCRIPTEN)
-    if(NOT DEFINED ENV{WF_QT_ROOT}) # for github actions
-        set(QT_HOST_PATH $ENV{WF_QT_ROOT}/gcc_64)
+    if(NOT DEFINED QT_HOST_PATH) # for github actions
+        set(QT_HOST_PATH ${HOST_ROOT}/gcc_64)
     endif()
+    message("Host path: ${QT_HOST_PATH}")
     find_package(Qt6 CONFIG COMPONENTS Core Quick)
     if(Qt6_FOUND)
         message("Project is Qt6 Emscripten")
     else()
-         message(FATAL_ERROR "Qt6 Emscripten is not found!")
+        message(FATAL_ERROR "Qt6 Emscripten is not found!")
      endif()
 else()
     if(HAS_QUL)
