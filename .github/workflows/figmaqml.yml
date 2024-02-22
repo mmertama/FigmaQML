@@ -12,7 +12,7 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "FigmaQML-Windows-MSVC.tar.xz"
+            artifact: "FigmaQML.tar.xz"
             os: windows-latest
             cc: "cl"
             cxx: "cl"
@@ -31,7 +31,7 @@ jobs:
         #    host: "windows"
         #    libs: 'qt5compat qtshadertools'
           - name: "Ubuntu Latest GCC"
-            artifact: "FigmaQML-Linux.tar.xz"
+            artifact: "FigmaQML.AppImage.xz"
             os: ubuntu-latest
             cc: "gcc"
             cxx: "g++"
@@ -40,7 +40,7 @@ jobs:
             host: "linux"
             libs: 'qt5compat qtserialport'
           - name: "macOS Latest Clang"
-            artifact: "FigmaQML-macOS.tar.xz"
+            artifact: "FigmaQML.app.tar.xz"
             os: macos-latest
             cc: "clang"
             cxx: "clang++"
@@ -170,28 +170,27 @@ jobs:
             chmod +x linuxdeploy*.AppImage
             export EXTRA_QT_PLUGINS=svg
             ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=FigmaQML.AppImage --verbosity=3
+            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.AppImage
 
       - name: QtDeploy (M)
         if: startsWith(matrix.config.os, 'macos')
         working-directory: build
         run: |
             $Qt6_DIR/bin/macdeployqt FigmaQML.app -qmldir=../qml
+            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.app
 
       - name: QtDeploy (W)
         if: startsWith(matrix.config.os, 'windows')
         working-directory: build
         run: |
+            New-Item -ItemType Directory -Path FigmaQml
+            Copy-Item "FigmaQML.exe" -Destination "FigmaQml"
             Get-ChildItem -Force
             $qt6Dir = $Env:Qt6_DIR
             $windeployqtPath = Join-Path -Path $qt6Dir -ChildPath "bin\windeployqt.exe"
-            & $windeployqtPath --qmldir ../qml --compiler-runtime FigmaQML.exe
-            copy ..\OpenSSL_win\*.dll Release
-
-
-
-      - name: Pack
-        working-directory: build
-        run: cmake -E tar cJfv ../${{ matrix.config.artifact }} .
+            & $windeployqtPath --qmldir ../qml --compiler-runtime "FigmaQml\FigmaQML.exe"
+            copy ..\OpenSSL_win\*.dll FigmaQml
+            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
 
       - name: Upload
         uses: actions/upload-artifact@v1
