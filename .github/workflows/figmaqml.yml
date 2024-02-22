@@ -112,8 +112,7 @@ jobs:
 
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
-        shell: bash
-        run: ls -laR "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
+        run: dir /s "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -146,7 +145,7 @@ jobs:
 
             if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
 
-                find_program(QTCMAKE NAME qt-cmake PATH $ENV{Qt6_DIR}/bin)
+                find_program(QTCMAKE NAMES qt-cmake qt-cmake.exe qt-cmake.bat PATH $ENV{Qt6_DIR}/bin)
 
                 if(NOT ${QTCMAKE})
                     message(FATAL_ERROR "qt-cmake not found in  $ENV{Qt6_DIR}/bin")
