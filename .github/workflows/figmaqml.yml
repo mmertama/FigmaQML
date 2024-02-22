@@ -50,12 +50,12 @@ jobs:
             libs: 'qt5compat'
           - name: "Wasm"
             artifact: "FigmaQML-wasm.tar.gz"
-            os: windows-latest
+            os: ubuntu-latest
             cc: "em"
             cxx: "em++"
             generators: "Ninja"
             arch: 'wasm_singlethread'
-            host: "windows"
+            host: "linux"
             libs: 'qt5compat'
 
     steps:
@@ -86,7 +86,7 @@ jobs:
         if: startsWith(matrix.config.arch, 'wasm')
         uses: mymindstorm/setup-emsdk@v14
 
-      - name: Install Qt win desktop for wasm
+      - name: Install Qt desktop for wasm
         if: startsWith(matrix.config.arch, 'wasm')
         uses: jurplel/install-qt-action@v3.3.0
         with:
@@ -94,7 +94,7 @@ jobs:
             version: '6.6.1'
             host: windows
             target: 'desktop'
-            arch: win64_mingw
+            arch: gcc_64
             install-deps: 'true'
             tools: 'tools_ninja tools_cmake'
 
@@ -113,7 +113,7 @@ jobs:
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
         run: |
-            Get-ChildItem -Recurse "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
+            ls -laR "${{ github.workspace }}/../Qt/6.6.1/${{ matrix.config.arch }}"
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -121,7 +121,7 @@ jobs:
       - name: Configure
         shell: cmake -P {0}
         run: |
-            file(TO_CMAKE_PATH "${{ github.workspace }}" WS_PATH)
+            set(WS_PATH "${{ github.workspace }}")
             set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.1/${{ matrix.config.arch }}")
             set(ENV{CC} ${{ matrix.config.cc }})
             set(ENV{CXX} ${{ matrix.config.cxx }})
