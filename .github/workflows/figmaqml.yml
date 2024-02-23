@@ -111,7 +111,6 @@ jobs:
           install-deps: 'true'
           modules: ${{ matrix.config.libs }}
           tools: 'tools_ninja tools_cmake'
-          install-deps: nosudo
 
 
         #- name: What is this crap?
