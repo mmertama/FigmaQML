@@ -172,7 +172,7 @@ jobs:
             endif()
 
       - name: Build
-        if: ! startsWith(matrix.config.arch, 'wasm')
+        if: !startsWith(matrix.config.arch, 'wasm')
         shell: cmake -P {0}
         run: |
           set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")
