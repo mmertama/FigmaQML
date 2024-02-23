@@ -99,9 +99,13 @@ if(HAS_QUL)
     if(DEFINED EMSCRIPTEN)
         message(FATAL_ERROR "Building & running is not supported in WASM")
     endif()
+    if(HAS_EXECUTE)
+        set(SOURCES ${SOURCES}
+            include/qulInfo.h
+            src/executeQul.cpp
+        )
+    endif()
     set(SOURCES ${SOURCES}
-        include/qulInfo.h
-        src/executeQul.cpp
         mcu_figma/mcu.qrc # files needed to build an app
     )
 endif()
