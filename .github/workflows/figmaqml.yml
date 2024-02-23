@@ -132,6 +132,8 @@ jobs:
             find ${{ github.workspace }}/.. -name wasm_singlethread
             echo qt.toolchain.cmake
             find ${{ github.workspace }}/.. -name qt.toolchain.cmake
+            echo look for Qt archs installed
+            find ${{ github.workspace }}/.. -name qmake
 
       - name: Checkout
         uses: actions/checkout@v3
