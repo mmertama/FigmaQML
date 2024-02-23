@@ -1,7 +1,9 @@
 if [ -z $QT_ROOT ]; then
-    QT_ROOT=~/Qt/6.6.2
-else
-    QT_ROOT=$1
+    if [ -z $1 ]; then
+        QT_ROOT=~/Qt/6.6.2
+    else
+        QT_ROOT=$1
+    fi
 fi
 
 if [ ! -d $QT_ROOT ]; then
@@ -10,9 +12,11 @@ if [ ! -d $QT_ROOT ]; then
 fi
 
 if [ ! -d $EMSDK_ROOT ]; then
-    EMSDK_ROOT=~/Development/emsdk
-else
-    EMSDK_ROOT=$2
+    if [ ! -d $2 ]; then
+        EMSDK_ROOT=~/Development/emsdk
+    else
+        EMSDK_ROOT=$2
+    fi
 fi
 
 
