@@ -1,28 +1,33 @@
-if [ -z $QT_ROOT ]; then
-    if [ -z $1 ]; then
-        QT_ROOT=~/Qt/6.6.2
+if [ -z $1 ]; then
+    if [ ! -z $QT_ROOT_DIR ]; then
+        QT_ROOT=$QT_ROOT_DIR/..
     else
-        QT_ROOT=$1
+        QT_ROOT=~/Qt/6.6.2
     fi
+else
+    QT_ROOT=$1
 fi
+
 
 if [ ! -d $QT_ROOT ]; then
     echo "invalid QT root '$QT_ROOT'";
-    exit
+    exit 1
 fi
 
-if [ ! -d $EMSDK_ROOT ]; then
-    if [ ! -d $2 ]; then
-        EMSDK_ROOT=~/Development/emsdk
+if [ -z $2 ]; then
+    if [ ! -z $EMSDK ]; then
+        EMSDK_ROOT=$EMSDK
     else
-        EMSDK_ROOT=$2
+        EMSDK_ROOT=~/Development/emsdk
     fi
+else
+    EMSDK_ROOT=$2
 fi
 
 
 if [ ! -d $EMSDK_ROOT ]; then
     echo "invalid EMSDK root '$EMSDK_ROOT'";
-    exit
+    exit 2
 fi
 
 
