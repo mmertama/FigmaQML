@@ -136,7 +136,7 @@ jobs:
             ./wasm_build.sh
 
       - name: Configure
-        if: ! startsWith(matrix.config.arch, 'wasm')
+        if: !startsWith(matrix.config.arch, 'wasm')
         shell: cmake -P {0}
         run: |
             set(WS_PATH "${{ github.workspace }}")
