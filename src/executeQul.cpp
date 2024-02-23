@@ -18,14 +18,6 @@
 #include <QJsonObject>
 #include <QJsonArray>
 
-
-constexpr auto STM32 = "STM32";
-
-QStringList AppWrite::supportedQulHardware() {
-    return {STM32};
-}
-
-
 class QulInfo::Private {
 public:
     Private(QulInfo& info) : m_info(info) {}

@@ -4,6 +4,7 @@
 #include <QFile>
 #include <QFileInfo>
 
+
 [[maybe_unused]]
 static bool addInXml(const QString& filename, const QStringList& values, const QString& element, const QStringList& context) {
     QFile file(filename);
@@ -39,6 +40,12 @@ static bool addInXml(const QString& filename, const QStringList& values, const Q
     file.write(remainder);
     return true;
 }
+
+QStringList AppWrite::supportedQulHardware() {
+    return {STM32}; // only supported, TODO more
+}
+
+
 
 bool AppWrite::writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
