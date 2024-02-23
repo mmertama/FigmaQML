@@ -131,9 +131,7 @@ jobs:
       - name: Make WASM
         if: startsWith(matrix.config.arch, 'wasm')
         shell: bash
-        run: |
-            mkdir build
-            ./wasm_build.sh
+        run: ./wasm_build.sh
 
       - name: Configure
         if: !startsWith(matrix.config.arch, 'wasm')
