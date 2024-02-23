@@ -34,6 +34,11 @@ fi
 export QT_DIR=$QT_ROOT/wasm_singlethread
 export QT_HOST_PATH=$QT_ROOT/gcc_64
 
+if [ ! -d $QT_HOST_PATH ]; then
+    echo "invalid QT_HOST_PATH root '$QT_HOST_PATH'";
+    exit 3
+fi
+
 export CMAKE_PREFIX_PATH=${QT_DIR}/lib/cmake
 
 mkdir -p build
