@@ -123,7 +123,7 @@ jobs:
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
         run: |
-            ls -laR "${{ github.workspace }}
+            ls -laR ${{ github.workspace }}
             find ${{ github.workspace }}/.. -name emsdk
 
       - name: Checkout
