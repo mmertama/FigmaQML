@@ -38,7 +38,7 @@ jobs:
             generators: "Ninja"
             arch: 'gcc_64'
             host: "linux"
-            libs: 'qt5compat qtserialport'
+            libs: 'qt5compat qtshadertools qtserialport'
           - name: "macOS Latest Clang"
             artifact: "FigmaQML-mac.app.tar.xz"
             os: macos-latest
@@ -47,7 +47,7 @@ jobs:
             generators: "Ninja"
             arch: 'clang_64'
             host: "mac"
-            libs: 'qt5compat'
+            libs: 'qt5compat qtshadertools'
           - name: "Wasm"
             artifact: "FigmaQML-wasm.tar.gz"
             os: ubuntu-latest
