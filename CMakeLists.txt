@@ -35,13 +35,11 @@ else()
         set(HAS_EXECUTE TRUE)
     endif()
 
-    if(HAS_QUL)
-        set(EXTRA
-            ${EXTRA}
+    if(HAS_QUL AND HAS_EXECUTE)
+        set(EXTRA ${EXTRA}
             Qt6::SerialPort
         )
-        set(EXTRA_PACKAGES
-            ${EXTRA_PACKAGES}
+        set(EXTRA_PACKAGES ${EXTRA_PACKAGES}
             SerialPort
         )
     endif()
