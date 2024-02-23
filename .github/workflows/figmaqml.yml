@@ -140,7 +140,7 @@ jobs:
         if: startsWith(matrix.config.arch, 'wasm')
         shell: bash
         run: |
-            ./wasm_build.sh "${{ github.workspace }}/../Qt/6.6.2/${{ matrix.config.arch }}"
+            ./wasm_build.sh "${{ github.workspace }}/../Qt/6.6.2"
             exit $!
 
       - name: Configure
