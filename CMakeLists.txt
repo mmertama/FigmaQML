@@ -11,28 +11,30 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
-option(HAS_QUL "Build Qt for MCU support" TRUE)
-
-if(NOT LINUX)
-    set(HAS_QUL FALSE)
-    set(HAS_EXECUTE FALSE)
-endif()
+message("Compiling for ${CMAKE_PREFIX_PATH}")
+message("Compiling pre ${CMAKE_PROJECT_INCLUDE_BEFORE}")
+message("Compiling tcn ${CMAKE_TOOLCHAIN_FILE}")
 
 
 if(EMSCRIPTEN)
+    option(HAS_QUL "Build Qt for MCU support" FALSE)
     if(NOT DEFINED QT_HOST_PATH) # for github actions
         message("Host path not defined, use: ${HOST_ROOT}")
         set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
     endif()
     message("Host path: ${QT_HOST_PATH}")
-    find_package(Qt6 CONFIG COMPONENTS Core Quick)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat)
     if(Qt6_FOUND)
         message("Project is Qt6 Emscripten")
     else()
         message(FATAL_ERROR "Qt6 Emscripten is not found!")
      endif()
 else()
+    option(HAS_QUL "Build Qt for MCU support" TRUE)
+    if(LINUX)
+        set(HAS_EXECUTE TRUE)
+    endif()
+
     if(HAS_QUL)
         set(EXTRA
             ${EXTRA}
@@ -78,17 +80,28 @@ set(SOURCES
     src/fontinfo.cpp
     include/fontinfo.h
     src/fontinfo.cpp
-    src/executeApp.cpp
+    src/appwrite.cpp
+    include/appwrite.h
     include/execute_utils.h
-    #include/figmaQmlSingleton.h
+    src/execute_utils.cpp
     app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
     app_figma/app.qrc # files needed to build an app
 )
 
+if(HAS_EXECUTE)
+    if(DEFINED EMSCRIPTEN)
+        message(FATAL_ERROR "Building & running is not supported in WASM")
+    endif()
+    set(SOURCES ${SOURCES}
+        src/executeApp.cpp
+    )
+endif()
 
 if(HAS_QUL)
-    set(SOURCES
-        ${SOURCES}
+    if(DEFINED EMSCRIPTEN)
+        message(FATAL_ERROR "Building & running is not supported in WASM")
+    endif()
+    set(SOURCES ${SOURCES}
         include/qulInfo.h
         src/executeQul.cpp
         mcu_figma/mcu.qrc # files needed to build an app
@@ -167,11 +180,10 @@ elseif(EMSCRIPTEN)
     add_custom_target(quazip DEPENDS QuaZip)
     add_dependencies(quazip zlib_target)
     include_directories(${CMAKE_SOURCE_DIR}/modules/quazip ${ZLIB_INCLUDE} ${ZCONF_INCLUDE})
-    string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+"
-        ver_p ${out_p})
-    if(NOT ${ver_p} STREQUAL "3.1.14")
-        message(FATAL_ERROR "emsdk 3.1.14 expected now!, you have ${ver_p}")
-    endif()
+    string(REGEX MATCH "[0-9]+\.[0-9]+\.[0-9]+" ver_p "${out_p}")
+    #if(NOT ${ver_p} STREQUAL "3.1.14")
+    #    message(FATAL_ERROR "emsdk 3.1.14 expected now!, you have ${ver_p}")
+    #endif()
     message("emsdk ${ver_p}")
     configure_file(res/favicon.ico "${CMAKE_CURRENT_BINARY_DIR}/favicon.ico" COPYONLY)
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")

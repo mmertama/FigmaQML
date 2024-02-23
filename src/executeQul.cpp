@@ -1,3 +1,8 @@
+#include "qulInfo.h"
+#include "figmaqml.h"
+#include "utils.h"
+#include "execute_utils.h"
+#include "appwrite.h"
 #include <QVariant>
 #include <QTemporaryDir>
 #include <QFile>
@@ -12,15 +17,11 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include "qulInfo.h"
-#include "figmaqml.h"
-#include "utils.h"
-#include "execute_utils.h"
 
 
 constexpr auto STM32 = "STM32";
 
-extern QStringList supportedQulHardware() {
+QStringList AppWrite::supportedQulHardware() {
     return {STM32};
 }
 
@@ -91,7 +92,7 @@ QSerialPortInfo getSerialPort(const QString& id) {
     return QSerialPortInfo{};
 }
 
-bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+bool AppWrite::writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
     if(!res)
         return false;
@@ -141,14 +142,14 @@ static bool flashSTM32(QProcess& flash_process, const QTemporaryDir& dir, const 
     return true;
 }
 
-bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements) {
+bool AppWrite::executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements) {
 
     // create a monitor
     auto qulInfo = QulInfo::instance(figmaQml);
 
     QTemporaryDir dir;
     VERIFY(dir.isValid(), "Cannot create temp dir")
-    if(!writeQul(dir.path(), figmaQml, true, elements))
+    if(!AppWrite::writeQul(dir.path(), figmaQml, true, elements))
         return false;
 
     QProcess build_process;

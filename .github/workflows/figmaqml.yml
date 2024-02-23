@@ -85,23 +85,25 @@ jobs:
       - name: Install dependencies for wasm
         if: startsWith(matrix.config.arch, 'wasm')
         uses: mymindstorm/setup-emsdk@v14
-
-      - name: Install Qt desktop for wasm
-        if: startsWith(matrix.config.arch, 'wasm')
-        uses: jurplel/install-qt-action@v3.3.0
         with:
-            aqtversion: '>=3.1.*'
-            version: '6.6.2'
-            host: linux
-            target: 'desktop'
-            arch: gcc_64
-            install-deps: 'true'
-            tools: 'tools_ninja tools_cmake'
+            version: 3.1.37
+
+        #- name: Install Qt desktop for wasm
+        #  if: startsWith(matrix.config.arch, 'wasm')
+        #  uses: jurplel/install-qt-action@v3.3.0
+        #  with:
+        #      aqtversion: '>=3.1.*'
+        #      version: '6.6.2'
+        #      host: linux
+        #    target: 'desktop'
+        #    arch: gcc_64
+        #    install-deps: 'true'
+        #    tools: 'tools_ninja tools_cmake'
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v3.3.0
+        uses: jurplel/install-qt-action@v3
         with:
-          aqtversion: '>=3.1.*'
+          aqtversion: '>=3.1.7'
           version: '6.6.2'
           host: ${{ matrix.config.host }}
           target: 'desktop'
@@ -109,13 +111,15 @@ jobs:
           install-deps: 'true'
           modules: ${{ matrix.config.libs }}
           tools: 'tools_ninja tools_cmake'
+          install-deps: nosudo
 
-      - name: What is this crap?
-        if: startsWith(matrix.config.arch, 'wasm')
-        shell: bash
-        run: |
-            chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
-            ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
+
+        #- name: What is this crap?
+        #if: startsWith(matrix.config.arch, 'wasm')
+        #shell: bash
+        #run: |
+        #    chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
+        #    ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
 
       - name: Quack
         if: startsWith(matrix.config.arch, 'wasm')
@@ -125,7 +129,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Make WASM
+        if: startsWith(matrix.config.arch, 'wasm')
+        shell: bash
+        run: |
+            mkdir build
+            ./wasm_build.sh
+
       - name: Configure
+        if: ! startsWith(matrix.config.arch, 'wasm')
         shell: cmake -P {0}
         run: |
             set(WS_PATH "${{ github.workspace }}")
@@ -151,39 +163,17 @@ jobs:
                 endforeach()
             endif()
 
-            if ("${{ matrix.config.arch }}" STREQUAL "wasm_singlethread")
-
-                find_program(QTCMAKE qt-cmake PATHS $ENV{Qt6_DIR}/bin)
-
-                if(NOT ${QTCMAKE})
-                    find_file(QTCMAKE_FILE qt-cmake PATHS $ENV{Qt6_DIR}/bin)
-                    message("qt-cmake not found in  $ENV{Qt6_DIR}/bin (${QTCMAKE_FILE})")
-                    set(QTCMAKE "${QTCMAKE_FILE}")
-                endif()
-
-                execute_process(COMMAND ${QTCMAKE} -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE -DEMSCRIPTEN=TRUE -DHOST_ROOT=${WS_PATH}/../Qt/6.6.2
-                RESULT_VARIABLE result
-                ECHO_ERROR_VARIABLE
-                )
-
-                if (NOT result EQUAL 0)
-                    message(FATAL_ERROR "Bad exit status for ${QTCMAKE} as ${result}")
-                endif()
-
-            else()
-
-                execute_process(
+            execute_process(
                     COMMAND cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCI_ACTIONS=ON -G Ninja -DACTIONS=TRUE
                         RESULT_VARIABLE result
                     )
-
-            endif()
 
             if (NOT result EQUAL 0)
                 message(FATAL_ERROR "Bad exit status ${result}")
             endif()
 
       - name: Build
+        if: ! startsWith(matrix.config.arch, 'wasm')
         shell: cmake -P {0}
         run: |
           set(ENV{NINJA_STATUS} "[%f/%t %o/sec] ")

@@ -4,8 +4,8 @@
 #include <optional>
 #include <QString>
 #include <QObject>
-#include <QProcess>
 #include <QRegularExpression>
+
 
 #define VERIFY(x, t) if(!x) {ExecuteUtils::showError(t); return false;}
 #define VERIFO(x, t) if(!x) {ExecuteUtils::showError(t); return std::nullopt;}
@@ -22,6 +22,7 @@ constexpr auto IMAGE_PREFIX =  "images/";
 constexpr auto QML_EXT = ".qml";
 
 class FigmaQml;
+class QProcess; // not defined in WASM
 
 namespace ExecuteUtils {
 
@@ -31,6 +32,7 @@ namespace ExecuteUtils {
      * @param infoNote
      */
     void showError(const QString& errorNote, const QString& infoNote = "");
+
 
     /**
      * @brief waitRun
