@@ -162,6 +162,21 @@ endif()
 option(QT6_CONCURRENT FALSE)
 option(QT6_SSL FALSE)
 
+
+if(HAS_QUL)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
+endif()
+
+set(COMMON_LIBS
+    Qt6::Core
+    Qt6::Quick
+    Qt6::Network
+    Qt6::Widgets
+    Qt6::Core5Compat
+    Qt6::ShaderTools
+    FigmaQmlInterface
+    ${EXTRA})
+
 if(Qt5_FOUND)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DQT5)
     target_link_libraries(${PROJECT_NAME}
@@ -201,7 +216,7 @@ elseif(EMSCRIPTEN)
         COMMENT "Obvious bug in QT 6.4 and these files are in the wrong place")
     target_link_libraries(${PROJECT_NAME}
       PRIVATE QuaZip
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat ${EXTRA})
+      PRIVATE ${COMMON_LIBS})
 else()
     if(NOT WIN32) # windows finds internal?
         find_package(OpenSSL REQUIRED)
@@ -218,15 +233,11 @@ else()
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DNO_SSL)
     endif()
 
-    if(HAS_QUL)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
-    endif()
-
     if(HAS_EXECUTE)
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_EXECUTE)
     endif()
 
 
     target_link_libraries(${PROJECT_NAME}
-      PRIVATE Qt6::Core Qt6::Quick Qt6::Network Qt6::Widgets Qt6::Core5Compat Qt6::ShaderTools ${EXTRA} FigmaQmlInterface)
+      PRIVATE ${COMMON_LIBS} )
 endif()

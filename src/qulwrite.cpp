@@ -2,6 +2,10 @@
 #include "appwrite.h"
 #include "execute_utils.h"
 
+#ifndef HAS_QUL
+#error HAS_QUL expected
+#endif
+
 bool AppWrite::writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
     if(!res)
