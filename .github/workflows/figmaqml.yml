@@ -56,7 +56,7 @@ jobs:
             generators: "Ninja"
             arch: 'wasm_singlethread'
             host: "linux"
-            libs: 'qt5compat'
+            libs: 'qt5compat qtshadertools'
 
     steps:
       - name: Install dependencies on windows
