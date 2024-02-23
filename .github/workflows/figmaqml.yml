@@ -137,6 +137,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+        submodules: true
+        lfs: true
 
       - name: Make WASM
         if: startsWith(matrix.config.arch, 'wasm')
