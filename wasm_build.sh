@@ -5,11 +5,11 @@ else
 fi
 
 if [ ! -d $QT_ROOT ]; then
-    echo "invalid QT root '$QT_ROOR'";
+    echo "invalid QT root '$QT_ROOT'";
     exit
 fi
 
-if [ -z $EMSDK_ROOT ]; then
+if [ ! -d $EMSDK_ROOT ]; then
     EMSDK_ROOT=~/Development/emsdk
 else
     EMSDK_ROOT=$2

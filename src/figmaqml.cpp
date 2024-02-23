@@ -1114,7 +1114,7 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 
 
 void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>& elements) {
-#ifdef HAS_QUL
+#if defined(HAS_QUL) && defined(HAS_EXECUTE)
     AppWrite::executeQulApp(parameters, *this, elements);
 #else
     (void) parameters;
