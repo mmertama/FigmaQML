@@ -136,9 +136,8 @@ jobs:
             find ${{ github.workspace }}/.. -name qmake
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         submodules: true
-        lfs: true
 
       - name: Make WASM
         if: startsWith(matrix.config.arch, 'wasm')
