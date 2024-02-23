@@ -15,9 +15,9 @@ message("Compiling for ${CMAKE_PREFIX_PATH}")
 message("Compiling pre ${CMAKE_PROJECT_INCLUDE_BEFORE}")
 message("Compiling tcn ${CMAKE_TOOLCHAIN_FILE}")
 
+option(HAS_QUL "Build Qt for MCU support" TRUE)
 
 if(EMSCRIPTEN)
-    option(HAS_QUL "Build Qt for MCU support" FALSE)
     if(NOT DEFINED QT_HOST_PATH) # for github actions
         message("Host path not defined, use: ${HOST_ROOT}")
         set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
@@ -30,11 +30,9 @@ if(EMSCRIPTEN)
         message(FATAL_ERROR "Qt6 Emscripten is not found!")
      endif()
 else()
-    option(HAS_QUL "Build Qt for MCU support" TRUE)
     if(LINUX)
         set(HAS_EXECUTE TRUE)
     endif()
-
     if(HAS_QUL AND HAS_EXECUTE)
         set(EXTRA ${EXTRA}
             Qt6::SerialPort
@@ -96,9 +94,6 @@ if(HAS_EXECUTE)
 endif()
 
 if(HAS_QUL)
-    if(DEFINED EMSCRIPTEN)
-        message(FATAL_ERROR "Building & running is not supported in WASM")
-    endif()
     set(SOURCES ${SOURCES}
         src/qulwrite.cpp
         mcu_figma/mcu.qrc # files needed to build an app

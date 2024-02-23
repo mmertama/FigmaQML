@@ -7,9 +7,7 @@ class FigmaQml;
 
 namespace AppWrite {
 #ifdef HAS_QUL
-constexpr auto STM32 = "STM32";
 bool writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
-QStringList supportedQulHardware();
 #ifdef HAS_EXECUTE
 bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
 #endif
@@ -19,6 +17,8 @@ bool executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, cons
 bool executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements);
 #endif
 
+constexpr auto STM32 = "STM32";
+QStringList supportedQulHardware();
 bool writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
 }
 
