@@ -88,17 +88,17 @@ jobs:
         with:
             version: 3.1.37
 
-        #- name: Install Qt desktop for wasm
-        #  if: startsWith(matrix.config.arch, 'wasm')
-        #  uses: jurplel/install-qt-action@v3.3.0
-        #  with:
-        #      aqtversion: '>=3.1.*'
-        #      version: '6.6.2'
-        #      host: linux
-        #    target: 'desktop'
-        #    arch: gcc_64
-        #    install-deps: 'true'
-        #    tools: 'tools_ninja tools_cmake'
+      - name: Install Qt desktop for wasm (unlike documentation says host is not installed)
+        if: startsWith(matrix.config.arch, 'wasm')
+        uses: jurplel/install-qt-action@v3.3.0
+        with:
+            aqtversion: '>=3.1.*'
+            version: '6.6.2'
+            host: linux
+            target: 'desktop'
+            arch: gcc_64
+            install-deps: 'true'
+            tools: 'tools_ninja tools_cmake'
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
