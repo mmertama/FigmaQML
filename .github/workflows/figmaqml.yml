@@ -126,8 +126,12 @@ jobs:
             # ls -laR ${{ github.workspace }}/..
             emcc -v
             which emcc
+            echo emscripten
             find ${{ github.workspace }}/../.. -name emscripten
+            echo wasm_singlethread
             find ${{ github.workspace }}/.. -name wasm_singlethread
+            echo qt.toolchain.cmake
+            find ${{ github.workspace }}/.. -name qt.toolchain.cmake
 
       - name: Checkout
         uses: actions/checkout@v3
