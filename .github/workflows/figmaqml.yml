@@ -98,6 +98,7 @@ jobs:
             target: 'desktop'
             arch: gcc_64
             install-deps: 'true'
+            modules: ${{ matrix.config.libs }}
             tools: 'tools_ninja tools_cmake'
 
       - name: Install Qt
@@ -134,6 +135,8 @@ jobs:
             find ${{ github.workspace }}/.. -name qt.toolchain.cmake
             echo look for Qt archs installed
             find ${{ github.workspace }}/.. -name qmake
+            echo look for Qt archs installed
+            find ${{ github.workspace }}/.. -name *shadertools*cmake
 
       - name: Checkout
         uses: actions/checkout@v4
