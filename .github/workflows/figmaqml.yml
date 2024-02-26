@@ -275,6 +275,7 @@ jobs:
             cp ../OpenSSL_win/*.dll ${{ matrix.config.target_name }}/
 
       - name: Set env
+        shell: bash
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
       - name: Upload
@@ -322,5 +323,5 @@ jobs:
       - name: Deploy to Github pages
         id: deployment
         uses: actions/deploy-pages@v4
-#        with:
-#          artifact_name: FigmaQML-wasm.tar.gz
+        with:
+          artifact_name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
