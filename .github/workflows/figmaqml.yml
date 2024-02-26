@@ -12,7 +12,7 @@ jobs:
       matrix:
         config:
           - name: "Windows Latest MSVC"
-            artifact: "FigmaQML-win.tar.xz"
+            target_name: "FigmaQML"
             os: windows-latest
             cc: "cl"
             cxx: "cl"
@@ -31,7 +31,7 @@ jobs:
         #    host: "windows"
         #    libs: 'qt5compat qtshadertools'
           - name: "Ubuntu Latest GCC"
-            artifact: "FigmaQML-nix.AppImage.xz"
+            target_name: "FigmaQML.AppImage"
             os: ubuntu-latest
             cc: "gcc"
             cxx: "g++"
@@ -40,7 +40,7 @@ jobs:
             host: "linux"
             libs: 'qt5compat qtshadertools qtserialport'
           - name: "macOS Latest Clang"
-            artifact: "FigmaQML-mac.app.tar.xz"
+            target_name: "FigmaQML.app"
             os: macos-latest
             cc: "clang"
             cxx: "clang++"
@@ -49,7 +49,7 @@ jobs:
             host: "mac"
             libs: 'qt5compat qtshadertools'
           - name: "Wasm"
-            artifact: "FigmaQML-wasm.tar.gz"
+            target_name: "FigmaQML.wapp"
             os: ubuntu-latest
             cc: "em"
             cxx: "em++"
@@ -229,32 +229,27 @@ jobs:
             wget --no-verbose "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
             chmod +x linuxdeploy*.AppImage
             export EXTRA_QT_PLUGINS=svg
-            ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=FigmaQML.AppImage --verbosity=3
-            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.AppImage
-
+            ./linuxdeploy-x86_64.AppImage --executable=./FigmaQML  --appdir=${{ matrix.config.target_name }} --verbosity=3
+ 
       - name: QtDeploy (A)
         if: startsWith(matrix.config.arch, 'wasm')
         working-directory: build
         run: |
           pwd & ls -la
-          mkdir release
-          cp favicon.ico release
-          cp FigmaQML.html release
-          cp *.js release
-          cp qtlogo.svg release
-          cp *.wasm release
-          pushd release
-          ls -l
-          cmake -E tar czvf ../../${{ matrix.config.artifact }} .
-          popd
-          ls -l ..
+          mkdir ${{ matrix.config.target_name }}
+          cp favicon.ico ${{ matrix.config.target_name }}
+          cp FigmaQML.html ${{ matrix.config.target_name }}
+          cp *.js ${{ matrix.config.target_name }}
+          cp qtlogo.svg ${{ matrix.config.target_name }}
+          cp *.wasm ${{ matrix.config.target_name }}
+          ls -l ${{ matrix.config.target_name }}
+  
 
       - name: QtDeploy (M)
         if: startsWith(matrix.config.os, 'macos')
         working-directory: build
         run: |
-            $Qt6_DIR/bin/macdeployqt FigmaQML.app -qmldir=../qml
-            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQML.app
+            $Qt6_DIR/bin/macdeployqt ${{ matrix.config.target_name }} -qmldir=../qml
 
           #- name: QtDeploy (W)
           #  if: startsWith(matrix.config.os, 'windows')
@@ -274,17 +269,17 @@ jobs:
         working-directory: build
         shell: bash
         run: |
-            mkdir FigmaQml
-            cp FigmaQML.exe FigmaQml/
-            $Qt6_DIR/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "FigmaQml/FigmaQML.exe"
-            cp ../OpenSSL_win/*.dll FigmaQml/
-            cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
+            mkdir ${{ matrix.config.target_name }}
+            cp FigmaQML.exe ${{ matrix.config.target_name }}/
+            $Qt6_DIR/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "${{ matrix.config.target_name }}/FigmaQML.exe"
+            cp ../OpenSSL_win/*.dll ${{ matrix.config.target_name }}/
+
 
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          path: ./${{ matrix.config.artifact }}
-          name: ${{ matrix.config.artifact }}
+          path: ./build/${{ matrix.config.target_name }}
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  github.ref_name }}" 
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
@@ -298,15 +293,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           allowUpdates: true
+      #    artifacts: ${{ matrix.config.artifact }}
 
-      - name: Store Release url
-        run: |
-          echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
-
-      - uses: actions/upload-artifact@v4
-        with:
-          path: ./upload_url
-          name: upload_url
+      #- name: Store Release url
+      #  run: |
+      #    echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
+      #      
+      #- uses: actions/upload-artifact@v4
+      #  with:
+      #    path: ./upload_url
+      #    name: ${{ matrix.config.artifact }}
 
 
   deploy:
@@ -324,5 +320,5 @@ jobs:
       - name: Deploy to Github pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          artifact_name: FigmaQML-wasm.tar.gz
+#        with:
+#          artifact_name: FigmaQML-wasm.tar.gz
