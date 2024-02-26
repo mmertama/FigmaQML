@@ -344,13 +344,15 @@ jobs:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: "ubuntun-latest"
     permissions:
+      contents: read
       pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:  
-      - name: Publish
+      - name: Deploy to Github pages
+        id: deployment
         uses: actions/deploy-pages@v4
         with:
           artifact_name: FigmaQML-wasm.tar.gz
