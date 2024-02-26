@@ -306,13 +306,6 @@ jobs:
           name: upload_url
 
   publish:
-    permissions:
-        pages: write
-
-    environment:
-        name: github-pages
-        url: ${{ steps.deployment.outputs.page_url }}
-
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ${{ matrix.config.os }}
     strategy:
@@ -347,8 +340,17 @@ jobs:
         with:
           files: ${{ matrix.config.artifact }}
 
-      - name: Publish
-        if: startsWith(matrix.config.artifact, 'FigmaQML-wasm')
-        uses: actions/deploy-pages@v4
-        with:
-            artifact_name: ${{ matrix.config.artifact }}
+
+  deploy:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    runs-on: "ubuntun-latest"
+    permissions:
+        pages: write
+    environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}
+
+  - name: Publish
+    uses: actions/deploy-pages@v4
+    with:
+        artifact_name: FigmaQML-wasm.tar.gz
