@@ -215,10 +215,6 @@ jobs:
             message(FATAL_ERROR "Bad exit status")
           endif()
 
-      - name: List this folder
-        shell: bash
-        run: pwd && ls -R
-
       - name: QtDeploy (U)
         if: startsWith(matrix.config.arch, 'gcc_64')
         working-directory: build
@@ -288,6 +284,7 @@ jobs:
         if: startsWith(matrix.config.arch, 'wasm')
         shell: bash
         run: |
+          ls -lr
           cp "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" github_pages
 
   release:
@@ -329,5 +326,7 @@ jobs:
       - name: Deploy to Github pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: build/${{ matrix.config.target_name }}
         #with:
         #  artifact_name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
