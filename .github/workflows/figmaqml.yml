@@ -277,7 +277,7 @@ jobs:
             cmake -E tar cJvf ../${{ matrix.config.artifact }} FigmaQml
 
       - name: Upload
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           path: ./${{ matrix.config.artifact }}
           name: ${{ matrix.config.artifact }}
