@@ -244,8 +244,10 @@ jobs:
           cp qtlogo.svg release
           cp *.wasm release
           pushd release
+          ls -l
           cmake -E tar czvf ../../${{ matrix.config.artifact }} .
           popd
+          ls -l ..
 
       - name: QtDeploy (M)
         if: startsWith(matrix.config.os, 'macos')
