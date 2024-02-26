@@ -340,7 +340,7 @@ jobs:
           files: ${{ matrix.config.artifact }}
 
 
-  deploy:
+deploy:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: "ubuntun-latest"
     permissions:
@@ -349,7 +349,7 @@ jobs:
         name: github-pages
         url: ${{ steps.deployment.outputs.page_url }}
 
-  - name: Publish
-    uses: actions/deploy-pages@v4
-    with:
-        artifact_name: FigmaQML-wasm.tar.gz
+    - name: Publish
+      uses: actions/deploy-pages@v4
+      with:
+          artifact_name: FigmaQML-wasm.tar.gz
