@@ -322,11 +322,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    steps:  
+    steps:
+      - name: Set env
+        shell: bash
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV  
       - name: Deploy to Github pages
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          artifact_name: build/${{ matrix.config.target_name }}
-        #with:
-        #  artifact_name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
+          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"
