@@ -280,12 +280,12 @@ jobs:
           path: ./build/${{ matrix.config.target_name }}
           name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
 
-      - name: Pages
-        if: startsWith(matrix.config.arch, 'wasm')
-        shell: bash
-        run: |
-          ls -lR
-          #cp "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" github_pages
+      #- name: Pages
+      #  if: startsWith(matrix.config.arch, 'wasm')
+      #  shell: bash
+      #  run: |
+      #    ls -lR
+      #    #cp "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" github_pages
 
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
