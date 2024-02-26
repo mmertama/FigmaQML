@@ -4,6 +4,7 @@ on:
   push:
 
 jobs:
+
   build:
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
@@ -98,6 +99,7 @@ jobs:
             target: 'desktop'
             arch: gcc_64
             install-deps: 'true'
+            # WASM wont work unless host has shaders as well
             modules: ${{ matrix.config.libs }}
             tools: 'tools_ninja tools_cmake'
 
@@ -304,6 +306,13 @@ jobs:
           name: upload_url
 
   publish:
+    permissions:
+        pages: write
+
+    environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}
+
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ${{ matrix.config.os }}
     strategy:
