@@ -122,22 +122,22 @@ jobs:
         #    chmod a+x ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake
         #    ${{ github.workspace }}/../Qt/6.6.2/wasm_singlethread/bin/qt-cmake -version
 
-      - name: Quack
-        if: startsWith(matrix.config.arch, 'wasm')
-        run: |
-            # ls -laR ${{ github.workspace }}/..
-            emcc -v
-            which emcc
-            echo emscripten
-            find ${{ github.workspace }}/../.. -name emscripten
-            echo wasm_singlethread
-            find ${{ github.workspace }}/.. -name wasm_singlethread
-            echo qt.toolchain.cmake
-            find ${{ github.workspace }}/.. -name qt.toolchain.cmake
-            echo look for Qt archs installed
-            find ${{ github.workspace }}/.. -name qmake
-            echo look for Qt archs installed
-            find ${{ github.workspace }}/.. -name *shadertools*cmake
+        #- name: Quack
+        #  if: startsWith(matrix.config.arch, 'wasm')
+        #  run: |
+        #      # ls -laR ${{ github.workspace }}/..
+        #      emcc -v
+        #      which emcc
+        #      echo emscripten
+        #      find ${{ github.workspace }}/../.. -name emscripten
+        #      echo wasm_singlethread
+        #      find ${{ github.workspace }}/.. -name wasm_singlethread
+        #      echo qt.toolchain.cmake
+        #      find ${{ github.workspace }}/.. -name qt.toolchain.cmake
+        #    echo look for Qt archs installed
+        #    find ${{ github.workspace }}/.. -name qmake
+        #    echo look for Qt archs installed
+        #    find ${{ github.workspace }}/.. -name *shadertools*cmake
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -335,6 +335,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
+
+      - name: Look an artifact
+        shell: bash    
+        run: |
+          ls -l
+          tar -tvf "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip"
+
 
       - name: Deploy WASM
         if: startsWith(matrix.config.arch, 'wasm')
