@@ -278,7 +278,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ./build/${{ matrix.config.target_name }}
-          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip" 
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
 
       #- name: Pages
       #  if: startsWith(matrix.config.arch, 'wasm')
@@ -328,6 +328,6 @@ jobs:
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV  
       - name: Deploy to Github pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v1
         with:
-          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}.zip"
+          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"
