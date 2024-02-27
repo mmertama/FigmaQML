@@ -278,7 +278,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ./build/${{ matrix.config.target_name }}
-          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip" 
 
       #- name: Pages
       #  if: startsWith(matrix.config.arch, 'wasm')
@@ -330,4 +330,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
         with:
-          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"
+          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}.zip"
