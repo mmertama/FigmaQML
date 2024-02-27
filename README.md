@@ -10,7 +10,7 @@ QML UI code.
 
 FigmaQML supports both Desktop and Qt for MCU development.
 
-* Version 3.0.0
+* Version 3.0.2
 * License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
 
 ## Run ##
@@ -18,20 +18,20 @@ FigmaQML supports both Desktop and Qt for MCU development.
  * FigmaQML can be run either in command line or as a gui application.
     * Command line support for Qt for MCU is under construction.
     * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
- * Gui application is interactive to see visuals and source code before saving.
- * Command line is for processing Figma documents to QML. 
- * Basic Command line format is <code> $figmaqml &lt;options&gt; TOKEN PROJECT QML_DIRECTORY </code>
+* Gui application is interactive to see visuals and source code before saving.
+* Command line is for processing Figma documents to QML. 
+* Basic Command line format is <code> $figmaqml &lt;options&gt; TOKEN PROJECT QML_DIRECTORY </code>
     * For options see --help
     * For MacOSX the commandline refers inside of application bundle: i.e. <code>$ FigmaQML.app/Contents/MacOS/FigmaQML</code>
 * FigmaQML can be run as a WebAssembly application.
-   * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app! - [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
-   * Qt for MCU support is under construction.  
+   * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!
+   * The compiled (6.6.2) Qt WASM seems to have issues. Working on it.
+   * [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
+* Other than Linux version may have a limited functionality.  
 
 ### Binaries ###
 
-* For [Windows 10](https://github.com/mmertama/FigmaQML/releases) (update TODO - currently version 1.0.0)
-* For [Mac OSX](https://github.com/mmertama/FigmaQML/releases) (update TODO - currently version 1.0.0)
-* For Ubuntu, binaries release is not available, please compile from sources.
+* See [Releases](https://github.com/mmertama/FigmaQML/releases) 
 
 ### Quick guide to FigmaQML UI ###
 
