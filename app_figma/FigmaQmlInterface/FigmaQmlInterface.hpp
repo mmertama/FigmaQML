@@ -14,13 +14,7 @@ public:
 
     int viewCount() const  {return static_cast<int>(m_elements.size());}
 
-    static FigmaQmlSingleton* instance() {
-        static FigmaQmlSingleton* inst = nullptr;
-        if(!inst) {
-            inst = new FigmaQmlSingleton();
-        }
-        return inst;
-    };
+    static inline FigmaQmlSingleton* instance(QQmlEngine& engine);
 
 signals:
    void valueChanged(const QString& element, const QString&  value);
@@ -104,12 +98,23 @@ private:
     QString m_currentView;
 };
 
-
+namespace FigmaQmlInterface {
 inline
 void registerFigmaQmlSingleton(QQmlApplicationEngine& engine) {
     qmlRegisterSingletonType<FigmaQmlSingleton>("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", [](QQmlEngine *, QJSEngine *) {
         return new FigmaQmlSingleton();
     });
     engine.addImportPath(":/");
+}
+}
+
+inline FigmaQmlSingleton* FigmaQmlSingleton::instance(QQmlEngine& engine) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 5, 0)
+    const auto id = qmlTypeId("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton");
+    auto* singleton = engine.singletonInstance<FigmaQmlSingleton*>(id);
+#else
+    auto* singleton = engine.singletonInstance<FigmaQmlSingleton*>("FigmaQmlInterface", "FigmaQmlSingleton");
+#endif
+    return singleton;
 }
 

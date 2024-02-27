@@ -1,6 +1,7 @@
 
-#include <QtSystemDetection>
+//#include <QtSystemDetection>
 #include "fontinfo.h"
+
 #ifdef Q_OS_LINUX
 #include <QFont>
 #include <QCoreApplication>

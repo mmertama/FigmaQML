@@ -103,7 +103,7 @@ namespace ExecuteUtils {
      * @param elements
      * @return
      */
-    std::optional<std::tuple<QStringList, QStringList, QStringList>> writeResources(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements);
+    std::optional<std::tuple<QStringList, QStringList, QStringList>> writeResources(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const QVector<int>& elements);
 }
 
 class ExecuteInfo: public QObject {

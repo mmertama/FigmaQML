@@ -35,7 +35,7 @@ void ExecuteUtils::waitRun(QProcess& process) {
     debug_out(process);
 }
 
-bool AppWrite::executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements) {
+bool AppWrite::executeApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const QVector<int>& elements) {
 
     // create a monitor
     auto eInfo = ExecuteInfo::instance(figmaQml);

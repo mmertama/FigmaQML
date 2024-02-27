@@ -240,7 +240,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 unique_names.insert(name, 0);
             } else {
                 *it += 1; // if there add a name - note that this can be non-unique as well... :-/ ooof but let's go with this untill
-                name += std::to_string(*it);    // properly done....(if ever)
+                name += QString::number(*it);    // properly done....(if ever)
             }
             name += FIGMA_SUFFIX;
            }

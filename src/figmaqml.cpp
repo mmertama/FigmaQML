@@ -1113,7 +1113,7 @@ void FigmaQml::showFontDialog(const QString& currentFont) {
 #endif
 
 
-void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>& elements) {
+void FigmaQml::executeQul(const QVariantMap& parameters, const QVector<int>& elements) {
 #if defined(HAS_QUL) && defined(HAS_EXECUTE)
     AppWrite::executeQulApp(parameters, *this, elements);
 #else
@@ -1122,7 +1122,7 @@ void FigmaQml::executeQul(const QVariantMap& parameters, const std::vector<int>&
 #endif
 }
 
-void FigmaQml::executeApp(const QVariantMap& parameters, const std::vector<int>& elements) {
+void FigmaQml::executeApp(const QVariantMap& parameters, const QVector<int>& elements) {
 #ifdef HAS_EXECUTE
     AppWrite::executeApp(parameters, *this, elements);
 #else
@@ -1140,7 +1140,7 @@ QStringList FigmaQml::supportedQulHardware() const {
 #endif
 }
 
-bool FigmaQml::saveQML(bool isMcu, const QString& folderName, bool writeAsApp, const std::vector<int>& elements) {
+bool FigmaQml::saveQML(bool isMcu, const QString& folderName, bool writeAsApp, const QVector<int>& elements) {
     if(isMcu) {
     #ifdef HAS_QUL
         return  AppWrite::writeQul(folderName, *this, writeAsApp, elements);

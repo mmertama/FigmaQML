@@ -234,7 +234,7 @@ QString ExecuteUtils::findFile(const QString& path, const QRegularExpression& re
     return {};
 }
 
-std::optional<std::tuple<QStringList, QStringList, QStringList>> ExecuteUtils::writeResources(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+std::optional<std::tuple<QStringList, QStringList, QStringList>> ExecuteUtils::writeResources(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const QVector<int>& elements) {
     // I decided to remove all as if not done it causes problems
     if(QDir(path).exists()) {
         VERIFO(QDir(path).removeRecursively(), "Cannot clean folder");

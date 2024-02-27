@@ -223,6 +223,10 @@ else()
         target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_EXECUTE)
     endif()
 
+    if(COPY_SSL AND LINUX)
+        add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_SOURCE_DIR}/OpenSSL_ubuntu/*" "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
 
     target_link_libraries(${PROJECT_NAME}
       PRIVATE ${COMMON_LIBS} )

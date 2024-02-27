@@ -497,7 +497,7 @@ int main(int argc, char *argv[]) {
 
 
     QQmlApplicationEngine engine;
-    registerFigmaQmlSingleton(engine);
+    FigmaQmlInterface::registerFigmaQmlSingleton(engine);
 
     if(!(state & CmdLine)) {
          onDataChange = [&figmaGet, &figmaQml]() {
@@ -577,7 +577,7 @@ int main(int argc, char *argv[]) {
              }
          });
 
-        auto* singleton = engine.singletonInstance<FigmaQmlSingleton*>("FigmaQmlInterface", "FigmaQmlSingleton");
+        auto* singleton = FigmaQmlSingleton::instance(engine);
         QObject::connect(figmaQml.get(), &FigmaQml::externalLoadersApplied, singleton, &FigmaQmlSingleton::setSource);
 
         engine.load(qml_source);

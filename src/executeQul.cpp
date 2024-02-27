@@ -108,7 +108,7 @@ static bool flashSTM32(QProcess& flash_process, const QTemporaryDir& dir, const 
     return true;
 }
 
-bool AppWrite::executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const std::vector<int>& elements) {
+bool AppWrite::executeQulApp(const QVariantMap& parameters, const FigmaQml& figmaQml, const QVector<int>& elements) {
 
     // create a monitor
     auto qulInfo = QulInfo::instance(figmaQml);

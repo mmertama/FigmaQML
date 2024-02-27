@@ -47,7 +47,7 @@ QStringList AppWrite::supportedQulHardware() {
 
 
 
-bool AppWrite::writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+bool AppWrite::writeApp(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const QVector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
     if(!res)
         return false;

@@ -97,7 +97,7 @@ public:
     const auto& externalLoaders() const {return m_externalLoaders;}
     QStringList supportedQulHardware() const;
     Q_INVOKABLE bool saveAllQML(const QString& folderName);
-    Q_INVOKABLE bool saveQML(bool asMcu, const QString& folderName, bool writeAsApp, const std::vector<int>& elements);
+    Q_INVOKABLE bool saveQML(bool asMcu, const QString& folderName, bool writeAsApp, const QVector<int>& elements);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE static QString validFileName(const QString& name);
     Q_INVOKABLE QByteArray componentSourceCode(const QString& name) const;
@@ -109,8 +109,8 @@ public:
     Q_INVOKABLE void setSignals(bool allow);
     //void takeSnap(const QString& pngName) const;
     Q_INVOKABLE static QString nearestFontFamily(const QString& requestedFont, bool useQt);
-    Q_INVOKABLE void executeQul(const QVariantMap& parameters, const std::vector<int>& elements);
-    Q_INVOKABLE void executeApp(const QVariantMap& parameters, const std::vector<int>& elements);
+    Q_INVOKABLE void executeQul(const QVariantMap& parameters, const QVector<int>& elements);
+    Q_INVOKABLE void executeApp(const QVariantMap& parameters, const QVector<int>& elements);
     Q_INVOKABLE bool hasFontPathInfo() const;
     Q_INVOKABLE void findFontPath(const QString& fontFamilyName) const;
 #ifdef USE_NATIVE_FONT_DIALOG

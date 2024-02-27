@@ -6,7 +6,7 @@
 #error HAS_QUL expected
 #endif
 
-bool AppWrite::writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const std::vector<int>& elements) {
+bool AppWrite::writeQul(const QString& path, const FigmaQml& figmaQml, bool writeAsApp, const QVector<int>& elements) {
     const auto res = ExecuteUtils::writeResources(path, figmaQml, writeAsApp, elements);
     if(!res)
         return false;
