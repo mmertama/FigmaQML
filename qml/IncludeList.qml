@@ -99,7 +99,12 @@ ListView {
             }
         }
         onAccepted: {
-            included_views.add_view(included_views_add_combox.currentValue.index)
+            // Qt 6.4 and 6.6 behaves quite differently here!
+            if(included_views_add_combox.currentValue)
+                included_views.add_view(included_views_add_combox.currentValue.index)
+            else {
+                 included_views.add_view(included_list_add_items.get(included_views_add_combox.currentIndex).index)
+            }
         }
     }
 }
