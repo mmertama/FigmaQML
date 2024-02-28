@@ -323,7 +323,7 @@ jobs:
         run: |
           ls -l
           mkdir -p _site
-          mv * _site
+          mv *.* _site
       
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3    
