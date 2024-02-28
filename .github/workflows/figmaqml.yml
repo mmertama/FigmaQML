@@ -318,11 +318,12 @@ jobs:
         with:
           name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}" 
 
-      - name: Tar an artifact
+      - name: Prepare pages
         shell: bash    
         run: |
           ls -l
-          cmake -E tar cJvf _site .
+          mkidir -p _site
+          mv * _site
       
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3    
