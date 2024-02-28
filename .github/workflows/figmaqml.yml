@@ -282,7 +282,10 @@ jobs:
       
       - name: Tar
         shell: bash
-        run: tar -czvf "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.gz" .   
+        run: |
+          BALL="${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.gz"
+          tar -czvf $BALL --exclude=$BALL *
+
 
       - name: Create Release
         uses: ncipollo/release-action@v1.12.0
