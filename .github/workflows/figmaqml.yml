@@ -322,7 +322,7 @@ jobs:
         shell: bash    
         run: |
           ls -l
-          mkidir -p _site
+          mkdir -p _site
           mv * _site
       
       - name: Upload GitHub Pages artifact
