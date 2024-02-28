@@ -340,14 +340,14 @@ jobs:
         shell: bash    
         run: |
           ls -l
-          tar -tvf "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip"
+          #tar -tvf "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip"
 
 
       - name: Deploy WASM
         if: startsWith(matrix.config.arch, 'wasm')
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"    
+        #with:
+        #  artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"    
 
       
