@@ -278,8 +278,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ./build/${{ matrix.config.target_name }}
-          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}" 
-
+          name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
+    
+      
   release:
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-latest
@@ -340,14 +341,15 @@ jobs:
         shell: bash    
         run: |
           ls -l
-          #tar -tvf "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.zip"
-
+      
+      - name: Upload GitHub Pages artifact
+        if: startsWith(matrix.config.arch, 'wasm')
+        uses: actions/upload-pages-artifact@v3    
 
       - name: Deploy WASM
         if: startsWith(matrix.config.arch, 'wasm')
         id: deployment
         uses: actions/deploy-pages@v4
-        #with:
-        #  artifact_name: "FigmaQML.wapp-wasm_singlethread-${{  env.RELEASE_VERSION }}"    
+       
 
       
