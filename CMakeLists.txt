@@ -101,7 +101,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.0.2")
+set(VERSION_NUMBER "3.0.4")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
@@ -167,6 +167,16 @@ set(COMMON_LIBS
     FigmaQmlInterface
     ${EXTRA})
 
+if(LINUX AND NOT NO_DOC)
+    include(doxygen.cmake)
+    set(DOXYGEN_HAS_SPELL TRUE)
+    set(DOXYGEN_DOCUMENTS
+        app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
+        mcu_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
+    )
+    add_doxygen(${PROJECT_NAME})
+endif()
+
 if(EMSCRIPTEN)
     set(QT_WASM_INITIAL_MEMORY, "300MB")
     subdirs(modules/zlib)
@@ -229,5 +239,6 @@ else()
     endif()
 
     target_link_libraries(${PROJECT_NAME}
-      PRIVATE ${COMMON_LIBS} )
+      PRIVATE ${COMMON_LIBS})
 endif()
+

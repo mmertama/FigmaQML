@@ -249,6 +249,9 @@ Store generated files in your application folder.
     * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
 * *Save as app*
     * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
+    
+## API Documentation
+[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/)
 
 ## Integrate for Desktop project
 1. Add FigmaInterface into target_link_libraries

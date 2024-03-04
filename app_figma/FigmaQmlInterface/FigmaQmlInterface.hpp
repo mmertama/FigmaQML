@@ -27,6 +27,8 @@ signals:
    void intReceived(const QString& key, int value);
    void realReceived (const QString& key, double value);
    void stringReceived(const QString& key, const QString& value);
+   void objectReceived(const QString& key, const QVariantMap& value);
+   void arrayReceived(const QString& key, const QVariantList& value);
    void currentViewChanged();
 public:
     /**
@@ -88,6 +90,21 @@ public:
      * @param value
      */
     Q_INVOKABLE void sendString(const QString& key, const QString& value) {emit stringReceived(key, value);}
+
+    /**
+     * @brief sendObject
+     * @param key
+     * @param value
+     */
+    Q_INVOKABLE void sendObject(const QString& key, const QVariantMap& value) {emit objectReceived(key, value);}
+
+    /**
+     * @brief sendArray
+     * @param key
+     * @param value
+     */
+    Q_INVOKABLE void sendArray(const QString& key, const QVariantList& value) {emit arrayReceived(key, value);}
+
 public: // for tooling access
     FigmaQmlSingleton() : m_currentView{m_elements.empty() ? QString{} : m_elements[0]} {}
 private:
