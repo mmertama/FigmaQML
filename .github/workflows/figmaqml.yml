@@ -256,11 +256,10 @@ jobs:
           destination_dir: docs
 
       - name: Github Pages Directory Listing
+        if: startsWith(matrix.config.os, 'ubuntu')
         uses: jayanta525/github-pages-directory-listing@v4.0.0
-        with: 
-          path: paradox
           
-      - name: List dir
+      - name: List dir  
         shell: bash
         run: ls -R         
       
