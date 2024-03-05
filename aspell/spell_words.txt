@@ -159,3 +159,5 @@ ControlsTemplates
 viewLoaded
 WG
 SINGLETONQString
+MQTT
+QMQTTI
