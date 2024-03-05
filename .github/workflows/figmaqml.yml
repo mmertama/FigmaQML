@@ -260,7 +260,7 @@ jobs:
           destination_dir: docs
 
       - name: Github Pages Directory Listing
-        uses: jayanta525/github-pages-directory-listing
+        uses: jayanta525/github-pages-directory-listing@v3
           
     
       
