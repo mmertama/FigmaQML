@@ -4,6 +4,10 @@
 #include <QQmlComponent>
 #include <QQmlApplicationEngine>
 
+/**
+ * @brief Singleton to access FigmaQml properties and communicate between views.
+ * 
+ */
 class FigmaQmlSingleton : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -11,24 +15,68 @@ class FigmaQmlSingleton : public QObject {
     Q_PROPERTY(QString currentView MEMBER m_currentView NOTIFY currentViewChanged)
     Q_PROPERTY(int viewCount READ viewCount() CONSTANT)
 public:
-
+    /**
+     * @brief Number of vailable views
+     * 
+     * @return int 
+     */
     int viewCount() const  {return static_cast<int>(m_elements.size());}
 
+    /**
+     * @brief Static to fetch this instance from engine
+     * 
+     * @param engine 
+     * @return FigmaQmlSingleton* 
+     */
     static inline FigmaQmlSingleton* instance(QQmlEngine& engine);
 
 signals:
-   void valueChanged(const QString& element, const QString&  value);
+   /// @brief emitted on applyValue
+   /// @param element 
+   /// @param source 
+   void valueChanged(const QString& element, const QString& value);
+   /// @brief emitted for asLoader source change 
+   /// @param element 
+   /// @param source 
    void setSource(const QString& element, const QString& source);
+   /// @brief emitted for asLoader component change
+   /// @param element 
+   /// @param sourceComponent 
    void setSourceComponent(const QString& element, const QQmlComponent* sourceComponent);
+   /// @brief emitted on asLoader has changed
+   /// @param element 
    void sourceLoaded(const QString& element);
+   /// @brief emitted on view has changed
+   /// @param view 
    void viewLoaded(const QString& view);
+   /// @brief emitted on asLoader component error
+   /// @param element 
    void sourceError(const QString& element);
+   /// @brief emitted on onClick
+   /// @param element 
+   /// @param event 
    void eventReceived(const QString& element, const QString& event);
+   /// @brief emitted on integer value is passed to view
+   /// @param key 
+   /// @param value 
    void intReceived(const QString& key, int value);
+   /// @brief emitted on real value is passed to view
+   /// @param key 
+   /// @param value 
    void realReceived (const QString& key, double value);
+   /// @brief emitted on string value is passed to view
+   /// @param key 
+   /// @param value 
    void stringReceived(const QString& key, const QString& value);
+   /// @brief emitted on object value is passed to view (QML JS object)
+   /// @param key 
+   /// @param value 
    void objectReceived(const QString& key, const QVariantMap& value);
+   /// @brief emitted on array value is passed to view (QML JS array)
+   /// @param key 
+   /// @param value 
    void arrayReceived(const QString& key, const QVariantList& value);
+   /// @brief emitted when current view has loaded and changed
    void currentViewChanged();
 public:
     /**
@@ -116,6 +164,11 @@ private:
 };
 
 namespace FigmaQmlInterface {
+    /**
+     * @brief Register FigmaQmlSingleton into engine's context as a singleton
+     * 
+     * @param engine 
+     */
 inline
 void registerFigmaQmlSingleton(QQmlApplicationEngine& engine) {
     qmlRegisterSingletonType<FigmaQmlSingleton>("FigmaQmlInterface", 1, 0, "FigmaQmlSingleton", [](QQmlEngine *, QJSEngine *) {

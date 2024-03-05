@@ -158,3 +158,4 @@ hearted
 ControlsTemplates
 viewLoaded
 WG
+SINGLETON

@@ -19,6 +19,10 @@ using SignalString = Qul::Private::String;
 using SignalString = std::string;
 #endif
 
+/**
+ * @brief Singleton to access FigmaQml properties and communicate between views.
+ * 
+ */
 class FigmaQmlSingleton : public Qul::Singleton<FigmaQmlSingleton> {
 public:
     /**
@@ -141,6 +145,7 @@ public:
      */
     static inline const std::vector<std::string> elements {/*element_declarations*/};
 
+    /// @brief internal
     FigmaQmlSingleton() : currentView{elements[0]}, viewCount{static_cast<int>(elements.size())} {}
 };
 

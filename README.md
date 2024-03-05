@@ -15,7 +15,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
 
 ## Run ##
 
- * FigmaQML can be run either in command line or as a gui application.
+* FigmaQML can be run either in command line or as a gui application.
     * Command line support for Qt for MCU is under construction.
     * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
 * Gui application is interactive to see visuals and source code before saving.
@@ -100,24 +100,24 @@ FigmaQML supports both Desktop and Qt for MCU development.
 
     * Do not use with Qt for MCU
     
- * **Qt for MCU**
+* **Qt for MCU**
     * The generated code is targeted for Qt for MCU.
     * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
- * **Static QML**
+* **Static QML**
     * Turn off all dynamic code creation.
- * **Cyan background**
+* **Cyan background**
     * Change FigmaQML background to an alternative color.
     * Does not affect to the exported code.
- * **No Gradients**
+* **No Gradients**
     * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
- * **Loader placeholders**
+* **Loader placeholders**
     * Show dynamic loader placeholder instead of rendered components.
     * Does not affect to the exported code.
- * **Render placeholders** 
-     * Show placeholder components as rendered images.
-     * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
-     * Does not affect to the exported code.
- * **Render view** 
+* **Render placeholders** 
+    * Show placeholder components as rendered images.
+    * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
+    * Does not affect to the exported code.
+* **Render view** 
     * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
     * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
 
@@ -159,8 +159,7 @@ the name identifies the element in QML and command tells what to do:
     FigmaQmlSingleton.applyValue("pressure_info",  pressure + " kPa");
 
     ```
-
- * *onClick*
+* *onClick*
     * *FigmaQmlSingleton::onEvent* is a signal handler that receives touch events coming from the named element.
     * The signalled parameters are 'element' and 'click_event'.
     * Most common is to implement button actions, e.g. *qml?temp_unit.onClick*: 
@@ -190,7 +189,7 @@ the name identifies the element in QML and command tells what to do:
     ```js
     FigmaQmlSingleton.setSource("Temp", "Graphs.qml");
     ```
- 
+
 
 Besides of those methods you can include multiple views in your application, and navigate between them using 
 *FigmaQmlSingleton::setView* that changes entire view.
@@ -277,8 +276,8 @@ Store generated files in your application folder.
     
     ```cpp
     
-    #include <QtGui>
-    #include <QtQml>
+    &#35;include &lt;QtGui&gt;
+    &#35;include &lt;QtQml&gt;
     
     #include "FigmaQmlInterface/FigmaQmlInterface.hpp"
     
