@@ -16,7 +16,7 @@ class FigmaQmlSingleton : public QObject {
     Q_PROPERTY(int viewCount READ viewCount() CONSTANT)
 public:
     /**
-     * @brief Number of vailable views
+     * @brief Number of available views
      * 
      * @return int 
      */

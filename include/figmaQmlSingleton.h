@@ -1,6 +1,5 @@
 
-#ifndef QMLSINGLETON_H
-#define QMLSINGLETON_H
+#pragma once
 
 #include <figmaqml.h>
 #include <QObject>
@@ -93,4 +92,3 @@ private:
 
 QML_DECLARE_TYPE(FigmaQmlSingleton)
 
-#endif // QMLSINGLETON_H

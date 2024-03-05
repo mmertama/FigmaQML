@@ -158,4 +158,4 @@ hearted
 ControlsTemplates
 viewLoaded
 WG
-SINGLETON
+SINGLETONQString
