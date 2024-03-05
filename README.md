@@ -26,7 +26,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
 * FigmaQML can be run as a WebAssembly application.
    * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!
    * The compiled (6.6.2) Qt WASM seems to have issues. Working on it.
-   * [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
+   * <strike>[Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)</strike>
 * Other than Linux version may have a limited functionality.  
 
 ### Binaries ###
@@ -250,7 +250,7 @@ Store generated files in your application folder.
     * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
     
 ## API Documentation
-[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/)
+[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/docs)
 
 ## Integrate for Desktop project
 1. Add FigmaQmlInterface into target_link_libraries
