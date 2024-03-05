@@ -247,6 +247,10 @@ jobs:
           path: ./build/${{ matrix.config.target_name }}
           name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
 
+      - name: List dir
+        shell: bash
+        run: ls -R    
+
       - name: Deploy docs
         if: startsWith(matrix.config.arch, 'gcc_64') && ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: peaceiris/actions-gh-pages@v3
@@ -295,8 +299,7 @@ jobs:
         shell: bash
         run: |
           BALL="${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}.gz"
-          tar -czvf $BALL --exclude=$BALL *
-
+          tar -czvf $BALL --exclude=$BALL *     
 
       - name: Create Release
         uses: ncipollo/release-action@v1.12.0
