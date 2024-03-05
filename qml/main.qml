@@ -355,13 +355,13 @@ ApplicationWindow {
                             }
                         }
                         QtCheckBox {
-                            text: "Antialiaze Shapes"
-                            checked: figmaQml.flags & FigmaQml.AntialiazeShapes
+                            text: "Antialiasing Shapes"
+                            checked: figmaQml.flags & FigmaQml.AntialiasingShapes
                             onCheckedChanged: {
                                 if(checked)
-                                    figmaQml.flags |= FigmaQml.AntialiazeShapes
+                                    figmaQml.flags |= FigmaQml.AntialiasingShapes
                                 else
-                                    figmaQml.flags &= ~FigmaQml.AntialaizeShapes
+                                    figmaQml.flags &= ~FigmaQml.AntialiasingShapes
                             }
                         }
                         QtCheckBox {

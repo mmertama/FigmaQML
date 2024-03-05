@@ -10,7 +10,7 @@
  * 2nd Update gives errors
  * warn file replaced only if there are differences
  ** look again writing to non empty folder
- * FigmaQMLSingleton sendObject(element, jsobject)
+ * FigmaQmlSingleton sendObject(element, jsobject)
 
 
 

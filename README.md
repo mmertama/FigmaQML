@@ -5,13 +5,13 @@ from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-6
 applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
 design using UI code. Omitting that tedious, redundant step, will dramatically decrease development effort.
 FigmaQML will provide a QML code that is ready programmer to focus on implementing functionality. You can inject
-tags in you Figma Design that enables seamlessly assingn functionality so that there is no need to implement any
+tags in you Figma Design that enables seamlessly assign functionality so that there is no need to implement any
 QML UI code.
 
 FigmaQML supports both Desktop and Qt for MCU development.
 
 * Version 3.0.2
-* License: [Mit license](https://en.wikipedia.org/wiki/MIT_License)
+* License: [MIT license](https://en.wikipedia.org/wiki/MIT_License)
 
 ## Run ##
 
@@ -42,7 +42,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
   * For example: if the URL is "https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…", the requested token is
   "bPWNMoKnXkXgf71S9cFX7G"  (without quotes)
 * **Export Qt for Desktop**
-    * Export appliaction QMLs     
+    * Export application QMLs     
 * **Export Qt for MCU**
     * Open view to manage and export Qt for MCU content.
     * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
@@ -62,22 +62,22 @@ FigmaQML supports both Desktop and Qt for MCU development.
 * **Source**
     * Generated source code. Mostly for debugging . You may use Ctrl+C to copy it to an external editor. 
 * **Figma**
-    * Figma produced interal content. Mostly for debugging
+    * Figma produced internal content. Mostly for debugging
 * **QtQuick**
     * Show QML rendering of the rendering - verify here that it looks ok. 
 
 ## Views ##
 
 * **+/-**
-    * Navigate pages and views.. 
+    * Navigate pages and views 
     * Figma project consists of "page" (or canvas) and "views" on each page.
-    * FigmaQML generes an UI for each view.
+    * FigmaQML generates an UI for each view.
 
 ## Connect ##
 
 **Update**
 * Read Figma data and generate QML out from it.
-* May take a while, When server is connected at first time, all the document data is retrieved, then trancoded to QML and rendered to UI
+* May take a while, When server is connected at first time, all the document data is retrieved, then transcoded to QML and rendered to UI
     
 ## Settings ##
   * **Break booleans**
@@ -86,8 +86,8 @@ FigmaQML supports both Desktop and Qt for MCU development.
   * **Embed images**
     * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
     * Do not use with Qt for MCU
-  * **Antialiaze shapes**
-    * Whether "antialiazed: true" property is set on each shape.
+  * **Antialiasing shapes**
+    * Whether "Antialiasing: true" property is set on each shape.
     * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
         
     ```cpp
@@ -161,7 +161,7 @@ the name identifies the element in QML and command tells what to do:
     ```
 
  * *onClick*
-    * *FigmaQMLSingleton::onEvent* is a signal handler that receives touch events coming from the named element.
+    * *FigmaQmlSingleton::onEvent* is a signal handler that receives touch events coming from the named element.
     * The signalled parameters are 'element' and 'click_event'.
     * Most common is to implement button actions, e.g. *qml?temp_unit.onClick*: 
 
@@ -173,11 +173,11 @@ the name identifies the element in QML and command tells what to do:
     ```        
 
 * *asLoader*
-    * *FigmaQMLSingleton::setSource* let replace part of Figma generated with the custom QML component.
+    * *FigmaQmlSingleton::setSource* let replace part of Figma generated with the custom QML component.
     * Since all UI content just cannot be visualize beforehand, this powerful feature injects any QML content 
      into UI to replace the tagged element.
     * In Qt for MCU the QML file has to be injected in the FigmaQML module - therefore some steps are needed.
-        * *FigmaQml_AddQml* cmake funtion let you inject QML and header files into UI codes.
+        * *FigmaQml_AddQml* cmake function let you inject QML and header files into UI codes.
         * in Desktop that is not needed. 
     
     ```cmake 
@@ -185,7 +185,7 @@ the name identifies the element in QML and command tells what to do:
     include(${path_to_generated_source/FigmaQmlInterface}/FigmaQmlInterface.cmake)
     FigmaQml_AddQml(QMLS  ${CMAKE_SOURCE_DIR}/qml/Graphs.qml  ${CMAKE_SOURCE_DIR}/qml/TimeSeries.qml HEADERS ${mcukit_SOURCE_DIR}/utils/Utils.hpp)
     ```
-    * Injecting component is straighforward, to replace qml?Temp.asLoader:
+    * Injecting component is straightforward, to replace qml?Temp.asLoader:
     
     ```js
     FigmaQmlSingleton.setSource("Temp", "Graphs.qml");
@@ -193,7 +193,7 @@ the name identifies the element in QML and command tells what to do:
  
 
 Besides of those methods you can include multiple views in your application, and navigate between them using 
-*FigmaQMLSingleton::setView* that changes entire view.
+*FigmaQmlSingleton::setView* that changes entire view.
 
 ```js
 FigmaQmlSingleton.setView(1);
@@ -203,7 +203,7 @@ FigmaQmlSingleton.setView(1);
 
 #### Execute
 * Application UI built and executed
-* For debug and verfication
+* For debug and verification
 * Available only for Linux
 
 #### Save
@@ -233,7 +233,7 @@ connected MCU device.
 * *Qul Platform*
     * Target platform e.g. "STM32F769I-DISCOVERY-baremetal"
 * *Qt License*
-    * Qt for MCU requires Qt commerical license. 
+    * Qt for MCU requires Qt commercial license. 
     * License file, can be downloaded from your Qt account.
 * *Platform Hardware*
     * Supported "Execute" platform - currently only STM32 is available.
@@ -254,7 +254,7 @@ Store generated files in your application folder.
 [FigmaQML Documentation](https://mmertama.github.io/FigmaQML/)
 
 ## Integrate for Desktop project
-1. Add FigmaInterface into target_link_libraries
+1. Add FigmaQmlInterface into target_link_libraries
     ```cmake
     target_link_libraries(${PROJECT_NAME} PRIVATE` FigmaQmlInterface)
     ```
@@ -273,7 +273,7 @@ Store generated files in your application folder.
 
 1. Register singleton
     
-    Call `registerFigmaQmlSingleton` before laoding your UI.
+    Call `registerFigmaQmlSingleton` before loading your UI.
     
     ```cpp
     
@@ -296,7 +296,7 @@ Store generated files in your application folder.
 
 1. CMake
     * See also injecting source for loader above
-    * Add FigmaInterface into target_link_libraries
+    * Add FigmaQmlInterface into target_link_libraries
     ```cmake
     target_link_libraries(${PROJECT_NAME} PRIVATE` FigmaQmlInterface)
     ```
@@ -375,15 +375,15 @@ There are few scripts in the [test]() folder that are used for testing. Since th
  * Parameter after that is a test project token.
  * Optional third parameter is a Canvas-view to be tested (default is 1-1)
  * runtest.sh fetch data from Figma server and runs basic QML generation test on that
- * runtest_image let run additional image tests on data without further data retrive. (Figma service has data quota)
+ * runtest_image let run additional image tests on data without further data retrieve. (Figma service has data quota)
  * image test compares Figma rendered Canvas-view and FigmaQML rendered canvas view (see IMAGE_COMPARE above) and provides fuzzy match value between 0 and 1.
- * Here I have been using value 0.9, "90% same"), (see IMAGE_TRESHOLD above) to pass the test.
+ * Here I have been using value 0.9, "90% same"), (see IMAGE_THRESHOLD above) to pass the test.
  * Note: You may have to install SSIM_PIL from https://github.com/mmertama/SSIM-PIL.git until my change is accepted in.
  
  #### Changes
  * 1.0.1 
-    * Qt5 may not build anymore, Qt 6.3 had some issues and maintaining those also on Qt 5.15 was too much work. The support for Qt6 is a bit half hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
-    But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat untill eternity or the issue changes.
+    * Qt5 may not build anymore, Qt 6.3 had some issues and maintaining those also on Qt 5.15 was too much work. The support for Qt6 is a bit half-hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
+    But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat until eternity or the issue changes.
     * On OSX Checkbox was not working correctly so I did a quick styling to fix it.
     * Some minor fixes to get rid of warnings.
     * Build script and README updates.   

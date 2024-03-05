@@ -239,7 +239,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             if(it == unique_names.end()) {
                 unique_names.insert(name, 0);
             } else {
-                *it += 1; // if there add a name - note that this can be non-unique as well... :-/ ooof but let's go with this untill
+                *it += 1; // if there add a name - note that this can be non-unique as well... :-/ ooof but let's go with this until
                 name += QString::number(*it);    // properly done....(if ever)
             }
             name += FIGMA_SUFFIX;
@@ -1181,7 +1181,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
 
 
      QByteArray FigmaParser::makeAntialiasing(int indents) const {
-         return !isQul() && (m_flags & AntialiazeShapes) ? // antialiazing is not supported
+         return !isQul() && (m_flags & AntialiasingShapes) ? // antialiazing is not supported
             (tabs(indents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 
@@ -2141,7 +2141,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += indent4 + loaderId + ".source = source;\n";
          out += indent2 + "}\n";
 
-#ifndef QUL_CPP_HAS_SOURCE_COMPONENT  // I cannot find C++ implementatation of Component for QUL
+#ifndef QUL_CPP_HAS_SOURCE_COMPONENT  // I cannot find C++ implementation of Component for QUL
          if(!isQul()) {
 #endif
          out += indent2 + "onSetSourceComponent: {\n";

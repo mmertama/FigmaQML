@@ -50,7 +50,7 @@ public:
         PrerenderInstances          = 0x20,
         NoGradients                 = 0x40,
         BreakBooleans               = 0x400,
-        AntialiazeShapes             = 0x800,
+        AntialiasingShapes          = 0x800,
         QulMode                     = 0x1000,
         StaticCode                  = 0x2000,
         EmbedImages                 = 0x10000,

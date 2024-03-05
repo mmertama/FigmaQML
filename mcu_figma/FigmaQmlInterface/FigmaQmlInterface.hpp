@@ -41,7 +41,7 @@ public:
      */
     Qul::Signal<void(SignalString element, SignalString source)> setSource;
 
-#ifdef QUL_CPP_HAS_SOURCE_COMPONENT // I cannot find C++ implementatation of Component for QUL
+#ifdef QUL_CPP_HAS_SOURCE_COMPONENT // I cannot find C++ implementation of Component for QUL
     /**
      * @brief valueChanged
      */

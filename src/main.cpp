@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     const QCommandLineOption imageDimensionMaxParameter("image-dimension-max", "Capping an image size, default is 1024.", "imageDimensionMax");
     const QCommandLineOption embedImagesParameter("embed-images", "Embed images into QML files.");
     const QCommandLineOption breakBooleansParameter("break-boolean", "Break Figma boolean shapes to QtQuick items.");
-    const QCommandLineOption antialiazeShapesParameter("antialiaze-shapes", "Add antialiaze property to shapes.");
+    const QCommandLineOption antialiasingShapesParameter("antialiasing-shapes", "Add antialiasing property to shapes.");
     const QCommandLineOption importsParameter("imports", "QML imports, ';' separated list of imported modules as <module-name> <version-number>.", "imports");
     const QCommandLineOption snapParameter("snap", "Take snapshot and exit, expects restore or user project token parameters to be given.", "snapFile");
     const QCommandLineOption storeParameter("store", "Create .figmaqml file and exit, expects user and project token parameters to be given.");
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
                           renderFrameParameter,
                           imageDimensionMaxParameter,
                           breakBooleansParameter,
-                          antialiazeShapesParameter,
+                          antialiasingShapesParameter,
                           embedImagesParameter,
                           importsParameter,
                           snapParameter,
@@ -257,8 +257,8 @@ int main(int argc, char *argv[]) {
                 qmlFlags |= FigmaQml::PrerenderFrames;
             if(parser.isSet(breakBooleansParameter))
                 qmlFlags |= FigmaQml::BreakBooleans;
-            if(parser.isSet(antialiazeShapesParameter))
-                qmlFlags |= FigmaQml::AntialiazeShapes;
+            if(parser.isSet(antialiasingShapesParameter))
+                qmlFlags |= FigmaQml::AntialiasingShapes;
             if(parser.isSet(embedImagesParameter))
                 qmlFlags |= FigmaQml::EmbedImages;
             if(parser.isSet(altFontMatchParameter))

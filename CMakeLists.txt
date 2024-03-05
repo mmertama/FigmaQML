@@ -108,6 +108,7 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 set(NON_SOURCE
     todo.txt
     README.md
+
     .github/workflows/figmaqml.yml
 )
 
@@ -169,6 +170,15 @@ set(COMMON_LIBS
 
 if(LINUX AND NOT NO_DOC)
     include(doxygen.cmake)
+    set(DOXYGEN_SPELL_EXCLUDE_DIRS
+        build
+        aspell
+        modules
+        res
+        .git
+        OpenSSL*)
+    set(DOXYGEN_SPELL_EXCLUDE_FILES
+        \*.qmlproject*)
     set(DOXYGEN_HAS_SPELL TRUE)
     set(DOXYGEN_DOCUMENTS
         app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
