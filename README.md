@@ -325,7 +325,7 @@ Store generated files in your application folder.
 ## Other Info
 
 ### Build and deploy
-* Qt6.2 or newer
+* Qt6.4 or newer
 * Python 3.8 (or later)
 * CMake 3.20 (or later)
 * For WebAssembly see [Qt 6.4 WebAssembly](https://doc-snapshots.qt.io/qt6-6.4/wasm.html)
@@ -340,6 +340,7 @@ Store generated files in your application folder.
 * Linux
     * Qt Serial port
     * Qt5 compatibility library
+    * To prevent spellchecker and doxygen, define NO_DOC
 
 
 #### Testing

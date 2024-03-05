@@ -169,22 +169,22 @@ set(COMMON_LIBS
     ${EXTRA})
 
 if(LINUX AND NOT NO_DOC)
-    include(doxygen.cmake)
-    set(DOXYGEN_SPELL_EXCLUDE_DIRS
+    include(documentation.cmake)
+    set(DOCUMENTATION_DOXYGEN_DOCUMENTS
+        app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
+        mcu_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
+    )
+    add_doxygen(${PROJECT_NAME})
+    set(DOCUMENTATION_SPELL_EXCLUDE_DIRS
         build
         aspell
         modules
         res
         .git
         OpenSSL*)
-    set(DOXYGEN_SPELL_EXCLUDE_FILES
+    set(DOCUMENTATION_SPELL_EXCLUDE_FILES
         \*.qmlproject*)
-    set(DOXYGEN_HAS_SPELL TRUE)
-    set(DOXYGEN_DOCUMENTS
-        app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
-        mcu_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
-    )
-    add_doxygen(${PROJECT_NAME})
+    add_spellcheck(${PROJECT_NAME})
 endif()
 
 if(EMSCRIPTEN)

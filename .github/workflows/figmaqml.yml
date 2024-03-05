@@ -74,6 +74,9 @@ jobs:
           ninja --version
           cmake --version
           gcc --version
+          sudo apt-get install doxygen
+          sudo apt-get install graphviz
+          sudo apt-get install aspell
 
       - name: Install dependencies on macos
         if: startsWith(matrix.config.os, 'macos')
