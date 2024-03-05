@@ -15,7 +15,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
 
 ## Run ##
 
- * FigmaQML can be run either in command line or as a gui application.
+* FigmaQML can be run either in command line or as a gui application.
     * Command line support for Qt for MCU is under construction.
     * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
 * Gui application is interactive to see visuals and source code before saving.
@@ -26,7 +26,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
 * FigmaQML can be run as a WebAssembly application.
    * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!
    * The compiled (6.6.2) Qt WASM seems to have issues. Working on it.
-   * [Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)
+   * <strike>[Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)</strike>
 * Other than Linux version may have a limited functionality.  
 
 ### Binaries ###
@@ -76,19 +76,19 @@ FigmaQML supports both Desktop and Qt for MCU development.
 ## Connect ##
 
 **Update**
-* Read Figma data and generate QML out from it.
-* May take a while, When server is connected at first time, all the document data is retrieved, then transcoded to QML and rendered to UI
+    * Read Figma data and generate QML out from it.
+    * May take a while, When server is connected at first time, all the document data is retrieved, then transcoded to QML and rendered to UI
     
 ## Settings ##
-  * **Break booleans**
-    * Generate code for each child element that composites a Figma Boolean element are generated. By default only the composed shape Item is produced.
-    * Avoid using.
-  * **Embed images**
-    * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
-    * Do not use with Qt for MCU
-  * **Antialiasing shapes**
-    * Whether "Antialiasing: true" property is set on each shape.
-    * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
+    * **Break booleans**
+        * Generate code for each child element that composites a Figma Boolean element are generated. By default only the composed shape Item is produced.
+        * Avoid using.
+    * **Embed images**
+        * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
+        * Do not use with Qt for MCU
+    * **Antialiasing shapes**
+        * Whether "Antialiasing: true" property is set on each shape.
+        * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
         
     ```cpp
     
@@ -98,28 +98,28 @@ FigmaQML supports both Desktop and Qt for MCU development.
     
     ```
 
-    * Do not use with Qt for MCU
+    **Do not use with Qt for MCU**
     
- * **Qt for MCU**
-    * The generated code is targeted for Qt for MCU.
-    * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
- * **Static QML**
-    * Turn off all dynamic code creation.
- * **Cyan background**
-    * Change FigmaQML background to an alternative color.
-    * Does not affect to the exported code.
- * **No Gradients**
-    * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
- * **Loader placeholders**
-    * Show dynamic loader placeholder instead of rendered components.
-    * Does not affect to the exported code.
- * **Render placeholders** 
-     * Show placeholder components as rendered images.
-     * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
-     * Does not affect to the exported code.
- * **Render view** 
-    * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
-    * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
+    * **Qt for MCU**
+        * The generated code is targeted for Qt for MCU.
+        * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
+    * **Static QML**
+        * Turn off all dynamic code creation.
+    * **Cyan background**
+        * Change FigmaQML background to an alternative color.
+        * Does not affect to the exported code.
+    * **No Gradients**
+        * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
+    * **Loader placeholders**
+        * Show dynamic loader placeholder instead of rendered components.
+        * Does not affect to the exported code.
+    * **Render placeholders** 
+        * Show placeholder components as rendered images.
+        * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
+        * Does not affect to the exported code.
+    * **Render view** 
+        * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
+        * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
 
 ## Components ##
 * Displayed only when the source code tab is activated.
@@ -159,8 +159,7 @@ the name identifies the element in QML and command tells what to do:
     FigmaQmlSingleton.applyValue("pressure_info",  pressure + " kPa");
 
     ```
-
- * *onClick*
+* *onClick*
     * *FigmaQmlSingleton::onEvent* is a signal handler that receives touch events coming from the named element.
     * The signalled parameters are 'element' and 'click_event'.
     * Most common is to implement button actions, e.g. *qml?temp_unit.onClick*: 
@@ -190,7 +189,7 @@ the name identifies the element in QML and command tells what to do:
     ```js
     FigmaQmlSingleton.setSource("Temp", "Graphs.qml");
     ```
- 
+
 
 Besides of those methods you can include multiple views in your application, and navigate between them using 
 *FigmaQmlSingleton::setView* that changes entire view.
@@ -251,7 +250,7 @@ Store generated files in your application folder.
     * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
     
 ## API Documentation
-[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/)
+[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/docs)
 
 ## Integrate for Desktop project
 1. Add FigmaQmlInterface into target_link_libraries
@@ -277,8 +276,8 @@ Store generated files in your application folder.
     
     ```cpp
     
-    #include <QtGui>
-    #include <QtQml>
+    &#35;include &lt;QtGui&gt;
+    &#35;include &lt;QtQml&gt;
     
     #include "FigmaQmlInterface/FigmaQmlInterface.hpp"
     
@@ -320,6 +319,11 @@ Store generated files in your application folder.
     }    
 
     ```
+
+## Example
+
+[QMQTTI] (https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
+on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is update when FigmaQML is used to decouple visuals from functionality. 
 
 
 ## Other Info
@@ -372,23 +376,24 @@ There are few scripts in the [test]() folder that are used for testing. Since th
  } 2> test_errors.txt | tee -a test_log.txt 
  </pre>
 
- * $token is your Figma user token.
- * Parameter after that is a test project token.
- * Optional third parameter is a Canvas-view to be tested (default is 1-1)
- * runtest.sh fetch data from Figma server and runs basic QML generation test on that
- * runtest_image let run additional image tests on data without further data retrieve. (Figma service has data quota)
- * image test compares Figma rendered Canvas-view and FigmaQML rendered canvas view (see IMAGE_COMPARE above) and provides fuzzy match value between 0 and 1.
- * Here I have been using value 0.9, "90% same"), (see IMAGE_THRESHOLD above) to pass the test.
- * Note: You may have to install SSIM_PIL from https://github.com/mmertama/SSIM-PIL.git until my change is accepted in.
+* $token is your Figma user token.
+* Parameter after that is a test project token.
+* Optional third parameter is a Canvas-view to be tested (default is 1-1)
+* runtest.sh fetch data from Figma server and runs basic QML generation test on that
+* runtest_image let run additional image tests on data without further data retrieve. (Figma service has data quota)
+* image test compares Figma rendered Canvas-view and FigmaQML rendered canvas view (see IMAGE_COMPARE above) and provides fuzzy match value between 0 and 1.
+* Here I have been using value 0.9, "90% same"), (see IMAGE_THRESHOLD above) to pass the test.
+* Note: You may have to install SSIM_PIL from https://github.com/mmertama/SSIM-PIL.git until my change is accepted in.
  
  #### Changes
- * 1.0.1 
+
+* 1.0.1 
     * Qt5 may not build anymore, Qt 6.3 had some issues and maintaining those also on Qt 5.15 was too much work. The support for Qt6 is a bit half-hearted, as many Qt5 components are used - but some of those are not available yet (some coming Qt 6.5). 
     But more troublesome issue is that Graphic effects are on Qt6 only available on commercial version. Therefore Qt5Compat until eternity or the issue changes.
     * On OSX Checkbox was not working correctly so I did a quick styling to fix it.
     * Some minor fixes to get rid of warnings.
     * Build script and README updates.   
- * 2.0.0
+* 2.0.0
     * WebAssembly support
     * Lot of fixes and refactoring code for the WebAssembly 
 * 3.0.0

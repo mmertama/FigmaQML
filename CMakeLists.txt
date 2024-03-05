@@ -181,6 +181,7 @@ if(LINUX AND NOT NO_DOC)
         modules
         res
         .git
+        FigmaQML
         OpenSSL*)
     set(DOCUMENTATION_SPELL_EXCLUDE_FILES
         \*.qmlproject*)
