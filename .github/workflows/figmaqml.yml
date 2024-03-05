@@ -259,6 +259,9 @@ jobs:
           publish_dir: ./build/html
           destination_dir: docs
 
+      - name: Github Pages Directory Listing
+        uses: jayanta525/github-pages-directory-listing@v4
+          
     
       
   release:
