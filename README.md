@@ -1,6 +1,6 @@
 # FigmaQML #
 
-FigmaQML is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
+(FigmaQML)[https://github.com/mmertama/FigmaQML] is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
 from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-6/qtquick-index.html) 
 applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
 design using UI code. Omitting that tedious, redundant step, will dramatically decrease development effort.
