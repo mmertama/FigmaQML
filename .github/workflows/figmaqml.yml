@@ -349,7 +349,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
-          path: "${{ env.GITHUB_WORKSPACE }}/${{ matrix.config.target_path }}"
+          path: ${{ matrix.config.target_path }}"
         
       - name: Prepare pages
         shell: bash    
