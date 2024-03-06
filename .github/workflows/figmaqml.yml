@@ -333,11 +333,11 @@ jobs:
           - name: "Ubuntu Latest GCC"
             target_name: "docs"
             arch: 'gcc_64'
-            target_path:  $ {{ env.GITHUB_WORKSPACE }}/docs
+            target_path: docs
           - name: "Wasm"
             target_name: "FigmaQML.wapp"
             arch: 'wasm_singlethread'
-            target_path: $ {{ env.GITHUB_WORKSPACE }}
+            target_path: .
           
 
     steps:
@@ -349,7 +349,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: "${{ matrix.config.target_name }}-${{ matrix.config.arch }}-${{  env.RELEASE_VERSION }}"
-          path: "${{ matrix.config.target_path}}"
+          path: "${{ env.GITHUB_WORKSPACE }}/${{ matrix.config.target_path }}"
         
       - name: Prepare pages
         shell: bash    
