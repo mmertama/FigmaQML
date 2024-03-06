@@ -334,10 +334,12 @@ jobs:
             target_name: docs
             arch: 'gcc_64'
             target_path: docs
+            artifact_name: doxygen_pages
           - name: "Wasm"
             target_name: "FigmaQML.wapp"
             arch: 'wasm_singlethread'
             target_path: .
+            artifact_name: wasm_app
           
 
     steps:
@@ -361,9 +363,12 @@ jobs:
           ls -lR
       
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v3    
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: ${{ matrix.config.artifact_name }}    
 
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-
+        with: 
+          artifact_name: ${{ matrix.config.artifact_name }}  
