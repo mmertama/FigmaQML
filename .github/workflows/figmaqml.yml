@@ -357,7 +357,7 @@ jobs:
           ls -l
           # the action seems to expect that content is extracted into _site folder (there is no docs)
           mkdir -p _site
-          ls | grep -v n_siteew | xargs mv -t _site
+          ls | grep -v _site | xargs mv -t _site
       
       #- name: Upload GitHub Pages artifact
       #  uses: actions/upload-pages-artifact@v3    
