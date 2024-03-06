@@ -333,11 +333,11 @@ jobs:
           - name: "Ubuntu Latest GCC"
             target_name: "docs"
             arch: 'gcc_64'
-            target_path: $GITHUB_WORKSPACE/docs
+            target_path:  $ {{ env.GITHUB_WORKSPACE }}/docs
           - name: "Wasm"
             target_name: "FigmaQML.wapp"
             arch: 'wasm_singlethread'
-            target_path: $GITHUB_WORKSPACE
+            target_path: $ {{ env.GITHUB_WORKSPACE }}
           
 
     steps:
