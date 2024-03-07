@@ -325,6 +325,13 @@ Store generated files in your application folder.
 [QMQTTI] (https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
 on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is update when FigmaQML is used to decouple visuals from functionality. 
 
+## FAQ
+
+* Q: How FigmaQML compares to Qt Figma Bridge?
+   * A: I see them as quite different thing:
+      * Qt for Figma Bridge is a importer for Qt Design Studio that works with component visuals. Those components are then used to compose an application UI in Qt Creator in very traditional way. FigmaQML does not use Qt Design studio - it generates a FigmaQmlUi that is used in the application QML like any other QtQuick item and therefore IS the application UI visuals.
+      * You can even use them together: use Qt Design Studio to create beatiful components. Then for FigmaQML set a UI element as placeholder (see `asLoader`), and then use FigmaQmlSingleton.setSource dynamically load that beautiful component to replace a placeholder.   
+      * FigmaQML supports both Qt Desktop and Qt for MCU.
 
 ## Other Info
 
