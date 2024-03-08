@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(FigmaQML LANGUAGES CXX)
 
+include(FetchContent)
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(CMAKE_AUTOUIC ON)
@@ -108,7 +110,6 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 set(NON_SOURCE
     todo.txt
     README.md
-
     .github/workflows/figmaqml.yml
 )
 
@@ -153,7 +154,6 @@ endif()
 option(QT6_CONCURRENT FALSE)
 option(QT6_SSL FALSE)
 
-
 if(HAS_QUL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
 endif()
@@ -168,14 +168,21 @@ set(COMMON_LIBS
     FigmaQmlInterface
     ${EXTRA})
 
+# Create documentation and do spellcheck in the Linux
 if(LINUX AND NOT NO_DOC)
-    include(documentation.cmake)
-    set(DOCUMENTATION_DOXYGEN_DOCUMENTS
+    FetchContent_Declare(
+      cmakedoc
+      GIT_REPOSITORY https://github.com/mmertama/cmakedoc.git
+      GIT_TAG        main
+    )
+    FetchContent_MakeAvailable(cmakedoc)
+    include(${cmakedoc_SOURCE_DIR}/cmakedoc.cmake)
+    set(CMAKEDOC_DOXYGEN_DOCUMENTS
         app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
         mcu_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
     )
     add_doxygen(${PROJECT_NAME})
-    set(DOCUMENTATION_SPELL_EXCLUDE_DIRS
+    set(CMAKEDOC_SPELL_EXCLUDE_DIRS
         build
         aspell
         modules
@@ -183,7 +190,7 @@ if(LINUX AND NOT NO_DOC)
         .git
         FigmaQML
         OpenSSL*)
-    set(DOCUMENTATION_SPELL_EXCLUDE_FILES
+    set(CMAKEDOC_SPELL_EXCLUDE_FILES
         \*.qmlproject*)
     add_spellcheck(${PROJECT_NAME})
 endif()

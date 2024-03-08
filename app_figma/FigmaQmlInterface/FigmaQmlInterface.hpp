@@ -12,7 +12,9 @@ class FigmaQmlSingleton : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+    /// Name of currently active view
     Q_PROPERTY(QString currentView MEMBER m_currentView NOTIFY currentViewChanged)
+    /// Number of views
     Q_PROPERTY(int viewCount READ viewCount() CONSTANT)
 public:
     /**
@@ -33,7 +35,7 @@ public:
 signals:
    /// @brief emitted on applyValue
    /// @param element 
-   /// @param source 
+   /// @param value
    void valueChanged(const QString& element, const QString& value);
    /// @brief emitted for asLoader source change 
    /// @param element 
