@@ -176,8 +176,8 @@ private:
     static QByteArray toColor(double r, double g, double b, double a = 1.0);
     QByteArray makeId(const QJsonObject& obj);
     QByteArray makeId(const QString& prefix,  const QJsonObject& obj);
-    EByteArray makeComponentInstance(const QString& type, const QJsonObject& obj, int indents);
-    EByteArray makeItem(const QString& type, const QJsonObject& obj, int indents);
+    EByteArray makeComponentInstance(const QString& type, const QJsonObject& obj, int indents, const QByteArray& change_receiver = QByteArray());
+    EByteArray makeItem(const QString& type, const QJsonObject& obj, int indents, const QByteArray& change_receiver = QByteArray());
 
     QPointF position(const QJsonObject& obj) const;
 
@@ -273,7 +273,7 @@ private:
      QByteArray makeGradientToFlat(const QJsonObject& obj, int indents);
      QByteArray addComponentStream(const QJsonObject& obj,  const QByteArray& child_item);
      QByteArray makePropertyChangeHandler(int indents);
-     EByteArray makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents);
+     EByteArray makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents, const QByteArray& change_receiver);
      QString makeFileName(const QJsonObject& obj, const QString& prefix) const;
      ~FigmaParser();
      std::tuple<QByteArray, QString> makePathAlias(int pathIndex, const QJsonObject& obj, int indents);

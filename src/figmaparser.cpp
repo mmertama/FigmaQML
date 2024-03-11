@@ -26,6 +26,7 @@ const auto QML_TAG = "qml?";
 const auto ON_CLICK = "onClick";
 const auto AS_LOADER = "asLoader";
 const auto ID_PREFIX = "figma_";
+const auto SVGPATH_PREFIX = "svgpath_";
 
 static auto& last_parse_error() {
     static QString last_error_string;
@@ -444,12 +445,10 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
              const auto indent = tabs(indents);
              const auto indent2 = tabs(indents + 1);
              const auto indent3 = tabs(indents + 2);
-             out += indent + "Connections {\n";
+             out += indent + "Connections { //makePropertyChangeHandler \n ";
              out += indent2 + "target: FigmaQmlSingleton\n";
 
              out += indent2 + "onValueChanged: {\n";
-             //out += indent2 + "function onSetValue(element, value) {\n";
-             //out += indent3 + "console.log('FigmaQmlSingleton-setValue:', element, value);\n";
              out += indent3 + "switch(element) {\n";
 
              for(const auto& alias : m_aliases) {
@@ -472,43 +471,43 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          return out;
      }
 
-
-     EByteArray FigmaParser::makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents) {
-         QByteArray out;
+    EByteArray FigmaParser::makeComponentPropertyChangeHandler(const QJsonObject& obj, int indents, const QByteArray& change_receiver) {
+        QByteArray out;
 
         const auto properties = getProperties(obj);
         if(properties) {
-            const auto indent = tabs(indents);
-            const auto indent2 = tabs(indents + 1);
-            const auto indent3 = tabs(indents + 2);
-
-
-            out += indent + "Connections {\n";
-            out += indent2 + "target: FigmaQmlSingleton\n";
-
-            out += indent2 + "onValueChanged: {\n";
-            //out += indent2 + "function onSetValue(element, value) {\n";
-            //out += indent3 + "console.log('FigmaQmlSingleton-valueChanged:', element, value);\n";
-            out += indent3 + "switch(element) {\n";
-
-            const auto id_string = makeId(obj);
             const auto& [obj_name, name, vars] = properties.value();
-            for(const auto& var : vars) {
-                if(!isReservedName(var)) {
-                    if(var.isEmpty()) {
-                        ERR("Expected element property in name (Figma name as 'qml?element.property'), get '" + name + "'");
-                    }
-                    const auto indent4 = tabs(indents + 3);
-                    out += indent4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
-                    }
-                }
+            if(!vars.empty()) {
+                const auto indent = tabs(indents);
+                const auto indent2 = tabs(indents + 1);
+                const auto indent3 = tabs(indents + 2);
 
-            out +=  indent3 + "}\n";
-            out +=  indent2 + "}\n";
-            out += indent + "}\n";
+
+                out += indent + "Connections { //makeComponentPropertyChangeHandler \n";
+                out += indent2 + "target: FigmaQmlSingleton\n";
+
+                out += indent2 + "onValueChanged: {\n";
+                out += indent3 + "switch(element) {\n";
+
+                const auto id_string = !(change_receiver.isNull() && change_receiver.isEmpty()) ? change_receiver : makeId(obj);
+
+                for(const auto& var : vars) {
+                    if(!isReservedName(var)) {
+                        if(var.isEmpty()) {
+                            ERR("Expected element property in name (Figma name as 'qml?element.property'), get '" + name + "'");
+                        }
+                        const auto indent4 = tabs(indents + 3);
+                        out += indent4 + "case '" + name + "': " + id_string + '.' + var + " = value; break;\n";
+                        }
+                    }
+
+                out +=  indent3 + "}\n";
+                out +=  indent2 + "}\n";
+                out += indent + "}\n";
+            }
         }
-         return out;
-     }
+        return out;
+    }
 
 
     QByteArray FigmaParser::makeId(const QString& prefix, const QJsonObject& obj)  {
@@ -519,7 +518,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return qml_id;
     }
 
-     EByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int indents) {
+     EByteArray FigmaParser::makeComponentInstance(const QString& type, const QJsonObject& obj, int indents, const QByteArray& change_receiver) {
          QByteArray out;
          const auto indent = tabs(indents - 1);
          const auto indent1 = tabs(indents);
@@ -552,16 +551,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          }
 
          if(generateAccess() && m_componentLevel != 0) { // when m_componentLevel is zero this is component to-file write
-             APPENDERR(out, makeComponentPropertyChangeHandler(obj, indents));
+             APPENDERR(out, makeComponentPropertyChangeHandler(obj, indents, change_receiver));
          }
 
          return out;
      }
 
-    EByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int indents) {
+     EByteArray FigmaParser::makeItem(const QString& type, const QJsonObject& obj, int indents, const QByteArray& change_receiver) {
         QByteArray out;
         const auto indent1 = tabs(indents);
-        APPENDERR(out, makeComponentInstance(type, obj, indents));
+        APPENDERR(out, makeComponentInstance(type, obj, indents, change_receiver));
         out += makeEffects(obj, indents);
         out += makeTransforms(obj, indents);
         if(obj.contains("visible") && !obj["visible"].toBool()) {
@@ -985,8 +984,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             out += indent + "strokeColor: \"transparent\"\n";
 
         out += indent + "// component (shapeFill) level: " + QString::number(m_componentLevel)  + " \n";
-        if(m_componentLevel == 0)
-            out += indent + "id: " + makeId("svgpath_" , obj) + "\n";
+        if(m_componentLevel == 0) // to avoid duplicates
+            out += indent + "id: " + makeId(SVGPATH_PREFIX , obj) + "\n";
 
         return out;
     }
@@ -1185,34 +1184,39 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             (tabs(indents) + "antialiasing: true\n").toLatin1() : QByteArray();
      }
 
-     /*
+    /*
       * makeVectorxxxxxFill functions are redundant in purpose - but I ended up
       * to if-else hell and wrote open to keep normal/inside/outside and image/fill
       * cases managed
     */
-     EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int indents) {
-         QByteArray out;
-         APPENDERR(out, makeItem("Shape", obj, indents));
-         out += makeExtents(obj, indents);
-         const auto indent = tabs(indents);
+    EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int indents) {
+        QByteArray out;
+        const auto shape_path_id = makeId(SVGPATH_PREFIX, obj);
+        APPENDERR(out, makeItem("Shape", obj, indents, shape_path_id));
+        out += makeExtents(obj, indents);
 
-         QByteArray out2;
-         const auto make_alias = [&](int i) {
-             QString id;
-             std::tie(out2, id) = makePathAlias(i, obj, indents - 1);
-             return id;
-         };
+        const auto indent = tabs(indents);
 
-         out += makeAntialiasing(indents);
-         out += indent + "ShapePath {\n";
-         out += makeShapeStroke(obj, indents + 1, StrokeType::Normal);
-         out += makeShapeFill(obj, indents + 1);
-         out += makeShapeFillData(obj, indents + 1, make_alias);
-         out += indent + "}\n";
-         out += out2;
-         out += tabs(indents - 1) + "}\n";
-         return out;
-     }
+        QByteArray out2;
+        const auto make_alias = [&](int i) {
+            QString id;
+            std::tie(out2, id) = makePathAlias(i, obj, indents - 1);
+            return id;
+        };
+
+        out += makeAntialiasing(indents);
+        out += indent + "ShapePath {\n";
+        if(m_componentLevel != 0) { // see makeShapeFill
+            out += tabs(indents + 1) + "id: " + shape_path_id + "\n";
+        }
+        out += makeShapeStroke(obj, indents + 1, StrokeType::Normal);
+        out += makeShapeFill(obj, indents + 1);
+        out += makeShapeFillData(obj, indents + 1, make_alias);
+        out += indent + "}\n";
+        out += out2;
+        out += tabs(indents - 1) + "}\n";
+        return out;
+    }
 
      EByteArray FigmaParser::makeVectorNormalFill(const QString& image, const QJsonObject& obj, int indents) {
          QByteArray out;

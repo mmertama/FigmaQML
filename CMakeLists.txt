@@ -103,7 +103,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.0.4")
+set(VERSION_NUMBER "3.1.0")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
