@@ -8,6 +8,7 @@ import QtQuick.Dialogs
 import FigmaQmlInterface
 
 
+
 ApplicationWindow {
     id: main
     visible: true
@@ -403,7 +404,7 @@ ApplicationWindow {
                                 if(checked)
                                     container.color = "cyan"
                                 else
-                                    container.color = "white"
+                                    container.color = palette.active.window
                             }
                         }
                         QtCheckBox {
@@ -606,7 +607,6 @@ ApplicationWindow {
                         }
                 }
             }
-
     Item {
         height: main.height - controls.height - footer.height - menubar.height
         width: main.width
@@ -618,13 +618,15 @@ ApplicationWindow {
         }
         onCurrenItemChanged: _setVisible();
         Component.onCompleted: _setVisible();
-        BigText {
+
+
+       BigText {
             id: qmlText
             anchors.fill: parent
-          //  visible: qmlSourceButton.checked
             text: sourceChooser.text === elementName ? figmaQml.sourceCode : figmaQml.componentSourceCode(sourceChooser.text);
             wrapMode: TextEdit.Wrap
             leftPadding: 5
+
             FontMetrics {
                 id: fontMetrics
                 font: qmlText.font
@@ -640,7 +642,6 @@ ApplicationWindow {
         BigText {
             id: figmaSource
             anchors.fill: parent
-         //   visible: jsonButton.checked
             text: jsonChooser.text == documentName ? figmaQml.prettyData(figmaGet.data) : figmaQml.prettyData(figmaQml.componentObject(jsonChooser.text));
             wrapMode: TextEdit.WordWrap
         }
@@ -650,6 +651,7 @@ ApplicationWindow {
             visible: qmlButton.checked
             Rectangle {
                 id: container
+                color: palette.active.window
                 anchors.fill: parent
                 width: parent.width
                 height: parent.height

@@ -16,8 +16,9 @@
 #include <QTextStream>
 #include <QRegularExpression>
 #include <QFont>
+#include <QQuickStyle>
 #include "app_figma/FigmaQmlInterface/FigmaQmlInterface.hpp"
-//#include "figmaQmlSingleton.h"
+
 
 
 #ifndef NO_SSL
@@ -400,6 +401,9 @@ int main(int argc, char *argv[]) {
      }
 
      if(!(state & CmdLine) && snapFile.isEmpty()) {
+
+         QQuickStyle::setStyle(UI_STYLE);
+
          QObject::connect(figmaQml.get(), &FigmaQml::flagsChanged,
                           figmaQml.get(), [&figmaGet, &figmaQml]() {
              QSettings settings(COMPANY_NAME, PRODUCT_NAME);

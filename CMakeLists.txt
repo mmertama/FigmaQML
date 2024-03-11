@@ -25,7 +25,7 @@ if(EMSCRIPTEN)
         set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
     endif()
     message("Host path: ${QT_HOST_PATH}")
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat ShaderTools REQUIRED)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat ShaderTools QuickControls2 REQUIRED)
 else()
     if(LINUX)
         set(HAS_EXECUTE TRUE)
@@ -38,7 +38,7 @@ else()
             SerialPort
         )
     endif()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ShaderTools ${EXTRA_PACKAGES} REQUIRED)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ShaderTools QuickControls2 ${EXTRA_PACKAGES} REQUIRED)
 endif()
 
 # dog food
@@ -158,6 +158,8 @@ if(HAS_QUL)
     target_compile_definitions(${PROJECT_NAME} PRIVATE -DHAS_QUL)
 endif()
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE -DUI_STYLE="Fusion")
+
 set(COMMON_LIBS
     Qt6::Core
     Qt6::Quick
@@ -165,6 +167,7 @@ set(COMMON_LIBS
     Qt6::Widgets
     Qt6::Core5Compat
     Qt6::ShaderTools
+    Qt6::QuickControls2
     FigmaQmlInterface
     ${EXTRA})
 

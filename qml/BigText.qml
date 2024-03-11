@@ -1,5 +1,6 @@
-import QtQuick 2.14
-import QtQuick.Controls 2.14
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Fusion
 
 Item {
     id: main
@@ -16,11 +17,14 @@ Item {
     readonly property int bottomIndex: view.indexAt(1, view.contentY + view.contentHeight)
     readonly property alias lineCount: view.count
     property Component linePredessor
+
     Text {
         id: hidden
         visible: false
+        color: palette.active.buttonText
         width: 0
         height: 0
+
     }
     ListView {
         id: view
