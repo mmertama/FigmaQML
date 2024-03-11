@@ -578,11 +578,13 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
                 if(var.contains(ON_CLICK)) {
                     out += indent1 + "MouseArea {\n";
                     out += indent2 + "anchors.fill: parent\n";
-                    /*out += indent2 + "x: " + mouse_area_name.first + ".x\n";
-                              out += indent2 + "y: " + mouse_area_name.first + ".y\n";
-                              out += indent2 + "width: " + mouse_area_name.first + ".width\n";
-                              out += indent2 + "height: " + mouse_area_name.first + ".height\n";*/
                     out += indent2 + "onClicked: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'click_event' ); }\n";
+                    out += indent2 + "onPositionChanged: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'mouse_move_event' ); }\n";
+                    out += indent2 + "onPressAndHold: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'press_and_hold_event' ); }\n";
+                    if(!isQul()) // DCLICK not supported w/ qul
+                        out += indent2 + "onDoubleClicked: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'double_clicked_event' ); }\n";
+                    out += indent2 + "onPressed: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'pressed_event' );}\n";
+                    out += indent2 + "onReleased: { FigmaQmlSingleton.eventReceived( '"  +  name + "', 'released_event' ); }\n";
                     out += indent1 + "}\n";
                 }
             }
@@ -1191,6 +1193,8 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
     */
     EByteArray FigmaParser::makeVectorNormalFill(const QJsonObject& obj, int indents) {
         QByteArray out;
+        // I would be trivial do a dynamic dispatching by figuring out runtime if property is intendent to this or path
+        // but that wont work with MCU, but as Shape wont contain any useful properties to change, its more than fine pass them to ShapePath instead
         const auto shape_path_id = makeId(SVGPATH_PREFIX, obj);
         APPENDERR(out, makeItem("Shape", obj, indents, shape_path_id));
         out += makeExtents(obj, indents);
