@@ -161,3 +161,6 @@ WG
 SINGLETONQString
 MQTT
 QMQTTI
+CMakeLists
+subdirectory
+

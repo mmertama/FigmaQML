@@ -23,7 +23,7 @@ FigmaQML supports both Desktop and Qt for MCU development.
  1. Go File/Export Qt Desktop.
  1. Add View... to add your application views in the included views (if any).
  1. Save... save in your application folder. Here a folder is created (MY_PROJECT below)
- 1. In your application CMakeFile - *MY_PROJECT* and *Page_1* may vary. 
+ 1. In your application CMakeLists.txt - *MY_PROJECT* and *Page_1* may vary. 
     * `add_subdirectory(${CMAKE_SOURCE_DIR}/MY_PROJECT/Page_1/FigmaQmlInterface)`
     * `target_include_directories(${PROJECT_NAME} PRIVATE MY_PROJECT/Page_1/FigmaQmlInterface")`
     * `target_link_libraries(${PROJECT_NAME} PRIVATE FigmaQmlInterface`
