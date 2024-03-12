@@ -13,82 +13,89 @@ FigmaQML supports both Desktop and Qt for MCU development.
 * Version 3.0.2
 * License: [MIT license](https://en.wikipedia.org/wiki/MIT_License)
 
-## Run ##
+## Quick steps
+ 1. Make figma design.
+ 1. Start FigmaQML.
+ 1. Enter your user and personal tokens to access your project.
+ 1. Press *Update*.
+ 1. Press QtQuick Tab.
+ 1. Select you 1st view (use those [1][1] widgets).
+ 1. Go File/Export Qt Desktop.
+ 1. Add View... to add your application views in the included views (if any).
+ 1. Save... save in your application folder. Here a folder is created (MY_PROJECT below)
+ 1. In your application CMakeFile - *MY_PROJECT* and *Page_1* may vary. 
+    * `add_subdirectory(${CMAKE_SOURCE_DIR}/MY_PROJECT/Page_1/FigmaQmlInterface)`
+    * `target_include_directories(${PROJECT_NAME} PRIVATE MY_PROJECT/Page_1/FigmaQmlInterface")`
+    * `target_link_libraries(${PROJECT_NAME} PRIVATE FigmaQmlInterface`
+ 1. Add *FigmaQmlInterface::registerFigmaQmlSingleton(QQmlEngine)* before loading a QML code in your C++ code.
+    * Needed only for dynamic code.
+ 1. Insert in QML code
+    
+    ``` 
+        FigmaQmlUi {
+            id: figmaUi
+            anchors.fill: parent
+            }  
+    ```   
+    
+## FigmaQML UI
 
-* FigmaQML can be run either in command line or as a gui application.
-    * Command line support for Qt for MCU is under construction.
-    * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
-* Gui application is interactive to see visuals and source code before saving.
-* Command line is for processing Figma documents to QML. 
-* Basic Command line format is <code> $figmaqml &lt;options&gt; TOKEN PROJECT QML_DIRECTORY </code>
-    * For options see --help
-    * For MacOSX the commandline refers inside of application bundle: i.e. <code>$ FigmaQML.app/Contents/MacOS/FigmaQML</code>
-* FigmaQML can be run as a WebAssembly application.
-   * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!
-   * The compiled (6.6.2) Qt WASM seems to have issues. Working on it.
-   * <strike>[Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)</strike>
-* Other than Linux version may have a limited functionality.  
-
-### Binaries ###
-
-* See [Releases](https://github.com/mmertama/FigmaQML/releases) 
-
-### Quick guide to FigmaQML UI ###
-
-## File ##
-* **Tokens**
+### File 
+* Tokens
   * Set your user [account token ](https://www.figma.com/developers/api#access-tokens) and project token. 
   * To get project token open your Figma Document on the browser and see the URL: The token after file.
   * For example: if the URL is "https://www.figma.com/file/bPWNMoKnXkXgf71S9cFX7G/…", the requested token is
   "bPWNMoKnXkXgf71S9cFX7G"  (without quotes)
-* **Export Qt for Desktop**
+* Export Qt for Desktop
     * Export application QMLs     
-* **Export Qt for MCU**
+* Export Qt for MCU
     * Open view to manage and export Qt for MCU content.
     * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
-* **Export all QMLs**
+* Export all QMLs
     * Generates QML code and related images into the given directory.
     * Do not use for Qt for MCU.
-* **Edit Imports...** edit a QML "imports" statement.
-* **Fonts...**
+* Edit Imports... edit a QML "imports" statement.
+* Fonts...
     * See and map how the current Figma design fonts are mapped with the local fonts. You don't have to install missing fonts, therefore you set an additional font file search folder.
     * Qt For MCU is partial, MCU application uses the font defined in its qmlproject file, and it may be different defined for FigmaQML. I.e. Fonts defined here does not impact to final fonts. (TODO) 
-* **Store** 
+* Store
     * Saves the current project. The big project can take time and Store-Restore would save your time by storing of 'snapshot' of the current content.
-* **Restore**
+* Restore
     * Reads a project from a file.
     
-## Tabs ##    
-* **Source**
+### Tabs     
+* Source
     * Generated source code. Mostly for debugging . You may use Ctrl+C to copy it to an external editor. 
-* **Figma**
+* Figma
     * Figma produced internal content. Mostly for debugging
-* **QtQuick**
+* QtQuick
     * Show QML rendering of the rendering - verify here that it looks ok. 
 
-## Views ##
+### Views
 
 * **+/-**
     * Navigate pages and views 
     * Figma project consists of "page" (or canvas) and "views" on each page.
     * FigmaQML generates an UI for each view.
 
-## Connect ##
+### Connect
 
-**Update**
+* Update
     * Read Figma data and generate QML out from it.
     * May take a while, When server is connected at first time, all the document data is retrieved, then transcoded to QML and rendered to UI
     
-## Settings ##
-    * **Break booleans**
-        * Generate code for each child element that composites a Figma Boolean element are generated. By default only the composed shape Item is produced.
-        * Avoid using.
-    * **Embed images**
-        * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
-        * Do not use with Qt for MCU
-    * **Antialiasing shapes**
-        * Whether "Antialiasing: true" property is set on each shape.
-        * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
+### Settings
+
+* Break booleans
+    * Generate code for each child element that composites a Figma Boolean element are generated. By default only the composed shape Item is produced.
+    * Avoid using.
+* Embed images
+    * Creates stand-alone QML files that have images written in the QML code instead of generating and referring to image files.
+    * Do not use with Qt for MCU
+* Antialiasing shapes
+    * Whether "Antialiasing: true" property is set on each shape.
+    * Do not use with Qt for MCU    
+    * Alternatively improve rendering quality (as FigmaQML does) by setting the global multisampling using the code snippet:
         
     ```cpp
     
@@ -97,37 +104,92 @@ FigmaQML supports both Desktop and Qt for MCU development.
     QSurfaceFormat::setDefaultFormat(format);
     
     ```
+   
+* Qt for MCU
+    * The generated code is targeted for Qt for MCU.
+    * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
+* Static QML
+    * Turn off all dynamic code creation.
+* Cyan background
+    * Change FigmaQML background to an alternative color.
+    * Does not affect to the exported code.
+* No Gradients
+    * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
+* Loader placeholders
+    * Show dynamic loader placeholder instead of rendered components.
+    * Does not affect to the exported code.
+* Render placeholders 
+    * Show placeholder components as rendered images.
+    * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
+    * Does not affect to the exported code.
+* Render view 
+    * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
+    * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
 
-    **Do not use with Qt for MCU**
-    
-    * **Qt for MCU**
-        * The generated code is targeted for Qt for MCU.
-        * Available only for Linux (Qt for MCU requires Ubuntu 20.04)
-    * **Static QML**
-        * Turn off all dynamic code creation.
-    * **Cyan background**
-        * Change FigmaQML background to an alternative color.
-        * Does not affect to the exported code.
-    * **No Gradients**
-        * Qt for MCU current version (2.6) does not support gradients, this enforces to rendered with the gradient's average color.
-    * **Loader placeholders**
-        * Show dynamic loader placeholder instead of rendered components.
-        * Does not affect to the exported code.
-    * **Render placeholders** 
-        * Show placeholder components as rendered images.
-        * Only for debugging and verification. Figma server may have hiccups if there are too much to render.
-        * Does not affect to the exported code.
-    * **Render view** 
-        * Set the view to be rendered on the Figma Server, and the generated UI is just an image. Handy to compare rendering results.
-        * Only for debugging and verification. Figma server may have hiccups if there are too much to render. 
-
-## Components ##
+### Components
 * Displayed only when the source code tab is activated.
     * Show a source code of the component or item selected.
-* **Scaling**
+* Scaling
     * Let the user to zoom in and out the current rendering. 
 
-## Dynamic code ##
+
+### Export Qt for Desktop
+
+### Execute
+* Application UI built and executed
+* For debug and verification
+* Available only for Linux
+
+### Save
+Store generated files in your application folder.    
+
+* *Included views*
+    * By default a only a current view is exported, to add more views add them into list.
+    * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
+* *Save as app*
+    * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
+
+
+### Export Qt for MCU ## 
+(available only on Linux)
+
+[Qt for MCU dialog](doc/qtformcu.png)
+
+### Execute
+
+For UI verification "Execute" builds a dummy UI and execute it on the
+connected MCU device. 
+
+* *Qt Dir* 
+    * Qt directory, e.g. "/home/user/Qt"
+* *Qul Version*
+    * Qt for MCU version, e.g, "2.6.0"
+* *Qul Platform*
+    * Target platform e.g. "STM32F769I-DISCOVERY-baremetal"
+* *Qt License*
+    * Qt for MCU requires Qt commercial license. 
+    * License file, can be downloaded from your Qt account.
+* *Platform Hardware*
+    * Supported "Execute" platform - currently only STM32 is available.
+* *Platform tools*
+    * Path to MCU tooling e.g. "/home/user/STM32_MCU" 
+    
+### Save
+
+Store generated files in your application folder.    
+
+* *Included views*
+    * By default a only a current view is exported, to add more views add them into list.
+    * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
+* *Save as app*
+    * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
+  
+
+## API Documentation
+[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/docs)
+
+
+## Dynamic code
 
 The FigmaQML generated code is exported into application code where it is used like any QML item. FigmaQmlUi Item takes charge of rendering the UI graphics.
 You can inject the FigmaQML generated UI in your application just by  adding a FigmaQML item.
@@ -159,6 +221,7 @@ the name identifies the element in QML and command tells what to do:
     FigmaQmlSingleton.applyValue("pressure_info",  pressure + " kPa");
 
     ```
+    
 * *onClick*
     * *FigmaQmlSingleton::onEvent* is a signal handler that receives touch events coming from the named element.
     * The signalled parameters are 'element' and 'click_event'.
@@ -169,6 +232,7 @@ the name identifies the element in QML and command tells what to do:
         if(event == 'click_event' && element == 'temp_unit') {
             bme680.currentUnitCelcius = !bme680.currentUnitCelcius;
         }
+    
     ```        
 
 * *asLoader*
@@ -184,6 +248,7 @@ the name identifies the element in QML and command tells what to do:
     include(${path_to_generated_source/FigmaQmlInterface}/FigmaQmlInterface.cmake)
     FigmaQml_AddQml(QMLS  ${CMAKE_SOURCE_DIR}/qml/Graphs.qml  ${CMAKE_SOURCE_DIR}/qml/TimeSeries.qml HEADERS ${mcukit_SOURCE_DIR}/utils/Utils.hpp)
     ```
+    
     * Injecting component is straightforward, to replace qml?Temp.asLoader:
     
     ```js
@@ -197,60 +262,6 @@ Besides of those methods you can include multiple views in your application, and
 ```js
 FigmaQmlSingleton.setView(1);
 ```
-
-## Export Qt for Desktop
-
-#### Execute
-* Application UI built and executed
-* For debug and verification
-* Available only for Linux
-
-#### Save
-Store generated files in your application folder.    
-
-* *Included views*
-    * By default a only a current view is exported, to add more views add them into list.
-    * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
-* *Save as app*
-    * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
-
-
-## Export Qt for MCU ## 
-(available only on Linux)
-
-[Qt for MCU dialog](doc/qtformcu.png)
-
-#### Execute
-
-For UI verification "Execute" builds a dummy UI and execute it on the
-connected MCU device. 
-
-* *Qt Dir* 
-    * Qt directory, e.g. "/home/user/Qt"
-* *Qul Version*
-    * Qt for MCU version, e.g, "2.6.0"
-* *Qul Platform*
-    * Target platform e.g. "STM32F769I-DISCOVERY-baremetal"
-* *Qt License*
-    * Qt for MCU requires Qt commercial license. 
-    * License file, can be downloaded from your Qt account.
-* *Platform Hardware*
-    * Supported "Execute" platform - currently only STM32 is available.
-* *Platform tools*
-    * Path to MCU tooling e.g. "/home/user/STM32_MCU" 
-    
-#### Save
-
-Store generated files in your application folder.    
-
-* *Included views*
-    * By default a only a current view is exported, to add more views add them into list.
-    * *FigmaQmlSingleton::setView* index refers to this view order so that 1st, default, is zero. 
-* *Save as app*
-    * For debugging, copies also project files to create an executable (virtually same as "Execute" is using).
-    
-## API Documentation
-[FigmaQML Documentation](https://mmertama.github.io/FigmaQML/docs)
 
 ## Integrate for Desktop project
 1. Add FigmaQmlInterface into target_link_libraries
@@ -276,8 +287,8 @@ Store generated files in your application folder.
     
     ```cpp
     
-    &#35;include &lt;QtGui&gt;
-    &#35;include &lt;QtQml&gt;
+    #include <QtGui>
+    #include <QtQml>
     
     #include "FigmaQmlInterface/FigmaQmlInterface.hpp"
     
@@ -320,20 +331,25 @@ Store generated files in your application folder.
 
     ```
 
-## Example
+## Run ##
 
-[QMQTTI] (https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
-on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is update when FigmaQML is used to decouple visuals from functionality. 
+* FigmaQML can be run either in command line or as a gui application.
+    * Command line support for Qt for MCU is under construction.
+    * Maybe I will drop off the commandline support entirely as it is good to see results before export. 
+* Gui application is interactive to see visuals and source code before saving.
+* Command line is for processing Figma documents to QML. 
+* Basic Command line format is <code> $figmaqml &lt;options&gt; TOKEN PROJECT QML_DIRECTORY </code>
+    * For options see --help
+    * For MacOSX the commandline refers inside of application bundle: i.e. <code>$ FigmaQML.app/Contents/MacOS/FigmaQML</code>
+* FigmaQML can be run as a WebAssembly application.
+   * There seems to be some occasional CORS issues, and I have no idea how to fix. If that is a problem, please use a native app!
+   * The compiled (6.6.2) Qt WASM seems to have issues. Working on it.
+   * <strike>[Start FigmaQML](https://mmertama.github.io/FigmaQML/FigmaQML.html)</strike>
+* Other than Linux version may have a limited functionality.  
 
-## FAQ
+### Binaries ###
 
-* Q: How FigmaQML compares to Qt Figma Bridge?
-   * A: I see them as quite different thing:
-      * Qt for Figma Bridge is a importer for Qt Design Studio that works with component visuals. Those components are then used to compose an application UI in Qt Creator in very traditional way. FigmaQML does not use Qt Design studio - it generates a FigmaQmlUi that is used in the application QML like any other QtQuick item and therefore IS the application UI visuals.
-      * You can even use them together: use Qt Design Studio to create beautiful components. Then for FigmaQML set a UI element as placeholder (see `asLoader`), and then use FigmaQmlSingleton.setSource dynamically load that beautiful component to replace a placeholder.   
-      * FigmaQML supports both Qt Desktop and Qt for MCU.
-
-## Other Info
+* See [Releases](https://github.com/mmertama/FigmaQML/releases)
 
 ### Build and deploy
 * Qt6.4 or newer
@@ -353,6 +369,20 @@ on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is updat
     * Qt5 compatibility library
     * To prevent spellchecker and doxygen, define NO_DOC
 
+## Example
+
+[QMQTTI] (https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
+on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is update when FigmaQML is used to decouple visuals from functionality. 
+
+## FAQ
+
+* Q: How FigmaQML compares to Qt Figma Bridge?
+   * A: I see them as quite different thing:
+      * Qt for Figma Bridge is a importer for Qt Design Studio that works with component visuals. Those components are then used to compose an application UI in Qt Creator in very traditional way. FigmaQML does not use Qt Design studio - it generates a FigmaQmlUi that is used in the application QML like any other QtQuick item and therefore IS the application UI visuals.
+      * You can even use them together: use Qt Design Studio to create beautiful components. Then for FigmaQML set a UI element as placeholder (see `asLoader`), and then use FigmaQmlSingleton.setSource dynamically load that beautiful component to replace a placeholder.   
+      * FigmaQML supports both Qt Desktop and Qt for MCU.
+
+## Other info
 
 #### Testing
 There are few scripts in the [test]() folder that are used for testing. Since the test data itself is under a personal Figma account, there are no automated tests provided along the FigmaQML sources. However if you have a good set of Figma documents available you can execute tests using next example:
@@ -408,3 +438,7 @@ There are few scripts in the [test]() folder that are used for testing. Since th
     * Dynamic code support
     * Fixes 
     * UI updates
+* 3.1.0
+    * UI polish
+    * Improved dynamic code support
+    
