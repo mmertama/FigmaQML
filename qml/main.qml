@@ -6,7 +6,7 @@ import FigmaQml
 import FigmaGet
 import QtQuick.Dialogs
 import FigmaQmlInterface
-import Qt.labs.settings // remove this after 6.7 released (Ubuntu 20.04 is not needed anymore for Qt for MCU)
+
 
 
 
@@ -270,6 +270,14 @@ ApplicationWindow {
             MenuItem {
                 text: "About..."
                 onTriggered: about.open();
+            }
+            MenuItem {
+                text: "Help..."
+                onTriggered: {
+                    if(!Qt.openUrlExternally("https://mmertama.github.io/FigmaQML/docs")) {
+                        errorNote.text = "Cannot open help";
+                    }
+                }
             }
             MenuItem {
                 text: "Exit"

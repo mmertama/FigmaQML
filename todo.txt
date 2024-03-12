@@ -2,15 +2,12 @@
  * Bug: Sub component source code is not shown
  * Bug: Any component Figma code is not shown
  * (Rewrite parser, WHY: add new features / fixes is a pain (AST))
- ** MCU generation logging should be async WHY, current is annoying
  * Tons of warnings that means either file exits, it conflicst or futile work is done
  * Why it is so slow, how to speed up?
  * Qt for MCU font support (see https://doc.qt.io/QtForMCUs-2.5/qtul-fonts.html#fontmaps)
  * Find from document could be a savior
  * 2nd Update gives errors
  * warn file replaced only if there are differences
- ** look again writing to non empty folder
- * FigmaQmlSingleton sendObject(element, jsobject)
 
 
 

@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Dialogs
 import QtCore
+import Qt.labs.settings // remove this after 6.7 released (Ubuntu 20.04 is not needed anymore for Qt for MCU)
 
 Dialog {
     id: dialog
