@@ -19,7 +19,7 @@ RowLayout {
             Layout.preferredHeight: button.height - border.width * 2
             border.color: row.borderColor
             color: row.color
-            TextInput {
+            TextField {
                 id: input
                 anchors.centerIn: parent
                 text: row.text

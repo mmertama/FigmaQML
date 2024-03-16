@@ -17,7 +17,7 @@ CheckBox {
         height: main.height
         color: "black"
     }
-    contentItem: Text {
+    contentItem: Label {
         text: main.text
         font: main.font
         opacity: enabled ? 1.0 : 0.3

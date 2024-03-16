@@ -18,10 +18,9 @@ Item {
     readonly property alias lineCount: view.count
     property Component linePredessor
 
-    Text {
+    Label {
         id: hidden
         visible: false
-        color: palette.active.buttonText
         width: 0
         height: 0
 

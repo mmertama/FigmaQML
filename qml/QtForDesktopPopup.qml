@@ -9,9 +9,9 @@ Dialog {
     id: dialog
     title: "Qt Export"
 
-    background: Rectangle {
+    /*background: Rectangle {
             color: "lightgray"
-    }
+    }*/
     property color textBg: "white"
     property color textBgBorder: "gray"
 
@@ -49,7 +49,7 @@ Dialog {
 
     ColumnLayout {
         // I doubt if setting this has any meaning if setExecute is false ... but it wont hurt :-D
-        Text {text: "Qt DIR";font.weight: Font.Medium}
+        Label {text: "Qt DIR";font.weight: Font.Medium}
         MyInput {
             id: qtDir
             text: "/opt/Qt"
@@ -62,7 +62,7 @@ Dialog {
             }
         }
 
-        Text {text: "Included views"; font.weight: Font.Medium}
+        Label {text: "Included views"; font.weight: Font.Medium}
         RowLayout {
             Layout.preferredWidth: parent.width
             spacing: 10

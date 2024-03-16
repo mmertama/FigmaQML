@@ -326,7 +326,7 @@ ApplicationWindow {
                 enabled: figmaGet.projectToken.length > 0
                          && figmaGet.userToken.length > 0
                 onClicked: !updater.running ? updater.start() : updater.stop()
-                contentItem: Text {
+                contentItem: Label {
                     anchors.fill: parent
                     horizontalAlignment: Qt.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
@@ -512,7 +512,7 @@ ApplicationWindow {
                 visible: tabs.currentItem === qmlSourceButton && elementName.length > 0
                 property var content: [elementName].concat(figmaQml.components)
                 width:  333
-                contentItem: Text {
+                contentItem: Label {
                     anchors.fill: parent
                     horizontalAlignment: Qt.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
@@ -548,7 +548,7 @@ ApplicationWindow {
                                 checked: index == 0
                                 background: Rectangle {
                                     anchors.fill: parent
-                                    color: "#cccccc"
+                                    color: palette.mid
                                 }
                                 onCheckedChanged: {
                                     if(checked)
@@ -567,7 +567,7 @@ ApplicationWindow {
                 visible: tabs.currentItem === figmaSourceButton && documentName.length > 0
                 property var content: [documentName].concat(figmaQml.components)
                 width:  333
-                contentItem: Text {
+                contentItem: Label {
                     anchors.fill: parent
                     horizontalAlignment: Qt.AlignHCenter
                     verticalAlignment: Qt.AlignVCenter
@@ -602,7 +602,7 @@ ApplicationWindow {
                                 checked: index == 0
                                 background: Rectangle {
                                     anchors.fill: parent
-                                    color: "#cccccc"
+                                    color: palette.mid
                                 }
                                 onCheckedChanged: {
                                     if(checked)
@@ -641,7 +641,7 @@ ApplicationWindow {
                 font: qmlText.font
                 readonly property real numWidth: advanceWidth('0'.repeat(Math.log10(qmlText.lineCount) + 1))
             }
-            linePredessor: Text {
+            linePredessor: Label {
                 font: qmlText.font
                 color: "gray"
                 text: lineIndex + 1
@@ -737,13 +737,13 @@ ApplicationWindow {
                     } catch (error) {
                         //There is a reason line numbers wont match, and therefore we try to load a sourceCode
                         error = sourceCodeError(error, container);
-                        let errors = "Text {text:\"Error loading a Figma item\";}\n"
+                        let errors = "Label {text:\"Error loading a Figma item\";}\n"
 
                         console.debug("Catch error on create:", error)
 
                         if(error.qmlErrors) {
                             for (let i = 0; i < error.qmlErrors.length; i++) {
-                                errors += "Column {\nText {text:\"" + "line: "
+                                errors += "Column {\Label {text:\"" + "line: "
                                         + error.qmlErrors[i].lineNumber  + "\";}\n"
                                         + "Text {text:\"column: "
                                         + error.qmlErrors[i].columnNumber + "\";}\n"
@@ -753,7 +753,7 @@ ApplicationWindow {
                                         + error.qmlErrors[i].message.split('').map(c=>'\\x' + c.charCodeAt(0).toString(16)).join('') + "';}\n}\n"
                             }
                         } else {
-                           errors += "Text {text: \"Unknown error:" + error.replace(/"/g, '\\"') +"\" }";
+                           errors += "Label {text: \"Unknown error:" + error.replace(/"/g, '\\"') +"\" }";
                         }
                         let content = "import QtQuick 2.14\n Column {\n" + errors + "}\n";
                         try {
@@ -807,7 +807,7 @@ ApplicationWindow {
 
     footer:  Rectangle {
         id: footer
-        color: "#cccccc"
+        color: palette.midlight
         height: footerRow.height
         width: parent.width
         Row {
@@ -819,19 +819,19 @@ ApplicationWindow {
             Label {
                 text: figmaDownload ? ("Downloads: " + figmaDownload.downloads): "__"
             }
-            Text {
+            Label {
                 text: documentName
             }
-            Text {
+            Label {
                 text: canvasName
             }
-            Text {
+            Label {
                 text: elementName
             }
-            Text {
+            Label {
                 id: info
             }
-            Text {
+            Label {
                 id: warning
                 color: "red"
                 font.bold: true
@@ -1193,8 +1193,7 @@ ApplicationWindow {
         id: send_set_value
         modal: Qt.NonModal
         title: qsTr("Request applyValue")
-        contentItem: Rectangle {
-            color: "white"
+        contentItem: Item {
             implicitWidth: 400
             implicitHeight: 100
             ColumnLayout {

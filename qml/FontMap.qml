@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Dialogs
 
 
-Popup {
+Dialog {
     id: main
     modal: true
     focus: true
@@ -69,7 +69,7 @@ Popup {
             text: "import font"
             onClicked: figmaQml.importFontFolder()
         }
-        Text {
+        Label {
             id: placeHolder
             visible: fonts.length === 0
             text: "No QML file with fonts available"
@@ -85,7 +85,7 @@ Popup {
             clip: true
             delegate: RowLayout {
                 spacing: 10
-                Text {
+                Label {
                     id: key
                     text: modelData
                     Layout.preferredHeight: 18
@@ -101,12 +101,13 @@ Popup {
                     }
                 }
                 Rectangle {
-                    color: "lightgrey"
+                    color: "transparent"
+                    //color: "lightgrey"
                     Layout.preferredWidth: list.width / 2 - 30
                     Layout.preferredHeight: key.height
                     border.width: 1
                     clip: true
-                    Text {
+                    Label {
                         id: name
                         anchors.centerIn: parent
                         text: main.model[main.switcher ? "" : modelData]
@@ -117,12 +118,13 @@ Popup {
                     }
                 }
                 Rectangle {
-                    color: "lightgrey"
+                    color: "transparent"
+                    //color: "lightgrey"
                     Layout.preferredHeight: key.height
                     Layout.preferredWidth: 40
                     Layout.alignment: Qt.AlignRight
                     border.width: 1
-                    Text {
+                    Label {
                         anchors.margins: 10
                         anchors.centerIn: parent
                         text: "reset"

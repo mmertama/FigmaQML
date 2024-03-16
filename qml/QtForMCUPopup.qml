@@ -9,9 +9,9 @@ Dialog {
     id: dialog
     title: "Qt For MCU Export"
 
-    background: Rectangle {
+    /*background: Rectangle {
             color: "lightgray"
-    }
+    }*/
     property color textBg: "white"
     property color textBgBorder: "gray"
 
@@ -58,7 +58,7 @@ Dialog {
 
     ColumnLayout {
 
-        Text {text: "Qt DIR";font.weight: Font.Medium}
+        Label {text: "Qt DIR";font.weight: Font.Medium}
         MyInput {
             id: qtDir
             text: "/opt/Qt"
@@ -71,7 +71,7 @@ Dialog {
             }
         }
 
-        Text {
+        Label {
             text: "Qul Version"
         }
         MyInput {
@@ -79,13 +79,13 @@ Dialog {
             text: "2.6.0"
         }
 
-        Text {text: "Qul Platform";font.weight: Font.Medium}
+        Label {text: "Qul Platform";font.weight: Font.Medium}
         MyInput {
             id: qulPlatform
             text: "STM32F769I-DISCOVERY-baremetal"
         }
 
-        Text {text: "Qt License";font.weight: Font.Medium}
+        Label {text: "Qt License";font.weight: Font.Medium}
         MyInput {
             id: qtLicense
             text: "./qt-license.txt"
@@ -98,7 +98,7 @@ Dialog {
             }
         }
 
-        Text {text: "Platfrom Hardware"; font.weight: Font.Medium}
+        Label {text: "Platfrom Hardware"; font.weight: Font.Medium}
         ComboBox {
             id: hwSelection
             model: [qsTr("Not spesified")].concat(figmaQml.supportedQulHardware)
@@ -106,7 +106,7 @@ Dialog {
         }
 
 
-        Text {text: "Platform tools";font.weight: Font.Medium}
+        Label {text: "Platform tools";font.weight: Font.Medium}
         MyInput {
             id: platformTools
             text: "         "
@@ -120,7 +120,7 @@ Dialog {
         }
 
 
-        Text {text: "Included views"; font.weight: Font.Medium}
+        Label {text: "Included views"; font.weight: Font.Medium}
         RowLayout {
             Layout.preferredWidth: parent.width
             IncludeList {

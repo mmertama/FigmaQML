@@ -2,7 +2,7 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Controls 2.15
 
-Popup {
+Dialog {
      id: main
      anchors.centerIn: main.contentItem
      modal: true
@@ -23,7 +23,7 @@ Popup {
              property var checked: new Array(model.length)
              delegate:  Row {
                 spacing: 10
-                TextEdit {
+                TextArea {
                     id: import_file
                     text: modelData
                     property string initialText: text
@@ -43,7 +43,7 @@ Popup {
                         this.width = Qt.binding(()=>list.r1) //we can to bind only after
                     }
                 }
-                TextEdit {
+                TextArea {
                     id: import_version
                     text: main.imports[modelData]
                     onTextChanged: {
