@@ -110,6 +110,7 @@ add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 set(NON_SOURCE
     todo.txt
     README.md
+    aspell/spell_words.txt
     .github/workflows/figmaqml.yml
 )
 

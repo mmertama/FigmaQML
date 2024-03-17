@@ -1,4 +1,3 @@
-personal_ws-1.1 en 84 utf-8
 forwhich
 PrivateBase
 ProtectedBase
@@ -163,4 +162,3 @@ MQTT
 QMQTTI
 CMakeLists
 subdirectory
-
