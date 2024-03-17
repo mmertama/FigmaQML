@@ -185,6 +185,7 @@ if(LINUX AND NOT NO_DOC)
         mcu_figma/FigmaQmlInterface/FigmaQmlInterface.hpp
     )
     add_doxygen(${PROJECT_NAME})
+    set(CMAKEDOC_SPELL_DICTIONARY ${CMAKE_SOURCE_DIR}/aspell/spell_words.txt)
     set(CMAKEDOC_SPELL_EXCLUDE_DIRS
         build
         aspell
