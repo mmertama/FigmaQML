@@ -103,7 +103,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.1.1")
+set(VERSION_NUMBER "3.2.1")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
@@ -112,6 +112,7 @@ set(NON_SOURCE
     README.md
     aspell/spell_words.txt
     .github/workflows/figmaqml.yml
+    find_types.py
 )
 
 #add_executable(FigmaQML

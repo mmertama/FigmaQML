@@ -13,6 +13,7 @@
         <file>IncludeList.qml</file>
         <file>LoaderPlaceHolder.qml</file>
         <file>QtForDesktopPopup.qml</file>
+        <file>TokensPopup.qml</file>
         <file>Input.qml</file>
     </qresource>
 </RCC>
