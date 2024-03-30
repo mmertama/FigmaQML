@@ -340,19 +340,6 @@ ApplicationWindow {
                     height: childrenRect.height
                     width: childrenRect.width
                     layer.enabled: true
-                    /*layer.effect:  Loader { //This does not work - rething later how to do compatible drop shadows
-                           asynchronous: false
-                           Component.onCompleted: {
-                               setSource("Qt5DropShadow.qml", {horizontalOffset: 5,
-                                                           verticalOffset: 5});
-                               if(status == Loader.Error)
-                                   setSource("Qt6DropShadow.qml", {horizontalOffset: 5,
-                                                               verticalOffset: 5});
-
-                           console.assert(status != Loader.Ready, "Cannot load dropshadow")
-                           }
-                       }
-                       */
                     Column {
                         QtCheckBox {
                             text: "Break Booleans"
@@ -524,24 +511,6 @@ ApplicationWindow {
                             height: qmlText.height
                             clip: true
                             layer.enabled: true
-                            /*layer.effect: Loader { //This does not work - rething later how to do compatible drop shadows
-                                Component.onCompleted: {
-                                    setSource("Qt5DropShadow.qml", {
-                                                                     transparentBorder: false,
-                                                                     horizontalOffset: 8,
-                                                                     verticalOffset: 8
-                                                                  });
-                                    if(status == Loader.Error)
-                                        setSource("Qt6DropShadow.qml", {
-                                                                     transparentBorder: false,
-                                                                     horizontalOffset: 8,
-                                                                     verticalOffset: 8
-                                                                  });
-
-                                console.assert(status != Loader.Ready, "Cannot load dropshadow")
-                                }
-                            }*/
-
                             delegate: RadioButton {
                                 width:  sourceChooser.width
                                 text: modelData
@@ -579,23 +548,6 @@ ApplicationWindow {
                             height: figmaSource.height
                             clip: true
                             layer.enabled: true
-                            /*layer.effect: Loader { //This does not work - rething later how to do compatible drop shadows
-                                Component.onCompleted: {
-                                    setSource("Qt5DropShadow.qml", {
-                                                                     transparentBorder: false,
-                                                                     horizontalOffset: 8,
-                                                                     verticalOffset: 8
-                                                                  });
-                                    if(status == Loader.Error)
-                                        setSource("Qt6DropShadow.qml", {
-                                                                     transparentBorder: false,
-                                                                     horizontalOffset: 8,
-                                                                     verticalOffset: 8
-                                                                  });
-
-                                console.assert(status != Loader.Ready, "Cannot load dropshadow")
-                                }
-                            }*/
                             delegate: RadioButton {
                                 width:  jsonChooser.width
                                 text: modelData

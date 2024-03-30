@@ -332,7 +332,12 @@ void FigmaQml::applyExternalLoaders() {
 
 void FigmaQml::updateDefaultImports() {
     const auto di = defaultImports();
-    const QStringList to_check = {"Qt5Compat.GraphicalEffects"};
+    const QStringList to_check = {
+#ifdef QT5COMPAT
+        "Qt5Compat.GraphicalEffects"
+#endif
+        "QtQuick.Effects"
+        };
     bool has_changes = false;
     for(const auto& c : to_check) {
         if(di.contains(c) && !m_imports.contains(c)) {
@@ -384,8 +389,12 @@ QVariantMap FigmaQml::defaultImports() const {
             {"QtQuick.Shapes", QString("")}
         } : QVariantMap{
             {"QtQuick", QString("")},
-            {"Qt5Compat.GraphicalEffects", QString("")},
-            {"QtQuick.Shapes", QString("")}
+#ifdef QT5COMPAT
+        {"Qt5Compat.GraphicalEffects", QString("")},
+#else
+        {"QtQuick.Effects", QString("")},
+#endif
+        {"QtQuick.Shapes", QString("")}
          };
 #endif
 
@@ -449,6 +458,8 @@ void FigmaQml::cancel() {
 
 void FigmaQml::doCancel() {
     m_doCancel = true;
+    m_busy = false;
+    emit busyChanged();
 }
 
 void FigmaQml::setFilter(const QMap<int, QSet<int>>& filter) {
@@ -1255,4 +1266,8 @@ Q_INVOKABLE void FigmaQml::reset(bool keepFonts, bool keepSources, bool keepImag
     emit canvasCountChanged();
     emit elementCountChanged();
     emit documentNameChanged();
+}
+
+void FigmaQml::doReset() {
+    reset(true, false, false, false);
 }

@@ -195,6 +195,7 @@ private:
     QByteArray makeShapeFill(const QJsonObject& obj, int indents);
     EByteArray makePlainItem(const QJsonObject& obj, int indents);
     QByteArray makeSvgPath(int index, bool isFill, const QString& pathId, const QJsonObject& obj, int indents);
+    QByteArray makeMask(const QString& sourceId, const QString& maskId, int indents);
 
     EByteArray parse(const QJsonObject& obj, int indents);
 

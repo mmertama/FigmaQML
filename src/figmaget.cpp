@@ -272,6 +272,7 @@ void FigmaGet::reset() {
     m_rendringQueue.clear();
     m_replies.clear();
     m_lastError = nullptr;
+    emit resetted();
 }
 
 void FigmaGet::cancel() {
@@ -282,6 +283,7 @@ void FigmaGet::cancel() {
         r->close();
     }
     m_downloads->cancel();
+    m_callQueue.clear();
 }
 
 void FigmaGet::doCall() {
@@ -361,7 +363,13 @@ std::tuple<int, int, int> FigmaGet::cacheInfo() const {
 
 void FigmaGet::getImage(const QString& imageRef, const QSize& maxSize) {
 
-    Q_ASSERT(FetchFailedDebug.find(imageRef) == FetchFailedDebug.end());
+    if(FetchFailedDebug.find(imageRef) != FetchFailedDebug.end()) {
+        emit error(QString("Image not found: %1").arg(imageRef));
+        m_callQueue.clear();
+        m_rendringQueue.clear();
+        cancel();
+        return;
+    }
 
     Q_ASSERT(maxSize.width() > 0 && maxSize.height() > 0);
     Q_ASSERT(!imageRef.isEmpty());

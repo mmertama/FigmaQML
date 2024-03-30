@@ -510,6 +510,10 @@ int main(int argc, char *argv[]) {
 
         QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, figmaGet.get(), &FigmaGet::documentCreated);
 
+
+        QObject::connect(figmaGet.get(), &FigmaGet::error, figmaQml.get(), [&figmaQml](auto){figmaQml->cancel();});
+        QObject::connect(figmaGet.get(), &FigmaGet::resetted, figmaQml.get(), &FigmaQml::doReset);
+
         if(parser.isSet(showParameter)) {
                 auto connection = std::make_shared<QMetaObject::Connection>();
                 *connection = QObject::connect(figmaQml.get(), &FigmaQml::documentCreated, [&figmaQml, &canvas, &element, &app, connection] () {
@@ -566,6 +570,12 @@ int main(int argc, char *argv[]) {
                                                   false);
 #endif
 
+         engine.rootContext()->setContextProperty("qt5_compat",
+#ifdef QT5COMPAT
+                                                  true);
+#else
+                                                  false);
+#endif
          QObject::connect(figmaQml.get(), &FigmaQml::elementChanged, [&engine](){
              engine.clearComponentCache();
          });

@@ -685,35 +685,71 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             return out; // Qul has no effects
 
         if(obj.contains("effects")) {
-                const auto effects = obj["effects"].toArray();
-                if(!effects.isEmpty()) {
-                    const auto indent = tabs(indents);
-                    const auto indent1 = tabs(indents + 1);
-                    const auto& e = effects[0];   //Qt supports only ONE effect!
+            const auto effects = obj["effects"].toArray();
+            if(!effects.isEmpty()) {
+#ifdef QT5COMPAT
+                const auto indent = tabs(indents);
+                const auto indent1 = tabs(indents + 1);
+                const auto& e = effects[0];   //Qt supports only ONE effect!
+                const auto effect = e.toObject();
+                if(effect["type"] == "INNER_SHADOW" || effect["type"] == "DROP_SHADOW") {
+                    const auto color = e["color"].toObject();
+                    const auto radius = e["radius"].toDouble();
+                    const auto offset = e["offset"].toObject();
+                    out += tabs(indents) + "layer.enabled:true\n";
+                    out += tabs(indents) + "layer.effect: DropShadow {\n";
+                    if(effect["type"] == "INNER_SHADOW") {
+                        out += indent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
+                        out += indent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
+                    } else {
+                        out += indent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
+                        out += indent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
+                    }
+                    out += indent1 + "radius: " + QString::number(radius) + "\n";
+                    out += indent1 + "samples: 17\n";
+                    out += indent1 + "color: " + toColor(
+                            color["r"].toDouble(),
+                            color["g"].toDouble(),
+                            color["b"].toDouble(),
+                            color["a"].toDouble()) + "\n";
+                    out += indent + "}\n";
+                }
+#else
+                const auto id_string = makeId(obj);
+                const auto indent = tabs(indents);
+                const auto indent1 = tabs(indents + 1);
+                out += indent +  "MultiEffect {\n";
+                out += indent1 + "anchors.fill: parent\n";
+                out += indent1 + "source: " + id_string + "\n";
+                for(const auto& e : effects) {
                     const auto effect = e.toObject();
-                    if(effect["type"] == "INNER_SHADOW" || effect["type"] == "DROP_SHADOW") {
-                        const auto color = e["color"].toObject();
-                        const auto radius = e["radius"].toDouble();
-                        const auto offset = e["offset"].toObject();
-                        out += tabs(indents) + "layer.enabled:true\n";
-                        out += tabs(indents) + "layer.effect: DropShadow {\n";
-                        if(effect["type"] == "INNER_SHADOW") {
-                            out += indent1 + "horizontalOffset: " + QString::number(-offset["x"].toDouble()) + "\n";
-                            out += indent1 + "verticalOffset: " + QString::number(-offset["y"].toDouble()) + "\n";
-                        } else {
-                            out += indent1 + "horizontalOffset: " + QString::number(offset["x"].toDouble()) + "\n";
-                            out += indent1 + "verticalOffset: " + QString::number(offset["y"].toDouble()) + "\n";
-                        }
-                        out += indent1 + "radius: " + QString::number(radius) + "\n";
-                        out += indent1 + "samples: 17\n";
-                        out += indent1 + "color: " + toColor(
-                                color["r"].toDouble(),
-                                color["g"].toDouble(),
-                                color["b"].toDouble(),
-                                color["a"].toDouble()) + "\n";
-                        out += indent + "}\n";
+                    out += indent1 + "// " + effect["type"].toString() + "\n";
+                    const bool is_inner = effect["type"] == "INNER_SHADOW";
+                    if(is_inner || effect["type"] == "DROP_SHADOW") {
+                        const auto color = effect["color"].toObject();
+                        const auto radius = effect["radius"].toDouble();
+                        const auto offset = effect["offset"].toObject();
+                        out += indent1 + "shadowEnabled: true\n";
+                        out += indent1 + "shadowColor: " + toColor(
+                                   color["r"].toDouble(),
+                                   color["g"].toDouble(),
+                                   color["b"].toDouble(),
+                                   color["a"].toDouble()) + "\n";
+                        const auto offset_x = offset["x"].toDouble();
+                        const auto offset_y = offset["y"].toDouble();
+                        out += indent1 + "shadowHorizontalOffset: " + QString::number(is_inner ? -offset_x : offset_x) + "\n";
+                        out += indent1 + "shadowVerticalOffset: " +  QString::number(is_inner ? -offset_y : offset_y)  + "\n";
+                        out += indent1 + "shadowScale: " + QString::number(radius)  + "\n";
+                    }
+                    if(effect["type"] == "LAYER_BLUR" || effect["type"] == "BACKGROUND_BLUR") {
+                        out += indent1 + "blurEnabled: true\n";
+                        const auto radius = effect["radius"].toDouble();
+                        out += indent1 + "blur: " + QString::number(radius)  + "\n";
                     }
                 }
+                out += indent +  "} //MultiEffect \n";
+#endif
+            }
         }
         return out;
     }
@@ -1083,6 +1119,19 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         return std::nullopt;
     }
 
+    QByteArray FigmaParser::makeMask(const QString& sourceId, const QString& maskSourceId, int indents) {
+        QByteArray out;
+        const auto indent = tabs(indents);
+        const auto indent1 = tabs(indents + 1);
+        out += indent + "MultiEffect {\n";
+        out += indent1 + "maskEnabled: true\n";
+        out += indent1 + "anchors.fill:parent\n";
+        out += indent1 + "source: " + sourceId +  "\n";
+        out += indent1 + "maskSource: " + maskSourceId + "\n";
+        out += indent + "}\n";
+        return out;
+    }
+
     EByteArray FigmaParser::makeImageMaskDataQt(const QString& imageRef, const QJsonObject& obj, int indents) {
         QByteArray out;
         const auto indent = tabs(indents);
@@ -1091,12 +1140,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         const auto sourceId =  makeId("source_", obj);
         const auto maskSourceId = makeId( "maskSource_", obj);
 
-
+#ifdef QT5COMPAT
         out += indent + "OpacityMask {\n";
         out += indent1 + "anchors.fill:parent\n";
         out += indent1 + "source: " + sourceId +  "\n";
         out += indent1 + "maskSource: " + maskSourceId + "\n";
         out += indent + "}\n";
+#else
+        out += makeMask(sourceId, maskSourceId, indents);
+#endif
+
 
         out += indent + "Image {\n";
         out += indent1 + "id: " + sourceId + "\n";
@@ -1304,11 +1357,15 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "}\n"; //shape
 
         if(!isQul()) { // OpacityMask is not supported
+#ifdef QT5COMPAT
             out += indent + "OpacityMask {\n";
             out += indent1 + "anchors.fill:parent\n";
             out += indent1 + "source: " + borderSourceId +  "\n";
             out += indent1 + "maskSource: " + borderMaskId + "\n";
             out += indent + "}\n"; //Opacity
+#else
+            out += makeMask(borderSourceId, borderMaskId, indents);
+#endif
         }
 
         out += tabs(indents - 1) + "}\n"; //Item
@@ -1368,11 +1425,15 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "}\n"; //shape
 
         if(!isQul()) { // OpacityMask is not supported
+#ifdef QT5COMPAT
             out += indent + "OpacityMask {\n";
             out += indent1 + "anchors.fill:parent\n";
             out += indent1 + "source: " + borderSourceId +  "\n";
             out += indent1 + "maskSource: " + borderMaskId + "\n";
             out += indent + "}\n"; //Opacity
+#else
+            out += makeMask(borderSourceId, borderMaskId, indents);
+#endif
         }
 
         out += tabs(indents - 1) + "}\n"; //Item
@@ -1462,12 +1523,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "}\n"; //Item
 
         if(!isQul()) { // OpacityMask is not supported
+#ifdef QT5COMPAT
             out += indent + "OpacityMask {\n";
             out += indent1 + "anchors.fill:parent\n";
             out += indent1 + "maskSource: " + borderMaskId +  "\n";
             out += indent1 + "source: " + borderSourceId + "\n";
             out += indent1 + "invert: true\n";
             out += indent + "}\n"; //Opacity
+#else
+            out += makeMask(borderSourceId, borderMaskId, indents);
+#endif
         }
 
         out += tabs(indents - 1) + "}\n"; //Item
@@ -1554,12 +1619,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
         out += indent + "}\n"; //Item
 
         if(!isQul()) { // OpacityMask is not supported
+#ifdef QT5COMPAT
             out += indent + "OpacityMask {\n";
             out += indent1 + "anchors.fill:parent\n";
             out += indent1 + "maskSource: " + borderMaskId +  "\n";
             out += indent1 + "source: " + borderSourceId + "\n";
             out += indent1 + "invert: true\n";
             out += indent + "}\n"; //Opacity
+#else
+            out += makeMask(borderSourceId, borderMaskId, indents);
+#endif
         }
 
         out += tabs(indents - 1) + "}\n"; //Item
@@ -1658,7 +1727,7 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
      bool FigmaParser::isRendering(const QJsonObject& obj) const {
         if(obj["isRendering"].toBool())
             return true;
-        if(type(obj) == ItemType::Vector && (m_flags & PrerenderShapes || isGradient(obj))) // || /*(m_flags & PrerenderGradients &&*/ isGradient(obj)))
+        if(type(obj) == ItemType::Vector && (m_flags & PrerenderShapes || ((m_flags & NoGradients) & isGradient(obj)))) // || /*(m_flags & PrerenderGradients &&*/ isGradient(obj)))
             return true;
         if(type(obj) == ItemType::Text && /*(m_flags & PrerenderGradients &&*/ isGradient((obj)))
             return true;
@@ -1872,13 +1941,15 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          APPENDERR(out, parseChildren(obj, indents + 1));
          out += indent + "}\n";
 
-
+#ifdef QT5COMPAT
         out += indent + "OpacityMask {\n";
         out += indent1 + "anchors.fill:" + sourceId + "\n";
         out += indent1 + "source:" + sourceId + "\n";
         out += indent1 + "maskSource:" + maskSourceId + "\n";
         out += indent + "}\n";
-
+#else
+         out += makeMask(sourceId, maskSourceId, indents);
+#endif
          return out;
      }
 
@@ -1910,13 +1981,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
          out += indent2 + "id:" + maskSourceId + "\n";
          APPENDERR(out, parse(children[0].toObject(), indents + 3));
          out += indent1 + "}\n";
-
+ #ifdef QT5COMPAT
          out += indent1 + "OpacityMask {\n";
          out += indent2 + "anchors.fill:" + sourceId + "\n";
          out += indent2 + "source:" + sourceId + "\n";
          out += indent2 + "maskSource:" + maskSourceId + "\n";
          out += indent1 + "}\n";
          out += indent + "}\n";
+#else
+         out += makeMask(sourceId, maskSourceId, indents + 1);
+#endif
          //This was one we subtracts from
 
          out += indent + "Item {\n";
@@ -1927,12 +2001,16 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
             APPENDERR(out, parse(children[i].toObject(), indents + 2));
          out += indent + "}\n";
 
+#ifdef QT5COMPAT
          out += indent + "OpacityMask {\n";
          out += indent1 + "anchors.fill:" + sourceId + "_subtract\n";
          out += indent1 + "source:" + sourceId + "_subtract\n";
          out += indent1 + "maskSource:" + maskSourceId + "_subtract\n";
          out += indent1 + "invert: true\n";
          out += indent + "}\n";
+#else
+         out += makeMask(sourceId, maskSourceId, indents);
+#endif
          return out;
      }
 
@@ -2366,11 +2444,15 @@ std::optional<FigmaParser::Components> FigmaParser::components(const QJsonObject
           out += tabs(indents) + "Item {\n";
           out += indent + "anchors.fill:parent\n";
           if(!isQul()) {
+#ifdef QT5COMPAT
               out += indent + "OpacityMask {\n";
               out += indent1 + "anchors.fill:parent\n";
               out += indent1 + "source: " + sourceId +  "\n";
               out += indent1 + "maskSource: " + maskSourceId + "\n";
               out += indent + "}\n\n";
+#else
+              out += makeMask(sourceId, maskSourceId, indents);
+#endif
           }
           out += indent + "Item {\n";
           out += indent1 + "id: " + maskSourceId + "\n";

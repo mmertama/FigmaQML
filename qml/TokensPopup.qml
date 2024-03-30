@@ -17,12 +17,13 @@ Popup {
         property alias project_token_history: project_token_text.history
     }
     function _set_history(history_list: list<string>, value: string) {
+        value = value.trim();
         for(let i = 0; i < history_list.length; ++i) {
             if(history_list[i] === value) {
                 if(i === 0)
                     return;
                 for(let j = i; j > 0; --j) {
-                    history_list[j - 1] = history_list[j];
+                    history_list[j] = history_list[j - 1];
                 }
                 history_list[0] = value;
                 return;
@@ -84,7 +85,7 @@ Popup {
     }
     Popup {
         id: history_popup
-        width: 420
+        width: 520
         modal: true
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnReleaseOutside

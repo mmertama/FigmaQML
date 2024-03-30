@@ -131,6 +131,7 @@ public:
 public slots:
     void createDocumentView(const QByteArray& data, bool restoreView);
     void createDocumentSources(const QByteArray& data);
+    void doReset();
 signals:
     void figmaDocumentCreated(FigmaFileDocument* doc);
     void figmaDocumentCreated(FigmaDataDocument* doc);

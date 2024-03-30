@@ -19,13 +19,19 @@ message("Compiling tcn ${CMAKE_TOOLCHAIN_FILE}")
 
 option(HAS_QUL "Build Qt for MCU support" TRUE)
 
+if(QT5COMPAT)
+    set(EXTRA ${EXTRA} Qt6::Core5Compat Qt6::ShaderTools)
+    set(EXTRA_PACKAGES ${EXTRA_PACKAGES} ShaderTools Core5Compat)
+    add_compile_definitions(QT5COMPAT=1)
+endif()
+
 if(EMSCRIPTEN)
     if(NOT DEFINED QT_HOST_PATH) # for github actions
         message("Host path not defined, use: ${HOST_ROOT}")
         set(QT_HOST_PATH "${HOST_ROOT}/gcc_64" CACHE STRING "" FORCE)
     endif()
     message("Host path: ${QT_HOST_PATH}")
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Core5Compat ShaderTools QuickControls2 REQUIRED)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick QuickControls2 ${EXTRA_PACKAGES} REQUIRED)
 else()
     if(LINUX)
         set(HAS_EXECUTE TRUE)
@@ -38,7 +44,7 @@ else()
             SerialPort
         )
     endif()
-    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets Core5Compat ShaderTools QuickControls2 ${EXTRA_PACKAGES} REQUIRED)
+    find_package(Qt6 CONFIG COMPONENTS Core Quick Network Widgets QuickControls2 ${EXTRA_PACKAGES} REQUIRED)
 endif()
 
 # dog food
@@ -103,7 +109,7 @@ if(EMSCRIPTEN)
 endif()
 
 
-set(VERSION_NUMBER "3.2.1")
+set(VERSION_NUMBER "3.2.0")
 
 add_compile_definitions(VERSION_NUMBER=${VERSION_NUMBER})
 
@@ -167,8 +173,6 @@ set(COMMON_LIBS
     Qt6::Quick
     Qt6::Network
     Qt6::Widgets
-    Qt6::Core5Compat
-    Qt6::ShaderTools
     Qt6::QuickControls2
     FigmaQmlInterface
     ${EXTRA})

@@ -63,6 +63,7 @@ signals:
     void throttleChanged();
     void restored(unsigned flags, const QVariantMap& imports);
     void replyComplete(const std::shared_ptr<QByteArray>& bytes);
+    void resetted();
 private:
     struct Id {
         bool isEmpty() const {return id.isEmpty();}
