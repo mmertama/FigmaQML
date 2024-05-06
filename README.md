@@ -1,6 +1,6 @@
 # FigmaQML #
 
-(FigmaQML)[https://github.com/mmertama/FigmaQML] is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
+[FigmaQML](https://github.com/mmertama/FigmaQML) is an application to generate [QML](https://doc.qt.io/qt-6/qtqml-index.html) sourcecode
 from [Figma](https://www.figma.com) designs for [QtQuick](https://doc.qt.io/qt-6/qtquick-index.html) 
 applications. FigmaQML will let designer to compose the UI without need of programmer to reproduce 
 design using UI code. Omitting that tedious, redundant step, will dramatically decrease development effort.
@@ -371,7 +371,7 @@ FigmaQmlSingleton.setView(1);
 
 ## Example
 
-[QMQTTI] (https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
+[QMQTTI](https://github.com/mmertama/qmqttiapp) is an example application UI composed using Figma. It is a Messaging application
 on top of MQTT protocol. The UI is ugly, but its purpose is how easy it is update when FigmaQML is used to decouple visuals from functionality. 
 
 ## FAQ
