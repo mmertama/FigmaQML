@@ -93,9 +93,9 @@ jobs:
 
       - name: Install Qt desktop for wasm (unlike documentation says host is not installed)
         if: startsWith(matrix.config.arch, 'wasm')
-        uses: jurplel/install-qt-action@v3.3.0
+        uses: jurplel/install-qt-action@v4
         with:
-            aqtversion: '>=3.1.*'
+            aqtversion: '>=3.1.7'
             version: '6.6.2'
             host: linux
             target: 'desktop'
@@ -106,7 +106,8 @@ jobs:
             tools: 'tools_ninja tools_cmake'
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v3
+        #if: '!startsWith(matrix.config.arch, ''wasm'')'
+        uses: jurplel/install-qt-action@v4
         with:
           aqtversion: '>=3.1.7'
           version: '6.6.2'
@@ -133,10 +134,16 @@ jobs:
         if: '!startsWith(matrix.config.arch, ''wasm'')'
         shell: cmake -P {0}
         run: |
-            file(TO_CMAKE_PATH "${{ github.workspace }}" WS_PATH)
-            set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.2/${{ matrix.config.arch }}")
+            if ("${{ runner.os }}" STREQUAL "Windows") 
+              file(TO_CMAKE_PATH "$ENV{GITHUB_WORKSPACE}" WS_PATH)
+              set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.2/msvc2019_64")
+            else()  
+              set(ENV{Qt6_DIR} "${WS_PATH}/../Qt/6.6.2/${{ matrix.config.arch }}")
+            endif()
+
             set(ENV{CC} ${{ matrix.config.cc }})
             set(ENV{CXX} ${{ matrix.config.cxx }})
+            set(ENV{QTDIR} "${Qt6Dir}")
 
             message("CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
             message("CMAKE_CURRENT_LIST_DIR ${CMAKE_CURRENT_LIST_DIR}")
@@ -212,7 +219,7 @@ jobs:
         run: |
           pwd & ls -la
           mkdir ${{ matrix.config.target_name }}
-          cp favicon.ico ${{ matrix.config.target_name }}
+          cp ../res/favicon.ico ${{ matrix.config.target_name }}
           cp FigmaQML.html ${{ matrix.config.target_name }}
           cp *.js ${{ matrix.config.target_name }}
           cp qtlogo.svg ${{ matrix.config.target_name }}
@@ -224,7 +231,8 @@ jobs:
         if: startsWith(matrix.config.os, 'macos')
         working-directory: build
         run: |
-            $Qt6_DIR/bin/macdeployqt ${{ matrix.config.target_name }} -qmldir=../qml
+            [[ -z "${Qt6_DIR}" ]] && Qt6_DIR="${WS_PATH}/../Qt/6.6.2/${{ matrix.config.arch }}" || Qt6_DIR="${Qt6_DIR}"
+            ${QT_ROOT_DIR}/bin/macdeployqt ${{ matrix.config.target_name }} -qmldir=../qml
 
 
       - name: QtDeploy (W)
@@ -232,9 +240,10 @@ jobs:
         working-directory: build
         shell: bash
         run: |
+            [[ -z "${Qt6_DIR}" ]] && Qt6_DIR="${GITHUB_WORKSPACE}/../Qt/6.6.2/msvc2019_64" || Qt6_DIR="${Qt6_DIR}"
             mkdir ${{ matrix.config.target_name }}
             cp FigmaQML.exe ${{ matrix.config.target_name }}/
-            $Qt6_DIR/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "${{ matrix.config.target_name }}/FigmaQML.exe"
+            ${Qt6_DIR}/bin/windeployqt.exe --qmldir ../qml --compiler-runtime "${{ matrix.config.target_name }}/FigmaQML.exe"
             cp ../OpenSSL_win/*.dll ${{ matrix.config.target_name }}/
 
       - name: Set env
