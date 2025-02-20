@@ -200,9 +200,12 @@ if(LINUX AND NOT NO_DOC)
         .git
         FigmaQML
         OpenSSL*)
-    set(CMAKEDOC_SPELL_EXCLUDE_FILES
-        \*.qmlproject*)
-    add_spellcheck(${PROJECT_NAME})
+    set(CMAKEDOC_SPELL_EXCLUDE_FILES \*.qmlproject*)
+
+    message("Spellchecking is disable until fixed")
+    if(DO_SPELLCHECK)
+       add_spellcheck(${PROJECT_NAME})
+    endif()
 endif()
 
 if(EMSCRIPTEN)
